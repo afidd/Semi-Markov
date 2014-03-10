@@ -46,19 +46,60 @@ public:
 
 /*! This is one way to provide a set of transitions for a GSPN.
  */
-template<typename LocalMarking, typename State, typename PN, typename Random>
+template<typename LocalMarking, typename State,
+    typename PetriGraph, typename Random>
 class ExplicitTransitions
 {
 public:
   typedef Random RNG;
-  typedef PN PetriNet;
-  typedef trans_t<PN> TransId;
+  typedef PetriGraph PetriNet;
+  typedef trans_t<PetriGraph> TransId;
+  ExplicitTransitions(PetriGraph& graph) : graph(graph) {}
 
-  std::map<trans_t<PN>,
+  std::map<trans_t<PetriGraph>,
       std::unique_ptr<ExplicitTransition<LocalMarking,State,RNG>>>
       transitions;
+  PetriGraph& graph;
 };
 
+
+template<typename LocalMarking, typename State,
+    typename PetriGraph, typename Random>
+struct petri_place<ExplicitTransitions<LocalMarking,State,PetriGraph,Random>>
+{
+  typedef typename boost::graph_traits<PetriGraph>::vertex_descriptor type;
+};
+
+
+
+template<typename LocalMarking, typename State,
+    typename PetriGraph, typename Random>
+struct petri_transition<ExplicitTransitions<LocalMarking,State,PetriGraph,Random>>
+{
+  typedef typename boost::graph_traits<PetriGraph>::vertex_descriptor type;
+};
+
+
+
+template<typename LocalMarking, typename State,
+    typename PetriGraph, typename Random>
+std::vector<std::tuple<size_t,size_t,int>>
+neighbors_of_transition(
+  ExplicitTransitions<LocalMarking,State,PetriGraph,Random>& et,
+  typename petri_transition<PetriGraph>::type trans_id)
+{
+  return neighbors_of_transition(et.graph, trans_id);
+}
+
+
+template<typename F, typename LocalMarking, typename State,
+    typename PetriGraph, typename Random>
+void neighbors_of_places(
+  ExplicitTransitions<LocalMarking,State,PetriGraph,Random>& et,
+  const std::set<typename petri_place<PetriGraph>::type>& place_id, F func)
+{
+  return neighbors_of_places(et.graph, place_id, func);
+}
 
 
 template<typename Transitions, typename... Args>
@@ -78,112 +119,6 @@ fire(Transitions& et, typename Transitions::TransId trans_id,
 {
   return et.transitions.at(trans_id)->fire(std::forward<Args>(args)...);
 }
-
-
-
-
-class EnablingPolicyNone
-{
-};
-
-
-
-class EnablingPolicyInTokens
-{
-};
-
-
-class EnablingPolicyInNoOutTokens
-{
-};
-
-
-
-struct FiringPolicyInToOutHelper
-{
-  template<typename U>
-  void operator()(U& x)
-  {
-
-  }
-};
-
-
-/*
-class FiringPolicyInToOut
-{
-  void fire(const Transition<LocalMarking,State,RNG>& tr,
-    State& s, LocalMarking& lm, RNG& rng)
-  {
-    
-    for_each<typename LocalMarking::layers>(
-      [&lm] (size_t layer_idx) {
-        std::vector<Token> stack;
-        for (auto place_idx : lm.in_places())
-        {
-          stack.push_back(lm.stochiometric_coefficient(place_idx));
-        }
-        for (auto out_idx : lm.out_places())
-        {
-          auto needs=-lm.stochiometric_coefficient(out_idx);
-          while (needs>0)
-          {
-            auto available=stack.pop_back();
-            auto taken=std::max(needs, available);
-            lm.move<layer_idx>()
-            needs-=taken;
-          }
-        }
-      });
-  }
-};
-*/
-
-
-/*
-
-template<typename Enable, typename Fire,
-    typename LocalMarking, typename State, typename RNG>
-class PolicyTransition : ExplicitTransition<LocalMarking,State,RNG>
-{
-public:
-  virtual std::pair<bool,std::unique_ptr<Dist>>
-  enabled(const Transition<LocalMarking,State,RNG>& tr, const State& s,
-    const LocalMarking& lm)
-  {
-  }
-
-  virtual void fire(const Transition<LocalMarking,State,RNG>& tr,
-    State& s, LocalMarking& lm, RNG& rng)
-  {
-  }
-};
-
-
-
-
-template<typename Enable, typename Fire,
-    typename LocalMarking, typename State, typename RNG>
-class ColoredPolicyTransition : PolicyTransition<LocalMarking,State,RNG>
-{
-  Color _color;
-
-public:
-  ColoredPolicyTransition(const Color& c) : _color(c) {}
-
-  virtual std::pair<bool,std::unique_ptr<Dist>>
-  enabled(const Transition<LocalMarking,State,RNG>& tr, const State& s,
-    const LocalMarking& lm)
-  {
-  }
-
-  virtual void fire(const Transition<LocalMarking,State,RNG>& tr,
-    State& s, LocalMarking& lm, RNG& rng)
-  {
-  }
-};
-
-*/
 
 
 }

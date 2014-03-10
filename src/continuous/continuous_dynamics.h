@@ -5,12 +5,12 @@ namespace afidd
 {
 namespace smv
 {
-template<typename EmbeddedMarkov, typename T, typename RNG>
-std::tuple<trans_t<typename EmbeddedMarkov::PetriNet>, double>
-delta(EmbeddedMarkov& system, T& token, RNG& rng)
+template<typename PartialCore, typename T, typename RNG>
+std::tuple<trans_t<typename PartialCore::PetriNet>, double>
+delta(PartialCore& system, T& token, RNG& rng)
 {
   system.state_machine_token(token);
-  using Transition=trans_t<typename EmbeddedMarkov::PetriNet>;
+  using Transition=trans_t<typename PartialCore::PetriNet>;
 
   auto least=std::make_tuple(Transition{}, std::numeric_limits<double>::infinity());
 

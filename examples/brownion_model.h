@@ -134,7 +134,7 @@ using ExpDist=smv::ExponentialDistribution<RandGen>;
 using NoDist=smv::NoDistribution<RandGen>;
 
 
-class Transitions
+class BrownionGSPN
 {
   // Could store the state parameters and distributions here
   // if we wanted.
@@ -143,10 +143,29 @@ class Transitions
 
 namespace afidd
 {
+  namespace smv
+  {
+  template<>
+  struct petri_place<BrownionGSPN>
+  {
+    typedef PlaceType type;
+  };
+
+  template<>
+  struct petri_transition<BrownionGSPN>
+  {
+    typedef TransitionType type;
+  };
+  }
+}
+
+
+namespace afidd
+{
 namespace smv
 {
 std::pair<bool,std::unique_ptr<TransitionDistribution<RandGen>>>
-enabled(const Transitions& et, TransitionType trans_id,
+enabled(const BrownionGSPN& et, TransitionType trans_id,
   const BrownionState& s, const smv::LocalMarking<Mark>& lm)
 {
   if (lm.template length<0>(0)>0)
@@ -166,7 +185,7 @@ enabled(const Transitions& et, TransitionType trans_id,
 
 template<typename RNG>
 void
-fire(Transitions& et, TransitionType trans_id,
+fire(BrownionGSPN& et, TransitionType trans_id,
   BrownionState& s, smv::LocalMarking<Mark>& lm, RNG& rng)
 {
   lm.template move<0,0>(0, 1, 1);
@@ -174,10 +193,10 @@ fire(Transitions& et, TransitionType trans_id,
 
 
 
-std::vector<std::tuple<place_t<BrownionGraph>,size_t,int>>
-neighbors_of_transition(BrownionGraph& g, trans_t<BrownionGraph> trans_id)
+std::vector<std::tuple<place_t<BrownionGSPN>,size_t,int>>
+neighbors_of_transition(BrownionGSPN& g, trans_t<BrownionGSPN> trans_id)
 {
-  std::vector<std::tuple<place_t<BrownionGraph>,size_t,int>> place_ids;
+  std::vector<std::tuple<place_t<BrownionGSPN>,size_t,int>> place_ids;
   place_ids.push_back(std::make_tuple(trans_id.from, 0, -1));
   place_ids.push_back(std::make_tuple(trans_id.to, 0, -1));
   return place_ids;
@@ -186,8 +205,8 @@ neighbors_of_transition(BrownionGraph& g, trans_t<BrownionGraph> trans_id)
 
 
 template<typename F>
-void neighbors_of_places(BrownionGraph& g,
-  const std::set<place_t<BrownionGraph>>& place_id, const F& func)
+void neighbors_of_places(BrownionGSPN& g,
+  const std::set<place_t<BrownionGSPN>>& place_id, const F& func)
 {
   for (auto p : place_id)
   {

@@ -81,7 +81,7 @@ public:
 };
 
 // This class holds the transitions.
-using SIRTransitions=
+using SIRGSPN=
     ExplicitTransitions<LocalMarking<Mark>,SIRState, PG, RandGen>;
 
 
@@ -152,7 +152,7 @@ class Recover : public SIRTransition
 
 /*! SIR infection on an all-to-all graph of uncolored tokens.
  */
-std::tuple<PG,SIRTransitions>
+std::tuple<PG,SIRGSPN>
 build_system(size_t individual_cnt)
 {
   size_t individual_state_cnt=3;
@@ -163,7 +163,7 @@ build_system(size_t individual_cnt)
   size_t transition_cnt=infection_cnt+recovery_cnt;
 
   PG graph(place_cnt + transition_cnt);
-  SIRTransitions et;
+  SIRGSPN et(graph);
 
   enum { s, i, r };
   PetriGraphVertexProperty vprop;
@@ -250,9 +250,9 @@ int main(int argc, char *argv[])
 
   RandGen rng(1);
 
-  PG graph;
-  SIRTransitions transitions;
-  std::tie(graph, transitions)=build_system(individual_cnt);
+  auto petrinet=build_system(individual_cnt);
+  auto& graph=std::get<0>(petrinet);
+  auto& gspn=std::get<1>(petrinet);
 
   SIRState state;
   for (size_t individual=0; individual<individual_cnt; ++individual)
@@ -260,8 +260,8 @@ int main(int argc, char *argv[])
     add<0>(state.marking, 3*individual, IndividualToken{});
   }
 
-  using Markov=PartialCoreMatrix<PG, SIRTransitions, SIRState, RandGen>;
-  Markov system(graph, transitions, state);
+  using Markov=PartialCoreMatrix<SIRGSPN, SIRState, RandGen>;
+  Markov system(gspn, state);
 
   BOOST_LOG_TRIVIAL(debug) << state.marking;
 

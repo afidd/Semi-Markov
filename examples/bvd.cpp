@@ -120,7 +120,7 @@ herd(size_t initial_cnt, size_t total_cnt)
 
   vprop.color=PetriGraphColor::Transition;
 
-  auto et=CowTransitions();
+  auto et=CowTransitions(g);
   et.transitions.emplace(17, std::unique_ptr<CowTransition>(
       new InfectNeighbor(17)));
 
@@ -149,11 +149,11 @@ int main(int argc, char *argv[])
   CowState state;
   auto res=herd<PN,LocalMarking<Mark>,CowState>(100, 10);
   auto graph=std::get<0>(res);
-  auto transitions=std::get<1>(std::move(res));
+  auto gspn=std::get<1>(std::move(res));
 
 
-  PartialCoreMatrix<PN,CowTransitions,CowState,CowGen>
-      system(graph, transitions, state);
+  PartialCoreMatrix<CowTransitions,CowState,CowGen>
+      system(gspn, state);
   auto token=[](CowState&) { };
   auto next=delta(system, token, rng);
   if (std::get<1>(next)<=std::numeric_limits<double>::max())

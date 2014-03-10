@@ -26,12 +26,11 @@ int main(int argc, char *argv[])
   afidd::log_init("debug");
 
   RandGen rng(random_seed);
-  BrownionGraph graph;
-  Transitions transitions;
+  BrownionGSPN gspn;
   BrownionState state;
 
-  using Markov=PartialCoreMatrix<BrownionGraph,Transitions,BrownionState,RandGen>;
-  Markov system(graph, transitions, state);
+  using Markov=PartialCoreMatrix<BrownionGSPN,BrownionState,RandGen>;
+  Markov system(gspn, state);
 
   auto input_string=[](BrownionState& state)->void {
     add<0>(state.marking, PlaceType{0,0,0}, IndividualToken());

@@ -10,20 +10,19 @@ namespace afidd
 namespace smv
 {
 
-template<typename Graph, typename Transitions, typename State, typename RNG>
+template<typename GSPN, typename State, typename RNG>
 class PartialCoreMatrix
 {
-  Graph& _graph;
-  Transitions& _transitions;
+  GSPN& _gspn;
   using Marking=typename State::Marking;
   State& _state;
   using Dist=TransitionDistribution<RNG>;
-  std::map<trans_t<Graph>,std::unique_ptr<Dist>> _distributions;
+  std::map<trans_t<GSPN>,std::unique_ptr<Dist>> _distributions;
 
 public:
-  typedef Graph PetriNet;
-  PartialCoreMatrix(Graph& g, Transitions& transitions, State& s)
-  : _graph(g), _transitions(transitions), _state(s)
+  typedef GSPN PetriNet;
+  PartialCoreMatrix(GSPN& gspn, State& s)
+  : _gspn(gspn), _state(s)
   {}
 
 
@@ -42,16 +41,16 @@ public:
     if (_state.marking.modified().size()>0)
     {
       // Check all neighbors of a place to see if they were enabled.
-      neighbors_of_places(_graph, _state.marking.modified(),
-        [&] (trans_t<Graph> neighbor_id)
+      neighbors_of_places(_gspn, _state.marking.modified(),
+        [&] (trans_t<GSPN> neighbor_id)
         {
           auto neighboring_places=
-              neighbors_of_transition(_graph, neighbor_id);
+              neighbors_of_transition(_gspn, neighbor_id);
           LocalMarking<Marking> lm(_state.marking, neighboring_places);
 
           bool isEnabled;
           std::unique_ptr<TransitionDistribution<RNG>> dist;
-          std::tie(isEnabled, dist)=enabled(_transitions, neighbor_id, _state, lm);
+          std::tie(isEnabled, dist)=enabled(_gspn, neighbor_id, _state, lm);
           auto previously_enabled=
             (_state.enabling_time.find(neighbor_id)!=_state.enabling_time.end());
           if (isEnabled && !previously_enabled)
@@ -78,18 +77,18 @@ public:
     auto begin=_distributions.begin();
     for (; begin!=_distributions.end(); ++begin)
     {
-      trans_t<Graph> trans_id=begin->first;
+      trans_t<GSPN> trans_id=begin->first;
       eval(begin->second, trans_id, _state.enabling_time[trans_id],
         _state.current_time());
     }
   }
 
 
-  void fire(trans_t<Graph> trans_id, double when, RNG rng)
+  void fire(trans_t<GSPN> trans_id, double when, RNG rng)
   {
-    auto neighboring_places=neighbors_of_transition(_graph, trans_id);
+    auto neighboring_places=neighbors_of_transition(_gspn, trans_id);
     LocalMarking<Marking> lm(_state.marking, neighboring_places);
-    afidd::smv::fire(_transitions, trans_id, _state, lm, rng);
+    afidd::smv::fire(_gspn, trans_id, _state, lm, rng);
     BOOST_LOG_TRIVIAL(trace) << "fire "<<trans_id << " modifies "
       << _state.marking.modified().size() << " places.";
 
