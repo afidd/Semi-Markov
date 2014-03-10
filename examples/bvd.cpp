@@ -57,7 +57,7 @@ struct petri_graph<PetriGraphType>
 
 using Mark=smv::Marking<smv::place_t<PN>,
     smv::Colored<Cow>,smv::Uncolored<std::map<size_t,double>>>;
-using CowState=smv::State<PN,Mark>;
+using CowState=smv::GSPNState<PN,Mark>;
 
 class CowTransition
 : public smv::ExplicitTransition<smv::LocalMarking<Mark>,CowState,CowGen>
@@ -100,10 +100,7 @@ public:
  *  the marking, because transitions are defined on local state.
  */
 template<typename PN, typename LocalMarking, typename CowState>
-std::tuple<
-  graph_t<PN>,
-  CowTransitions
-  >
+CowTransitions
 herd(size_t initial_cnt, size_t total_cnt)
 {
   enum { c, h1, h2, d, death, sale, culling};
@@ -124,7 +121,7 @@ herd(size_t initial_cnt, size_t total_cnt)
   et.transitions.emplace(17, std::unique_ptr<CowTransition>(
       new InfectNeighbor(17)));
 
-  return std::make_tuple(g, std::move(et));
+  return std::move(et);
 }
 
 
@@ -143,19 +140,15 @@ int main(int argc, char *argv[])
   assert(length<1>(m, params_place_id)==1);
   assert(length<0>(m, 27, 13)==0);
 
-
   CowGen rng(1);
 
   CowState state;
-  auto res=herd<PN,LocalMarking<Mark>,CowState>(100, 10);
-  auto graph=std::get<0>(res);
-  auto gspn=std::get<1>(std::move(res));
-
+  auto gspn=herd<PN,LocalMarking<Mark>,CowState>(100, 10);
 
   PartialCoreMatrix<CowTransitions,CowState,CowGen>
       system(gspn, state);
   auto token=[](CowState&) { };
-  auto next=delta(system, token, rng);
+  auto next=propagate_competing_processes(system, token, rng);
   if (std::get<1>(next)<=std::numeric_limits<double>::max())
   {
     std::cout << "We have a value." << std::endl;

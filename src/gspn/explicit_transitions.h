@@ -52,14 +52,13 @@ class ExplicitTransitions
 {
 public:
   typedef Random RNG;
-  typedef PetriGraph PetriNet;
   typedef trans_t<PetriGraph> TransId;
-  ExplicitTransitions(PetriGraph& graph) : graph(graph) {}
+  ExplicitTransitions(PetriGraph& graph) : graph(std::move(graph)) {}
 
   std::map<trans_t<PetriGraph>,
       std::unique_ptr<ExplicitTransition<LocalMarking,State,RNG>>>
       transitions;
-  PetriGraph& graph;
+  PetriGraph graph;
 };
 
 

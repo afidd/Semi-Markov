@@ -7,7 +7,7 @@ namespace smv
 {
 template<typename PartialCore, typename T, typename RNG>
 std::tuple<trans_t<typename PartialCore::PetriNet>, double>
-delta(PartialCore& system, T& token, RNG& rng)
+propagate_competing_processes(PartialCore& system, T& token, RNG& rng)
 {
   system.state_machine_token(token);
   using Transition=trans_t<typename PartialCore::PetriNet>;

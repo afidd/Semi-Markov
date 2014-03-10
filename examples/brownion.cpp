@@ -37,13 +37,12 @@ int main(int argc, char *argv[])
   };
   auto nothing=[](BrownionState&)->void {};
 
-  auto next=delta(system, input_string, rng);
+  auto next=propagate_competing_processes(system, input_string, rng);
   for (size_t iteration_idx=0; iteration_idx<iteration_cnt; ++iteration_idx)
   {
-    std::get<1>(next)<std::numeric_limits<double>::max();
     BOOST_LOG_TRIVIAL(debug) << "trans " << std::get<0>(next) << " time " <<
         std::get<1>(next);
-    next=delta(system, nothing, rng);
+    next=propagate_competing_processes(system, nothing, rng);
   }
 
   return 0;

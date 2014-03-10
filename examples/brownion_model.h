@@ -127,7 +127,7 @@ struct IndividualToken {};
 
 
 using Mark=smv::Marking<smv::place_t<BrownionGraph>, smv::Uncolored<IndividualToken>>;
-using BrownionState=smv::State<BrownionGraph,Mark>;
+using BrownionState=smv::GSPNState<BrownionGraph,Mark>;
 
 using Dist=smv::TransitionDistribution<RandGen>;
 using ExpDist=smv::ExponentialDistribution<RandGen>;

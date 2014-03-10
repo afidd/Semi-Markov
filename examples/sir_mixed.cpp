@@ -70,7 +70,7 @@ struct IndividualToken
 // Marking of the net.
 using Mark=Marking<place_t<PG>, Uncolored<IndividualToken>>;
 // State of the continuous dynamical system.
-using SIRState=State<PG, Mark>;
+using SIRState=GSPNState<PG, Mark>;
 
 class SIRTransition
 : public ExplicitTransition<LocalMarking<Mark>, SIRState, RandGen>
@@ -152,7 +152,7 @@ class Recover : public SIRTransition
 
 /*! SIR infection on an all-to-all graph of uncolored tokens.
  */
-std::tuple<PG,SIRGSPN>
+SIRGSPN
 build_system(size_t individual_cnt)
 {
   size_t individual_state_cnt=3;
@@ -162,8 +162,9 @@ build_system(size_t individual_cnt)
   size_t recovery_cnt=individual_cnt;
   size_t transition_cnt=infection_cnt+recovery_cnt;
 
-  PG graph(place_cnt + transition_cnt);
-  SIRGSPN et(graph);
+  PG build_graph(place_cnt + transition_cnt);
+  SIRGSPN et(build_graph);
+  PG& graph=et.graph;
 
   enum { s, i, r };
   PetriGraphVertexProperty vprop;
@@ -219,7 +220,7 @@ build_system(size_t individual_cnt)
   BOOST_LOG_TRIVIAL(trace) << "Last transition "<< trans_idx-1;
 
   // std::move the transitions because they contain unique_ptr.
-  return std::make_tuple(graph, std::move(et));
+  return std::move(et);
 }
 
 
@@ -250,9 +251,7 @@ int main(int argc, char *argv[])
 
   RandGen rng(1);
 
-  auto petrinet=build_system(individual_cnt);
-  auto& graph=std::get<0>(petrinet);
-  auto& gspn=std::get<1>(petrinet);
+  auto gspn=build_system(individual_cnt);
 
   SIRState state;
   for (size_t individual=0; individual<individual_cnt; ++individual)
@@ -270,12 +269,12 @@ int main(int argc, char *argv[])
   auto input_string=[&first_case](SIRState& state)->void {
     move<0,0>(state.marking, first_case*3, first_case*3+1, 1);
   };
-  auto next=delta(system, input_string, rng);
+  auto next=propagate_competing_processes(system, input_string, rng);
 
   auto nothing=[](SIRState&)->void {};
   for ( ;
     std::get<1>(next)<std::numeric_limits<double>::max();
-    next=delta(system, nothing, rng))
+    next=propagate_competing_processes(system, nothing, rng))
   {
     BOOST_LOG_TRIVIAL(debug) << "trans " << std::get<0>(next) << " time " <<
         std::get<1>(next);

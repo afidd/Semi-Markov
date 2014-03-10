@@ -59,7 +59,7 @@ public:
 
 
 template<typename PN, typename Mark, typename TimeStrategy=KahanTime>
-class State : public TimeStrategy
+class GSPNState : public TimeStrategy
 {
 public:
   typedef Mark Marking;
