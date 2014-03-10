@@ -1,5 +1,5 @@
-#ifndef _EMBEDDED_MARKOV_H_
-#define _EMBEDDED_MARKOV_H_ 1
+#ifndef _PARTIAL_CORE_MATRIX_H_
+#define _PARTIAL_CORE_MATRIX_H_ 1
 
 #include <memory>
 #include <map>
@@ -11,7 +11,7 @@ namespace smv
 {
 
 template<typename Graph, typename Transitions, typename State, typename RNG>
-class EmbeddedMarkov
+class PartialCoreMatrix
 {
   Graph& _graph;
   Transitions& _transitions;
@@ -22,7 +22,7 @@ class EmbeddedMarkov
 
 public:
   typedef Graph PetriNet;
-  EmbeddedMarkov(Graph& g, Transitions& transitions, State& s)
+  PartialCoreMatrix(Graph& g, Transitions& transitions, State& s)
   : _graph(g), _transitions(transitions), _state(s)
   {}
 
@@ -102,4 +102,4 @@ public:
 } // smv
 } // afidd
 
-#endif // _EMBEDDED_MARKOV_H_
+#endif // _PARTIAL_CORE_MATRIX_H_

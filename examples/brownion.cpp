@@ -10,7 +10,7 @@
 #include "boost/property_map/property_map.hpp"
 #include "boost/mpl/vector.hpp"
 #include "brownion_model.h"
-#include "embedded_markov.h"
+#include "partial_core_matrix.h"
 #include "continuous_dynamics.h"
 #include "logging.h"
 
@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
   Transitions transitions;
   BrownionState state;
 
-  using Markov=EmbeddedMarkov<BrownionGraph,Transitions,BrownionState,RandGen>;
+  using Markov=PartialCoreMatrix<BrownionGraph,Transitions,BrownionState,RandGen>;
   Markov system(graph, transitions, state);
 
   auto input_string=[](BrownionState& state)->void {

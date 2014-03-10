@@ -20,7 +20,7 @@
 #include "distributions.h"
 #include "continuous_state.h"
 #include "explicit_transitions.h"
-#include "embedded_markov.h"
+#include "partial_core_matrix.h"
 #include "continuous_dynamics.h"
 #include "logging.h"
 
@@ -260,7 +260,7 @@ int main(int argc, char *argv[])
     add<0>(state.marking, 3*individual, IndividualToken{});
   }
 
-  using Markov=EmbeddedMarkov<PG, SIRTransitions, SIRState, RandGen>;
+  using Markov=PartialCoreMatrix<PG, SIRTransitions, SIRState, RandGen>;
   Markov system(graph, transitions, state);
 
   BOOST_LOG_TRIVIAL(debug) << state.marking;

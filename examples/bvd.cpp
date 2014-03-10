@@ -17,7 +17,7 @@
 #include "distributions.h"
 #include "continuous_state.h"
 #include "explicit_transitions.h"
-#include "embedded_markov.h"
+#include "partial_core_matrix.h"
 #include "continuous_dynamics.h"
 #include "cow_token.h"
 
@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
   auto transitions=std::get<1>(std::move(res));
 
 
-  EmbeddedMarkov<PN,CowTransitions,CowState,CowGen>
+  PartialCoreMatrix<PN,CowTransitions,CowState,CowGen>
       system(graph, transitions, state);
   auto token=[](CowState&) { };
   auto next=delta(system, token, rng);
