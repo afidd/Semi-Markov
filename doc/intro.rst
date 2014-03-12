@@ -9,11 +9,10 @@ clear specification for, and efficient computation of, these systems.
 
 A Generalized Stochastic Petri Net (GSPN) is a formal way to specify a
 a system of interacting, competing processes. We think of the system
-as having mutually-exclusive sub-states which, together, determine the
+as having mutually-exclusive sub-states which together determine the
 whole state. Like checkers on a game board, the state of this system
 is determined by *tokens* located at *places.* The location of all the
 tokens together is called the *marking.*
-
 Each independent process is competing to move tokens from one place
 to another, which changes the system state and may enable or disable
 other processes.
