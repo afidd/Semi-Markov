@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Semi-Markov's documentation!
+AFIDD: Semi-Markov
 =======================================
 
 Contents:
@@ -12,7 +12,12 @@ Contents:
    :maxdepth: 2
 
    intro
+   install
+   mathematics
    concepts
+   explicit
+   gspntrajectory
+   distributions
 
 
 Indices and tables

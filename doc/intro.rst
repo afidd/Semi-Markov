@@ -7,6 +7,8 @@ continuous time. It represents these processes as Generalized
 Stochastic Petri Nets (GSPN). The goal of this library is to create a 
 clear specification for, and efficient computation of, these systems.
 
+
+
 Dairy Herd Example
 -------------------
 
