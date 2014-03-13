@@ -29,7 +29,6 @@ namespace smv
 
   struct PetriGraphProperty
   {
-    ;
   };
 
   typedef boost::adjacency_list<

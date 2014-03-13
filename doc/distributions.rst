@@ -71,3 +71,5 @@ infant mortality or aging processes.
 
 This transformation accounts for the time shifting.
 
+**GammaDistribution** This uses the Boost::Math::gamma_distribution.
+It has two parameters, shape and scale.

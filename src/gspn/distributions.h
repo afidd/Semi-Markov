@@ -3,6 +3,7 @@
 
 #include <tuple>
 #include <limits>
+#include "boost/math/distributions/gamma.hpp"
 #include "stochnet.h"
 #include "gspn_random.h"
 
@@ -90,32 +91,39 @@ public:
 
 
 
+
 template<typename RNG>
 class GammaDistribution : public TransitionDistribution<RNG>
 {
-  using ParamType=std::tuple<double,double>;
-  ParamType _params;
+  using Params=std::tuple<double,double>;
+  Params _params;
 public:
-  GammaDistribution(double alpha, double beta) : _params{alpha, beta} {}
+  GammaDistribution(double alpha, double beta)
+  : _params{alpha, beta}
+  {
+  }
+
 
   virtual double sample(double enabling_time, double current_time,
       RNG& rng) const
   {
-    double a=std::get<0>(_params);
-    double b=std::get<1>(_params);
     double d=current_time-enabling_time;
     double U=uniform(rng);
+    auto dist=boost::math::gamma_distribution<double>(
+      std::get<0>(_params), std::get<1>(_params));
 
     if (d>0)
     {
-      return 0;
+      return boost::math::quantile(dist, U);
     }
     else
     {
-      return 0;
+      auto cumulative=boost::math::cdf(dist, d);
+      return boost::math::quantile(dist, U*(1-cumulative) + cumulative) - d;
     }
   };
 };
+
 
 } // smv
 } // afidd
