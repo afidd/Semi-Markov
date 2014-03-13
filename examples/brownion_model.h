@@ -131,6 +131,7 @@ using BrownionState=smv::GSPNState<BrownionGraph,Mark>;
 
 using Dist=smv::TransitionDistribution<RandGen>;
 using ExpDist=smv::ExponentialDistribution<RandGen>;
+using Weibull=smv::WeibullDistribution<RandGen>;
 using NoDist=smv::NoDistribution<RandGen>;
 
 
@@ -172,7 +173,14 @@ enabled(const BrownionGSPN& et, TransitionType trans_id,
   {
     // This is where we choose the distributions for the two
     // Brownion states.
-    return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0))};
+    if (trans_id.from.state==0)
+    {
+      return {true, std::unique_ptr<Weibull>(new Weibull(1.0,1.0))};
+    }
+    else
+    {
+      return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0))};
+    }
   }
   else
   {

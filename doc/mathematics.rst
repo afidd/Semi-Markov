@@ -144,7 +144,7 @@ right after the firing of any transition, is
 
 .. math::
 
-   p_{nm}(\tau)=\frac{f_\alpha(\tau,t_0,t_e)}{1-F_\alpha(\tau,t_0,t_e)}\prod_\beta\int_{t_0}^∞ 1-F_\beta(s, t_0, t_e)ds
+   p_{nm}(\tau)=\frac{f_\alpha(\tau,t_0,t_e)}{1-F_\alpha(\tau,t_0,t_e)}\prod_\beta(1-F_\beta(s, t_0, t_e))
 
 Here :math:`(n,m)` label states determined by how each transition, :math:`\alpha`
 changes the marking. The system has, inherently, a core matrix, but we

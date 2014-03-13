@@ -16,9 +16,18 @@ first becomes enabled by the marking, it chooses the distribution
 of firing times. At any later time when a different, independent,
 transition has fired without affecting the first, the first's
 distribution doesn't change. It just gets renormalized to account
-for knowledge that it has not yet fired. This renormalization
-is apparently less common, because it is not in the API of
-Boost::Random or std::random.
+for knowledge that it has not yet fired. If we label the 
+cumulative distribution by :math:`F(t)` and a distribution is shifted
+by a time :math:`\Delta=t_0-t_e`, then the new distribution is
+sampled with a shifted quantile,
+
+.. math::
+
+  t-t_0=Q(U,\Delta)=F^{-1}(U(1-F(\Delta))+F(\Delta))-\Delta.
+
+Given any distributions from Boost::Random or std::random, this
+formula calculates the shifted quantile from the original quantile
+and cumulative distribution.
 
 Transitions for this library implement the following interface.::
 
@@ -38,15 +47,27 @@ The following distributions are currently in the library.
 **NoDistribution**
 This has no parameters and always returns infinity.
 
-**ExponentialDistribution** This is the classic Markovian distribution.
-
-**BoostDistribution** This takes any Boost distribution and converts it
-to account for the renormalization of a time shift.
+**ExponentialDistribution** The `exponential distribution <http://en.wikipedia.org/wiki/Exponential_distribution>`_
+is the classic Markovian distribution.
 
 .. math::
 
-   quantile(distribution, 1-(1-rand(rng))/normal)
-   *(1-cdf(distribution, t_c-t_e))-(t_c-t_e)
+  F(x) = 1-e^{-λx}
+
+  Q(x) = -(1/\lambda)\ln(1-x)
+
+  Q(x,\Delta)=Q(x)
+
+**WeibullDistribution** `Weibull distributions <http://en.wikipedia.org/wiki/Weibull_distribution>`_ can model either
+infant mortality or aging processes.
+
+.. math::
+
+  F(x)=1-e^{-\left(x/\lambda\right)^k}
+
+  Q(p; k,\lambda)=\lambda\left[-\ln(1-p)\right]^{1/k}
+
+  Q(p,\Delta; k,\lambda)=\lambda\left[-\ln(1-p)+\left(\Delta/\lambda\right)^k\right]^{1/k}-\Delta
 
 This transformation accounts for the time shifting.
 
