@@ -5,10 +5,11 @@
 #include "marking.h"
 #include "distributions.h"
 
-using RandGen=boost::random::mt19937;
 
 namespace smv=afidd::smv;
 using namespace smv;
+
+using RandGen=smv::BoostGenerator<boost::random::mt19937>;
 
 
 // This helps make a correct less than operator for places and transitions.

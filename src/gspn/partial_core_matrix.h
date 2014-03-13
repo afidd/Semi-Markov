@@ -84,7 +84,7 @@ public:
   }
 
 
-  void fire(trans_t<GSPN> trans_id, double when, RNG rng)
+  void fire(trans_t<GSPN> trans_id, double when, RNG& rng)
   {
     auto neighboring_places=neighbors_of_transition(_gspn, trans_id);
     LocalMarking<Marking> lm(_state.marking, neighboring_places);

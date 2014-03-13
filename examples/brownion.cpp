@@ -22,10 +22,10 @@ namespace smv=afidd::smv;
 int main(int argc, char *argv[])
 {
   size_t iteration_cnt=100;
-  size_t random_seed=1;
+  unsigned int random_seed=1U;
   afidd::log_init("debug");
 
-  RandGen rng(random_seed);
+  RandGen rng(RandGen::type{random_seed});
   BrownionGSPN gspn;
   BrownionState state;
 
