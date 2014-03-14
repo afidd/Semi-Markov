@@ -2,6 +2,7 @@
 #define _GSPN_RANDOM_H_ 1
 
 #include <random>
+#include <mutex>
 #include "boost/random/uniform_01.hpp"
 #include "boost/random/uniform_int_distribution.hpp"
 
@@ -80,6 +81,52 @@ struct RngToUniform<IndexType,StandardGenerator<RNG>>
 
 } // end namespace detail
 	
+
+
+
+template<typename RandGen>
+class ParallelCacheGeneratorSource
+{
+  RandGen _gen;
+  std::mutex _one_reader;
+
+ public:
+  typedef unsigned long result_type;
+  void write(std::vector<result_type>& cache)
+  {
+    auto guard=std::lock_guard<std::mutex>(_one_reader);
+    for (auto& val : cache)
+    {
+      val=_gen();
+    }
+  }
+};
+
+
+
+
+template<typename RandGen>
+class ParallelCacheGenerator
+{
+  RandGen& _gen;
+  using result_type=typename RandGen::result_type;
+  std::vector<result_type> _cache;
+  typename std::vector<result_type>::const_iterator _cur;
+
+ public:
+ ParallelCacheGenerator(RandGen& gen, size_t capacity=1000)
+   : _gen(gen), _cache(capacity), _cur(_cache.begin()) {}
+  result_type operator()() {
+    if (_cur==_cache.end())
+      {
+	_gen.write(_cache);
+	_cur=_cache.begin();
+      }
+    auto res=*_cur;
+    ++_cur;
+    return res;
+  }
+};
 
 
 

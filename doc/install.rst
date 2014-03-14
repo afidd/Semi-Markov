@@ -13,6 +13,10 @@ Requirements:
 * Make. The configure script and Makefile were created with autoconnf
   and automake.
 
+* The random number generation can use std::random, Boost::random,
+  or RNGSSELIB or PRAND from the `Computer Physics Communications Program Library of ScienceDirect <http://cpc.cs.qub.ac.uk/overview.html>`_.
+  RNGSSELIB uses SSE instructions and more modern generators. PRAND
+  augments this capability with GPU generation of random numbers.
 
 Installation:
 
