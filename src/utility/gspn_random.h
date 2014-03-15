@@ -18,60 +18,18 @@ namespace smv
 {
 
 
-namespace detail
-{
-/*
-template<typename IndexType, typename RNG>
-struct RngToUniform
-{
-  RNG& _rng;
-  RngToUniform(RNG& rng) : _rng(rng) {}
-  IndexType operator()(IndexType cnt)
-  {
-    return _rng()%cnt;
-  }
-};
-
-
-template<typename IndexType, typename RNG>
-struct RngToUniform<IndexType,BoostGenerator<RNG>>
-{
-  RNG& _rng;
-  RngToUniform(BoostGenerator<RNG>& rng) : _rng(rng.rng) {}
-  IndexType operator()(IndexType cnt)
-  {
-    boost::random::uniform_int_distribution<IndexType> gen_idx(0, cnt-1);
-    return gen_idx(_rng);
-  }
-};
-
-
-
-template<typename IndexType, typename RNG>
-struct RngToUniform<IndexType,StandardGenerator<RNG>>
-{
-  RNG& _rng;
-  RngToUniform(StandardGenerator<RNG>& rng) : _rng(rng.rng) {}
-  IndexType operator()(IndexType cnt)
-  {
-    std::uniform_int_distribution<IndexType> gen_idx(0, cnt-1);
-    return gen_idx(_rng);
-  }
-};
-*/
-} // end namespace detail
-	
 
 /*! Random number generator gets a list of numbers from another generator.
  *  This is a safe, simple way to get parallel random numbers. Use
  *  a single generator to make them.
  *  The template argument is a ProviderGenerator.
+ *  The user doesn't make one of these. They come from the ProviderGenerator.
  */
 template<typename ProviderGenerator>
 class SlurpGenerator
 {
  public:
-  typedef unsigned long result_type;
+  typedef typename ProviderGenerator::result_type result_type;
 
  private:
   ProviderGenerator& _provider;
@@ -81,7 +39,8 @@ class SlurpGenerator
 
  public:
   SlurpGenerator(ProviderGenerator& gen, size_t idx, size_t capacity=1000)
-  : _provider(gen), _idx{idx}, _cache(capacity), _cur(_cache.begin()) {}
+  : _provider(gen), _idx{idx}, _cache(capacity), _cur(_cache.end())
+  {}
 
   result_type min() { return _provider.min(); }
   result_type max() { return _provider.max(); }
@@ -127,6 +86,7 @@ template<typename RandGen>
 class ProviderGenerator
 {
 public:
+  typedef RandGen base_generator;
   typedef typename RandGen::result_type result_type;
   typedef SlurpGenerator<ProviderGenerator> value_type;
 private:
@@ -137,8 +97,8 @@ private:
   size_t _sub_capacity;
   size_t _too_many;
 
- public:
- ProviderGenerator(RandGen& gen, size_t capacity=1000,
+public:
+ ProviderGenerator(base_generator& gen, size_t capacity=1000,
     size_t too_many_generators=100)
   : _gen(gen), _sub_capacity(capacity), _too_many(too_many_generators)
  {
@@ -214,17 +174,6 @@ size_t uniform_index(RNG& rng, size_t cnt)
 }
 
 
-/*
-
-template<typename RandomAccessIterator, typename RNG>
-void random_shuffle(RandomAccessIterator first, RandomAccessIterator last,
-    RNG& rng)
-{
-  using Index=
-    typename std::iterator_traits<RandomAccessIterator>::difference_type;
-  detail::RngToUniform<Index,RNG> shuffle_gen(rng);
-  std::random_shuffle(first, last, shuffle_gen);
-} */
 
 } // end namespace smv
 } // end namespace afidd

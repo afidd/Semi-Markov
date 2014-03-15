@@ -9,7 +9,7 @@
 namespace smv=afidd::smv;
 using namespace smv;
 
-using RandGen=boost::random::mt19937;
+using RandGen=ProviderGenerator<boost::random::mt19937>;
 
 
 // This helps make a correct less than operator for places and transitions.
