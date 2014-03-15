@@ -119,8 +119,8 @@ herd(size_t initial_cnt, size_t total_cnt)
   vprop.color=PetriGraphColor::Transition;
 
   auto et=CowTransitions(g);
-  et.transitions.emplace(17, std::unique_ptr<CowTransition>(
-      new InfectNeighbor(17)));
+  et.transitions.emplace(17, std::move(std::unique_ptr<CowTransition>(
+      new InfectNeighbor(17))));
 
   return std::move(et);
 }

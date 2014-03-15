@@ -12,7 +12,7 @@ AC_CONFIG_HEADERS([config.h])
 # Checks for programs.
 AC_PROG_CXX([clang++ g++])
 AC_CONFIG_FILES([Makefile])
-AC_PROG_LIBTOOL
+#AC_PROG_LIBTOOL
 
 # Boost libraries can end in -mt, bare, or other endings.
 FLAVOR=-mt

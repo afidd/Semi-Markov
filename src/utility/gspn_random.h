@@ -94,7 +94,7 @@ class ParallelCacheGeneratorSource
   typedef unsigned long result_type;
   void write(std::vector<result_type>& cache)
   {
-    auto guard=std::lock_guard<std::mutex>(_one_reader);
+    std::lock_guard<std::mutex> guard{_one_reader};
     for (auto& val : cache)
     {
       val=_gen();

@@ -54,6 +54,23 @@ public:
   typedef Random RNG;
   typedef trans_t<PetriGraph> TransId;
   ExplicitTransitions(PetriGraph& graph) : graph(std::move(graph)) {}
+  ExplicitTransitions(const ExplicitTransitions&)=delete;
+  ExplicitTransitions& operator=(const ExplicitTransitions&)=delete;
+  ExplicitTransitions(ExplicitTransitions&& other)
+  {
+    transitions=std::move(other.transitions);
+    graph=std::move(other.graph);
+  }
+  ExplicitTransitions& operator=(ExplicitTransitions&& other)
+  {
+    if (this!=other)
+    {
+      transitions=std::move(other.transitions);
+      graph=std::move(other.graph);
+    }
+  }
+
+  ~ExplicitTransitions() {}
 
   std::map<trans_t<PetriGraph>,
       std::unique_ptr<ExplicitTransition<LocalMarking,State,RNG>>>
