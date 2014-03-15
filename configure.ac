@@ -15,7 +15,7 @@ AC_CONFIG_FILES([Makefile])
 #AC_PROG_LIBTOOL
 
 # Boost libraries can end in -mt, bare, or other endings.
-FLAVOR=-mt
+FLAVOR=
 AC_CHECK_LIB([pthread], [exit])
 AC_CHECK_LIB([boost_system${FLAVOR}], [exit])
 AC_CHECK_LIB([boost_random${FLAVOR}], [exit])

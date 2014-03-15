@@ -25,7 +25,7 @@
 namespace smv=afidd::smv;
 using namespace afidd::smv;
 
-using CowGen=smv::BoostGenerator<boost::random::mt19937>;
+using CowGen=boost::random::mt19937;
 
 
 
@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
   assert(length<1>(m, params_place_id)==1);
   assert(length<0>(m, 27, 13)==0);
 
-  CowGen rng(CowGen::type{1});
+  CowGen rng{1};
 
   CowState state;
   auto gspn=herd<PN,LocalMarking<Mark>,CowState>(100, 10);

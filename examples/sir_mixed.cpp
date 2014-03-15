@@ -26,7 +26,7 @@
 
 namespace smv=afidd::smv;
 using namespace smv;
-using RandGen=smv::StandardGenerator<std::mt19937_64>;
+using RandGen=std::mt19937_64;
 
 
 
@@ -249,7 +249,7 @@ int main(int argc, char *argv[])
   params[beta]=1.0;
   params[gamma]=0.5;
 
-  RandGen rng(RandGen::type(1));
+  RandGen rng(1);
 
   auto gspn=build_system(individual_cnt);
 

@@ -231,11 +231,11 @@ struct CopyTokens
     // Optional shuffling of arrays.
     if (ins.size()>outs.size())
     {
-      afidd::smv::random_shuffle(ins.begin(), ins.end(), rng);
+      std::shuffle(ins.begin(), ins.end(), rng);
     }
     else
     {
-      afidd::smv::random_shuffle(outs.begin(), outs.end(), rng);
+      std::shuffle(outs.begin(), outs.end(), rng);
     }
 
 
@@ -704,11 +704,11 @@ public:
     // Optional shuffling of arrays.
     if (ins.size()>outs.size())
     {
-      afidd::smv::random_shuffle(ins.begin(), ins.end(), rng);
+      std::shuffle(ins.begin(), ins.end(), rng);
     }
     else
     {
-      afidd::smv::random_shuffle(outs.begin(), outs.end(), rng);
+      std::shuffle(outs.begin(), outs.end(), rng);
     }
 
 

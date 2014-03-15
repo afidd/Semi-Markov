@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
   unsigned int random_seed=1U;
   afidd::log_init("debug");
 
-  RandGen rng(RandGen::type{random_seed});
+  RandGen rng{random_seed};
   BrownionGSPN gspn;
   BrownionState state;
 
