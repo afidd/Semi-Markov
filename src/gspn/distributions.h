@@ -38,17 +38,22 @@ public:
 template<typename RNG>
 class ExponentialDistribution : public TransitionDistribution<RNG>
 {
-  using ParamType=std::tuple<double>;
+  using ParamType=std::tuple<double, double>;
   ParamType _params;
 
 public:
-  ExponentialDistribution(double lambda)
-  : _params(lambda) {}
+  ExponentialDistribution(double lambda, double normal=1.0)
+  : _params(lambda, normal) {}
 
   virtual double sample(double enabling_time,
       double current_time, RNG& rng) const
   {
-    return -std::get<0>(_params)*std::log(uniform(rng));
+    auto U=uniform(rng)/std::get<1>(_params);
+    if (U>=1)
+    {
+      return std::numeric_limits<double>::infinity();
+    }
+    return -std::get<0>(_params)*std::log(U);
   }
 
   double sample_vector(
@@ -66,10 +71,11 @@ public:
 template<typename RNG>
 class WeibullDistribution : public TransitionDistribution<RNG>
 {
-  using ParamType=std::tuple<double,double>;
+  using ParamType=std::tuple<double,double,double>;
   ParamType _params;
 public:
-  WeibullDistribution(double lambda, double k) : _params{lambda, k} {}
+  WeibullDistribution(double lambda, double k, double normal=1.0)
+  : _params{lambda, k, normal} {}
 
   virtual double sample(double enabling_time, double current_time,
       RNG& rng) const
@@ -77,7 +83,11 @@ public:
     double l=std::get<0>(_params);
     double k=std::get<1>(_params);
     double d=current_time-enabling_time;
-    double U=uniform(rng);
+    double U=uniform(rng)/std::get<2>(_params);
+    if (U>=1)
+    {
+      return std::numeric_limits<double>::infinity();
+    }
 
     if (d>0)
     {
@@ -96,11 +106,11 @@ public:
 template<typename RNG>
 class GammaDistribution : public TransitionDistribution<RNG>
 {
-  using Params=std::tuple<double,double>;
+  using Params=std::tuple<double,double,double>;
   Params _params;
 public:
-  GammaDistribution(double alpha, double beta)
-  : _params{alpha, beta}
+  GammaDistribution(double alpha, double beta, double normal=1.0)
+  : _params{alpha, beta, normal}
   {
   }
 
@@ -109,9 +119,13 @@ public:
       RNG& rng) const
   {
     double d=current_time-enabling_time;
-    double U=uniform(rng);
+    double U=uniform(rng)/std::get<2>(_params);
     auto dist=boost::math::gamma_distribution<double>(
       std::get<0>(_params), std::get<1>(_params));
+    if (U>=1)
+    {
+      return std::numeric_limits<double>::infinity();
+    }
 
     if (d>0)
     {
@@ -136,15 +150,15 @@ public:
 template<typename RNG>
 class PiecewiseLinearDistribution : public TransitionDistribution<RNG>
 {
-  using Params=std::tuple<std::vector<double>,std::vector<double>>;
+  using Params=std::tuple<std::vector<double>,std::vector<double>,double>;
   Params _params;
 
   std::vector<double> _partial_sum;
 
 public:
   PiecewiseLinearDistribution(const std::vector<double>& b,
-    const std::vector<double>& w)
-  : _params{b,w}, _partial_sum(b.size())
+    const std::vector<double>& w, double normal=1.0)
+  : _params{b, w, normal}, _partial_sum(b.size())
   {
     assert(b.size()>1);
     assert(b.size()==w.size());
@@ -168,7 +182,7 @@ public:
     const auto& w=std::get<1>(_params);
 
     double from_time=current_time-enabling_time;
-    double U=uniform(rng);
+    double U=uniform(rng)/std::get<2>(_params);
 
     // What is the first b not less than current time? Store as b_{i+1}.
     double S=1.0;
