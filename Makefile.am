@@ -3,9 +3,9 @@ SEMIMARKOV_LIBRARY_VERSION=0:1:0
 ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS}
 AUTOMAKE_OPTIONS = foreign
 
-AM_LDFLAGS = $(BOOST_LDFLAGS) $(BOOST_PROGRAM_OPTIONS_LIB)
+AM_LDFLAGS = $(BOOST_LDFLAGS)
 
-AM_CPPFLAGS = -std=c++11 -Isrc -Isrc/continuous -Isrc/gspn -Isrc/utility
+AM_CPPFLAGS = -std=c++11 -Isrc -Isrc/continuous -Isrc/gspn -Isrc/utility $(BOOST_CPPFLAGS)
 
 bin_PROGRAMS = bvd sirmixed brownion
 

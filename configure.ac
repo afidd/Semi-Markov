@@ -45,7 +45,7 @@ AC_CHECK_LIB([boost_filesystem${FLAVOR}], [exit])
 AC_CHECK_LIB([boost_date_time${FLAVOR}], [exit])
 AC_CHECK_LIB([boost_log${FLAVOR}], [exit])
 AC_CHECK_LIB([boost_log_setup${FLAVOR}], [exit])
-LDFLAGS=LDFLAGS_SAVE
+LDFLAGS=$LDFLAGS_SAVE
 
 # Checks for header files.
 
