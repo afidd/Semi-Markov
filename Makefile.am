@@ -7,13 +7,12 @@ AM_LDFLAGS = $(BOOST_LDFLAGS) $(BOOST_PROGRAM_OPTIONS_LIB)
 
 AM_CPPFLAGS = -std=c++11 -Isrc -Isrc/continuous -Isrc/gspn -Isrc/utility
 
-#lib_LTLIBRARIES = semimarkov-0.1
-#semimarkov_0_1_includedir = $(includedir)/semimarkov-0.1
-#semimarkov_0_1_SOURCES =
-#semimarkov_0_1_include_HEADERS = src/stochnet.h src/continuous/continuous_dynamics.h src/continuous/continuous_state.h src/continuous/marking.h src/gspn/distributions.h src/gspn/explicit_transitions.h src/gspn/petri_graph.h src/gspn/partial_core_matrix.h src/gspn/gspn.h src/utility/gspn_random.h src/utility/logging.h
+bin_PROGRAMS = bvd sirmixed brownion
+
+semimarkov_0_1_includedir = $(includedir)/semimarkov-0.1
+semimarkov_0_1_include_HEADERS = src/stochnet.h src/continuous/continuous_dynamics.h src/continuous/continuous_state.h src/continuous/marking.h src/gspn/distributions.h src/gspn/explicit_transitions.h src/gspn/petri_graph.h src/gspn/partial_core_matrix.h src/gspn/gspn.h src/utility/gspn_random.h src/utility/logging.h
 #semimarkov_0_1_LDFLAGS = -version-info $(SEMIMARKOV_LIBRARY_VERSION)
 
-bin_PROGRAMS = bvd sirmixed brownion
 
 bvd_SOURCES = examples/bvd.cpp examples/cow_token.h src/stochnet.h src/continuous/continuous_dynamics.h src/continuous/continuous_state.h src/continuous/marking.h src/gspn/distributions.h src/gspn/explicit_transitions.h src/gspn/petri_graph.h src/gspn/partial_core_matrix.h src/gspn/gspn.h src/utility/gspn_random.h src/utility/logging.h
 
