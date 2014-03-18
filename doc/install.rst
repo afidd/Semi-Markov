@@ -22,7 +22,12 @@ Installation:
 
 #. Run "./configure --prefix=$HOME". Change the compiler or flags using
    environmental variables, CC, CFLAGS, and LDFLAGS before
-   running configure.
+   running configure. The only real option is specification of the 
+   location of Boost and the variant to link. If Boost libraries are in
+   /usr/local/lib/libboost and headers are in /usr/local/include/boost/,
+   then specify "./configure --with-boost=/usr/local". Boost has library
+   variants. If your libraries look like "libboost_system-mt.so", then
+   use "./configure --enable-variant=-mt".
 
 #. Run "make". This makes examples only.
 
