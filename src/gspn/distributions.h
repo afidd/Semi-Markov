@@ -188,7 +188,7 @@ public:
     double S=1.0;
     double within_integral=0.0;
     auto ip1_iter=std::lower_bound(b.begin(), b.end(), from_time);
-    typename decltype(ip1_iter)::size_type p0;
+    typename std::iterator_traits<decltype(ip1_iter)>::difference_type p0;
     if (ip1_iter==b.begin())
     {
       // time is before start of piecewise. Return the whole.
