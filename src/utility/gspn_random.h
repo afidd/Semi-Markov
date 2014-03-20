@@ -3,6 +3,7 @@
 
 #include <random>
 #include <mutex>
+#include <set>
 #include "boost/random/uniform_01.hpp"
 #include "boost/random/uniform_int_distribution.hpp"
 

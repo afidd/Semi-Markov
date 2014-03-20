@@ -34,8 +34,9 @@ namespace detail
     {
       BOOST_LOG_TRIVIAL(info) << "Fractional error of "<<m<< " too large. "
         "Expected "<< a << " found "<<b;
+        return false;
     }
-    return false;
+    return true;
   }
 }
 
@@ -77,7 +78,7 @@ public:
     {
       return std::numeric_limits<double>::infinity();
     }
-    return -std::get<0>(_params)*std::log(U);
+    return -std::log(U)/std::get<0>(_params);
   }
 
   double sample_vector(
