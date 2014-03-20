@@ -22,7 +22,7 @@ AC_ARG_ENABLE([variant],
   [AS_HELP_STRING([--enable-variant],
     [Build with the boost library that ends in -mt])],
   [boost_variant="$enableval"],
-  [boost_variant="yes"])
+  [boost_variant=""])
 
 
 AC_ARG_ENABLE([prand],

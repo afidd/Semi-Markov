@@ -4,6 +4,11 @@
 #include <tuple>
 #include <limits>
 #include "boost/math/distributions/gamma.hpp"
+#include "boost/accumulators/accumulators.hpp"
+#include "boost/accumulators/statistics/stats.hpp"
+#include "boost/accumulators/statistics/mean.hpp"
+#include "boost/accumulators/statistics/moment.hpp"
+#include "boost/accumulators/statistics/variance.hpp"
 #include "logging.h"
 #include "stochnet.h"
 #include "gspn_random.h"
@@ -14,6 +19,25 @@ namespace afidd
 namespace smv
 {
 
+namespace bac=boost::accumulators;
+
+namespace detail
+{
+  double frac_error(double a, double b)
+  {
+    return std::abs((a-b)/a);
+  }
+
+  bool check_frac_error(double a, double b, double tol, const std::string& m)
+  {
+    if (detail::frac_error(a, b)>tol)
+    {
+      BOOST_LOG_TRIVIAL(info) << "Fractional error of "<<m<< " too large. "
+        "Expected "<< a << " found "<<b;
+    }
+    return false;
+  }
+}
 
 
 template<typename RNG>
@@ -64,6 +88,39 @@ public:
 
   }
 
+  /*! Check whether generated samples fit expectations.
+   *  dt is the difference between enabling_time and current_time,
+   *  assumed constant for all samples.
+   */
+  bool check_samples(const std::vector<double>& samples, double dt)
+  {
+    bool pass=true;
+    bac::accumulator_set<double, bac::stats<bac::tag::mean,
+        bac::tag::moment<2>, bac::tag::moment<3>,
+        bac::tag::variance(bac::lazy)>> acc;
+    for (auto s : samples)
+    {
+      acc(s);
+    }
+
+    double lambda_estimator=1/bac::mean(acc);
+    double lambda=std::get<0>(_params);
+    auto too_low=lambda < lambda_estimator*(1-1.96/std::sqrt(samples.size()));
+    auto too_high=lambda > lambda_estimator*(1+1.96/std::sqrt(samples.size()));
+    if (too_low || too_high)
+    {
+      BOOST_LOG_TRIVIAL(info)<<"Parameter not in bounds. Low? "<<
+        too_low << " high? " << too_high;
+        pass=false;
+    }
+
+    double variance=bac::variance(acc);
+    // An estimator for the variance?
+    pass=detail::check_frac_error(variance, std::pow(lambda, -2), 0.01,
+      "variance");
+    return pass;
+  }
+
 };
 
 
@@ -97,7 +154,91 @@ public:
     {
       return l*std::pow(-std::log(1-U), 1/k);
     }
-  };
+  }
+
+
+
+  /*! Check estimators to see if the distribution is correct.
+   *  \lambda^k = \frac{1}{N}\sum_{i=1}^N(x_i^k-x_N^k)
+   *  where x_N is the largest observed sample.
+   *  From wikipedia. Yup.
+   */
+  bool check_samples(const std::vector<double>& samples, double dt)
+  {
+    bool pass=true;
+    double l=std::get<0>(_params);
+    double k=std::get<1>(_params);
+
+
+    bac::accumulator_set<double, bac::stats<bac::tag::mean,
+        bac::tag::moment<2>, bac::tag::moment<3>,
+        bac::tag::variance(bac::lazy)>> acc;
+    for (auto st : samples)
+    {
+      acc(st);
+    }
+
+    if (std::abs(dt-0)<0.0000001)
+    {
+      double expected_mean=l*std::tgamma(1+1/k);
+      double mean=bac::mean(acc);
+      if (detail::frac_error(expected_mean, mean)>0.01)
+      {
+        pass=false;
+        BOOST_LOG_TRIVIAL(info)<<"Expected mean " << expected_mean
+          << " but found "<< mean;
+      }
+
+      double expected_variance=l*l*(
+        std::tgamma(1+2/k)-std::pow(std::tgamma(1+1/k), 2)
+        );
+      double variance=bac::variance(acc);
+      if (detail::frac_error(expected_variance, variance)>0.01)
+      {
+        pass=false;
+        BOOST_LOG_TRIVIAL(info)<<"Expected variance " << expected_variance
+          << " but found "<< variance;
+      }
+
+      double max=*std::max_element(samples.begin(), samples.end());
+      double maxk=std::pow(max, k);
+
+      double total=0.0;
+      for (auto s : samples)
+      {
+        total+=std::pow(s, k);
+      }
+      double l_estimator=std::pow(total/samples.size() - maxk, 1/k);
+
+      if (detail::frac_error(l, l_estimator) > 0.01)
+      {
+        pass=false;
+        BOOST_LOG_TRIVIAL(info)<<"Expected lambda " << l
+          << " but found "<<l_estimator;
+      }
+
+      double numerator=0.0;
+      double denominator=0.0;
+      double logsum=0.0;
+      for (auto t : samples)
+      {
+        numerator+=std::pow(t, k)*std::log(t) - maxk*std::log(max);
+        denominator+=std::pow(t, k)-maxk;
+        logsum+=std::log(t);
+      }
+      double k_est_inv=numerator/denominator - logsum/samples.size();
+      double k_est=1.0/k_est_inv;
+
+      if (detail::frac_error(k, k_est) > 0.01)
+      {
+        pass=false;
+        BOOST_LOG_TRIVIAL(info)<<"Expected k " << k
+          << " but found "<<k_est;
+      }
+    }
+
+    return pass;
+  }
 };
 
 
@@ -136,7 +277,50 @@ public:
       auto cumulative=boost::math::cdf(dist, d);
       return boost::math::quantile(dist, U*(1-cumulative) + cumulative) - d;
     }
-  };
+  }
+
+
+  bool check_samples(const std::vector<double>& samples, double dt)
+  {
+    bool pass=true;
+    double a=std::get<0>(_params);
+    double b=std::get<1>(_params);
+
+
+    bac::accumulator_set<double, bac::stats<bac::tag::mean,
+        bac::tag::moment<2>, bac::tag::moment<3>,
+        bac::tag::variance(bac::lazy)>> acc;
+    for (auto st : samples)
+    {
+      acc(st);
+    }
+
+    if (std::abs(dt-0)<0.0000001)
+    {
+      double expected_mean=a/b;
+      double expected_variance=a/(b*b);
+      double expected_skew=2/std::sqrt(a);
+      pass=detail::check_frac_error(
+          expected_mean, bac::mean(acc), 0.01, "mean");
+      pass=detail::check_frac_error(
+          expected_variance, bac::variance(acc), 0.01, "variance");
+      pass=detail::check_frac_error(
+          expected_skew, bac::moment<3>(acc), 0.01, "skew");
+    }
+
+    double b_est=a/bac::mean(acc);
+    pass=detail::check_frac_error(b, b_est, 0.01, "beta");
+
+    // Following wikipedia on Gamma distribution...
+    double slog=0.0;
+    for (auto sl : samples)
+    {
+      slog+=std::log(sl);
+    }
+    double s=std::log(bac::mean(acc))-slog/samples.size();
+    double a_est=(3-s+std::sqrt((s-3)*(s-3)+24*s))/(12*s);
+    pass=detail::check_frac_error(a, a_est, 0.03, "alpha");
+  }
 };
 
 
@@ -227,6 +411,23 @@ public:
       double t=b[j]+2*c/(w[j]+std::sqrt(w[j]*w[j]+2*m*c));
       return t;
     }
+  }
+
+
+  double cumulative_probability(double enabling_time, double current_time,
+    double x)
+  {
+    return 0.0;
+  }
+
+
+  bool check_samples(const std::vector<double>& samples, double dt)
+  {
+    bool pass=true;
+
+    // Try Kolmogorov-Smirnov test.
+
+    return pass;
   }
 };
 
