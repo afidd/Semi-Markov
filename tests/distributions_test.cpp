@@ -1,6 +1,9 @@
 #include <type_traits>
 #include <utility>
+#include <algorithm>
 #include <random>
+#include <sstream>
+#include <fstream>
 #define BOOST_TEST_DYN_LINK 1
 #define BOOST_TEST_MAIN
 #include <boost/test/unit_test.hpp>
@@ -46,9 +49,52 @@ BOOST_AUTO_TEST_CASE( weibull )
     {
       *it=dist1.sample(0.0, 0.0, rng);
     }
+
+    std::sort(vals.begin(), vals.end());
+
+    std::stringstream name;
+    name<<"weibull_"<<lambda<<".txt";
+    std::ofstream output(name.str());
+    size_t cnt=0;
+    output<<0.0<<" "<<0.0<<std::endl;
+    for (auto v : vals)
+    {
+      ++cnt;
+      output<<v<<" "<<cnt/((double)vals.size())<<std::endl;
+    }
     BOOST_CHECK(dist1.check_samples(vals, 0.0));
   }
+}
 
+
+
+BOOST_AUTO_TEST_CASE( gamma )
+{
+  afidd::log_init("debug");
+  RandGen rng(1);
+  for (auto lambda : std::vector<double>{1.0, 2.0, 10.0})
+  {
+    GammaDistribution<RandGen> dist1(lambda, 0.5);
+    std::vector<double> vals(1000000);
+    for (auto it=vals.begin(); it!=vals.end(); ++it)
+    {
+      *it=dist1.sample(0.0, 0.0, rng);
+    }
+
+    std::sort(vals.begin(), vals.end());
+
+    std::stringstream name;
+    name<<"gamma_"<<lambda<<".txt";
+    std::ofstream output(name.str());
+    size_t cnt=0;
+    output<<0.0<<" "<<0.0<<std::endl;
+    for (auto v : vals)
+    {
+      ++cnt;
+      output<<v<<" "<<cnt/((double)vals.size())<<std::endl;
+    }
+    BOOST_CHECK(dist1.check_samples(vals, 0.0));
+  }
 }
 
 

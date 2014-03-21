@@ -201,15 +201,15 @@ public:
           << " but found "<< variance;
       }
 
-      double max=*std::max_element(samples.begin(), samples.end());
-      double maxk=std::pow(max, k);
+      double min=*std::min_element(samples.begin(), samples.end());
+      double mink=std::pow(min, k);
 
       double total=0.0;
       for (auto s : samples)
       {
         total+=std::pow(s, k);
       }
-      double l_estimator=std::pow(total/samples.size() - maxk, 1/k);
+      double l_estimator=std::pow(total/samples.size() - mink, 1/k);
 
       if (detail::frac_error(l, l_estimator) > 0.01)
       {
@@ -223,19 +223,14 @@ public:
       double logsum=0.0;
       for (auto t : samples)
       {
-        numerator+=std::pow(t, k)*std::log(t) - maxk*std::log(max);
-        denominator+=std::pow(t, k)-maxk;
+        numerator+=std::pow(t, k)*std::log(t) - mink*std::log(min);
+        denominator+=std::pow(t, k)-mink;
         logsum+=std::log(t);
       }
       double k_est_inv=numerator/denominator - logsum/samples.size();
       double k_est=1.0/k_est_inv;
 
-      if (detail::frac_error(k, k_est) > 0.01)
-      {
-        pass=false;
-        BOOST_LOG_TRIVIAL(info)<<"Expected k " << k
-          << " but found "<<k_est;
-      }
+      pass=detail::check_frac_error(k, k_est, 0.01, "k");
     }
 
     return pass;
@@ -251,8 +246,8 @@ class GammaDistribution : public TransitionDistribution<RNG>
   using Params=std::tuple<double,double,double>;
   Params _params;
 public:
-  GammaDistribution(double alpha, double beta, double normal=1.0)
-  : _params{alpha, beta, normal}
+  GammaDistribution(double alpha, double theta, double normal=1.0)
+  : _params{alpha, theta, normal}
   {
   }
 
@@ -285,7 +280,7 @@ public:
   {
     bool pass=true;
     double a=std::get<0>(_params);
-    double b=std::get<1>(_params);
+    double th=std::get<1>(_params);
 
 
     bac::accumulator_set<double, bac::stats<bac::tag::mean,
@@ -298,8 +293,8 @@ public:
 
     if (std::abs(dt-0)<0.0000001)
     {
-      double expected_mean=a/b;
-      double expected_variance=a/(b*b);
+      double expected_mean=a*th;
+      double expected_variance=a*th*th;
       double expected_skew=2/std::sqrt(a);
       pass=detail::check_frac_error(
           expected_mean, bac::mean(acc), 0.01, "mean");
@@ -309,8 +304,8 @@ public:
           expected_skew, bac::moment<3>(acc), 0.01, "skew");
     }
 
-    double b_est=a/bac::mean(acc);
-    pass=detail::check_frac_error(b, b_est, 0.01, "beta");
+    double th_est=bac::mean(acc)/a;
+    pass=detail::check_frac_error(th, th_est, 0.01, "theta");
 
     // Following wikipedia on Gamma distribution...
     double slog=0.0;
@@ -321,6 +316,7 @@ public:
     double s=std::log(bac::mean(acc))-slog/samples.size();
     double a_est=(3-s+std::sqrt((s-3)*(s-3)+24*s))/(12*s);
     pass=detail::check_frac_error(a, a_est, 0.03, "alpha");
+    return pass;
   }
 };
 
