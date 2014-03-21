@@ -120,11 +120,12 @@ BOOST_AUTO_TEST_CASE( piecewiselinear )
   std::vector<double> b={0,   1,   2, 3, 3.2, 5};
   std::vector<double> w={0.2, 1, 0.5, 0,   0, 1};
 
+  double cutoff=2;
   PiecewiseLinearDistribution<RandGen> dist1(b, w, 0.0);
   std::vector<double> vals(10000);
   for (auto it=vals.begin(); it!=vals.end(); ++it)
   {
-    *it=dist1.sample(0.0, rng);
+    *it=dist1.sample(cutoff, rng);
   }
 
   std::sort(vals.begin(), vals.end());
@@ -134,7 +135,11 @@ BOOST_AUTO_TEST_CASE( piecewiselinear )
   std::piecewise_linear_distribution<double> pld(b.begin(), b.end(), w.begin());
   for (auto pt=vals.begin(); pt!=vals.end(); ++pt)
   {
-    *pt=pld(rng);
+    double possible;
+    for (possible=pld(rng); possible<cutoff; possible=pld(rng))
+    {
+    }
+    *pt=possible;
   }
   std::sort(vals.begin(), vals.end());
   tofile(vals, "stdpiece.txt");
