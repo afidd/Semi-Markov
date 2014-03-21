@@ -97,11 +97,11 @@ class InfectNeighbor : public SIRTransition
 {
 
   virtual std::pair<bool, std::unique_ptr<Dist>>
-  enabled(const SIRState& s, const LocalMarking<Mark>& lm) const override
+  enabled(const SIRState& s, const LocalMarking<Mark>& lm, double te) const override
   {
     if (lm.template input_tokens_sufficient<0>())
     {
-      return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0))};
+      return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     }
     else
     {
@@ -127,11 +127,11 @@ class Recover : public SIRTransition
 {
 
   virtual std::pair<bool, std::unique_ptr<Dist>>
-  enabled(const SIRState& s, const LocalMarking<Mark>& lm) const override
+  enabled(const SIRState& s, const LocalMarking<Mark>& lm, double te) const override
   {
     if (lm.template input_tokens_sufficient<0>())
     {
-      return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0))};
+      return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     }
     else
     {
@@ -250,7 +250,7 @@ int main(int argc, char *argv[])
   params[gamma]=0.5;
 
   RandGen rng(1);
-
+  
   auto gspn=build_system(individual_cnt);
 
   SIRState state;

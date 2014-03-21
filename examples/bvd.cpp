@@ -84,9 +84,9 @@ public:
 
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
   enabled(const CowState& s,
-    const LocalMarking<Mark>& lm) const
+    const LocalMarking<Mark>& lm, double current_time) const
   {
-    return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0))};
+    return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, current_time))};
   }
 
   virtual void fire(CowState& s, LocalMarking<Mark>& lm, CowGen& rng) const

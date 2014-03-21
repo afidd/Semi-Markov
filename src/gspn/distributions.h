@@ -45,8 +45,7 @@ template<typename RNG>
 class TransitionDistribution
 {
 public:
-  virtual double sample(double enabling_time, double current_time,
-      RNG& rng) const=0;
+  virtual double sample(double current_time, RNG& rng) const=0;
 };
 
 
@@ -55,31 +54,118 @@ template<typename RNG>
 class NoDistribution : public TransitionDistribution<RNG>
 {
 public:
-  virtual double sample(double enabling_time, double current_time,
-      RNG& rng) const { return std::numeric_limits<double>::infinity(); };
+  virtual double sample(double current_time, RNG& rng) const
+  { return std::numeric_limits<double>::infinity(); };
 };
 
 
 template<typename RNG>
 class ExponentialDistribution : public TransitionDistribution<RNG>
 {
-  using ParamType=std::tuple<double, double>;
+  using ParamType=std::tuple<double, double, double>;
   ParamType _params;
 
 public:
-  ExponentialDistribution(double lambda, double normal=1.0)
-  : _params(lambda, normal) {}
+  ExponentialDistribution(double lambda, double enabling_time,
+    double normal=1.0)
+  : _params(lambda, enabling_time, normal) {}
 
-  virtual double sample(double enabling_time,
-      double current_time, RNG& rng) const
+
+
+  virtual double sample(double current_time, RNG& rng) const
   {
-    auto U=uniform(rng)/std::get<1>(_params);
+    auto U=uniform(rng)/std::get<2>(_params);
     if (U>=1)
     {
       return std::numeric_limits<double>::infinity();
     }
     return -std::log(U)/std::get<0>(_params);
   }
+
+
+
+  double sample_vector(
+    const std::vector<ParamType> params,
+    const std::vector<double>& enabling_time,
+    double current_time, RNG& rng)
+  {
+
+  }
+
+
+
+  /*! Check whether generated samples fit expectations.
+   *  dt is the difference between enabling_time and current_time,
+   *  assumed constant for all samples.
+   */
+  bool check_samples(const std::vector<double>& samples, double dt)
+  {
+    bool pass=true;
+    bac::accumulator_set<double, bac::stats<bac::tag::mean,
+        bac::tag::moment<2>, bac::tag::moment<3>,
+        bac::tag::variance(bac::lazy)>> acc;
+    for (auto s : samples)
+    {
+      acc(s);
+    }
+
+    double lambda_estimator=1/bac::mean(acc);
+    double lambda=std::get<0>(_params);
+    auto too_low=lambda < lambda_estimator*(1-1.96/std::sqrt(samples.size()));
+    auto too_high=lambda > lambda_estimator*(1+1.96/std::sqrt(samples.size()));
+    if (too_low || too_high)
+    {
+      BOOST_LOG_TRIVIAL(info)<<"Parameter not in bounds. Low? "<<
+        too_low << " high? " << too_high;
+        pass=false;
+    }
+
+    double variance=bac::variance(acc);
+    // An estimator for the variance?
+    pass=detail::check_frac_error(variance, std::pow(lambda, -2), 0.01,
+      "variance");
+    return pass;
+  }
+
+};
+
+
+
+
+
+
+template<typename RNG>
+class ShiftedExponentialDistribution : public TransitionDistribution<RNG>
+{
+  using ParamType=std::tuple<double, double, double, double>;
+  ParamType _params;
+
+public:
+  ShiftedExponentialDistribution(double lambda, double enabling_time,
+    double shift=0.0, double normal=1.0)
+  : _params(lambda, enabling_time, shift, normal) {}
+
+
+
+  virtual double sample(double current_time, RNG& rng) const
+  {
+    auto U=uniform(rng)/std::get<3>(_params);
+    double te=std::get<1>(_params);
+    double ts=std::get<2>(_params);
+    if (U>=1)
+    {
+      return std::numeric_limits<double>::infinity();
+    }
+    if (current_time>te+ts)
+    {
+      return -std::log(U)/std::get<0>(_params);
+    }
+    else
+    {
+      return te+ts-std::log(U)/std::get<0>(_params)-current_time;
+    }
+  }
+
 
   double sample_vector(
     const std::vector<ParamType> params,
@@ -126,34 +212,40 @@ public:
 
 
 
+
+
+
 template<typename RNG>
 class WeibullDistribution : public TransitionDistribution<RNG>
 {
-  using ParamType=std::tuple<double,double,double>;
+  using ParamType=std::tuple<double,double,double,double,double>;
   ParamType _params;
 public:
-  WeibullDistribution(double lambda, double k, double normal=1.0)
-  : _params{lambda, k, normal} {}
+  WeibullDistribution(double lambda, double k, double enabling_time,
+    double shift=0.0, double normal=1.0)
+  : _params{lambda, k, enabling_time, shift, normal} {}
 
-  virtual double sample(double enabling_time, double current_time,
+  virtual double sample(double current_time,
       RNG& rng) const
   {
     double l=std::get<0>(_params);
     double k=std::get<1>(_params);
-    double d=current_time-enabling_time;
-    double U=uniform(rng)/std::get<2>(_params);
+    double enabling_time=std::get<2>(_params);
+    double shift=std::get<3>(_params);
+    double U=uniform(rng)/std::get<4>(_params);
     if (U>=1)
     {
       return std::numeric_limits<double>::infinity();
     }
 
+    double d=current_time-(enabling_time+shift);
     if (d>0)
     {
       return l*std::pow(-std::log(1-U)+std::pow(d/l, k), 1/k)-d;
     }
     else
     {
-      return l*std::pow(-std::log(1-U), 1/k);
+      return -d+l*std::pow(-std::log(1-U), 1/k);
     }
   }
 
@@ -243,20 +335,22 @@ public:
 template<typename RNG>
 class GammaDistribution : public TransitionDistribution<RNG>
 {
-  using Params=std::tuple<double,double,double>;
+  using Params=std::tuple<double,double,double, double, double>;
   Params _params;
 public:
-  GammaDistribution(double alpha, double theta, double normal=1.0)
-  : _params{alpha, theta, normal}
+  GammaDistribution(double alpha, double theta, double enabling_time,
+      double shift=0.0, double normal=1.0)
+  : _params{alpha, theta, enabling_time, shift, normal}
   {
   }
 
 
-  virtual double sample(double enabling_time, double current_time,
-      RNG& rng) const
+  virtual double sample(double current_time, RNG& rng) const
   {
-    double d=current_time-enabling_time;
-    double U=uniform(rng)/std::get<2>(_params);
+    double te=std::get<2>(_params);
+    double ts=std::get<3>(_params);
+    double t0=current_time;
+    double U=uniform(rng)/std::get<4>(_params);
     auto dist=boost::math::gamma_distribution<double>(
       std::get<0>(_params), std::get<1>(_params));
     if (U>=1)
@@ -264,14 +358,15 @@ public:
       return std::numeric_limits<double>::infinity();
     }
 
+    double d=t0-(te+ts);
     if (d>0)
-    {
-      return boost::math::quantile(dist, U);
-    }
-    else
     {
       auto cumulative=boost::math::cdf(dist, d);
       return boost::math::quantile(dist, U*(1-cumulative) + cumulative) - d;
+    }
+    else
+    {
+      return boost::math::quantile(dist, U)-d;
     }
   }
 
@@ -331,22 +426,24 @@ public:
 template<typename RNG>
 class PiecewiseLinearDistribution : public TransitionDistribution<RNG>
 {
-  using Params=std::tuple<std::vector<double>,std::vector<double>,double>;
+  using Params=std::tuple<std::vector<double>,std::vector<double>,double,
+      double,double>;
   Params _params;
 
   std::vector<double> _partial_sum;
 
 public:
   PiecewiseLinearDistribution(const std::vector<double>& b,
-    const std::vector<double>& w, double normal=1.0)
-  : _params{b, w, normal}, _partial_sum(b.size())
+    const std::vector<double>& w, double enabling_time,
+    double shift=0.0, double normal=1.0)
+  : _params{b, w, enabling_time, shift, normal}, _partial_sum(b.size())
   {
     assert(b.size()>1);
     assert(b.size()==w.size());
     assert(std::is_sorted(b.begin(), b.end()));
 
     double total=0;
-    for (int idx=0; idx<b.size()-2; ++idx)
+    for (int idx=0; idx<b.size()-1; ++idx)
     {
       _partial_sum[idx]=total;
       total+=0.5*(w[idx]+w[idx+1])*(b[idx+1]-b[idx]);
@@ -356,20 +453,19 @@ public:
 
 
 
-  virtual double sample(double enabling_time, double current_time,
-    RNG& rng) const
+  virtual double sample(double current_time, RNG& rng) const
   {
     const auto& b=std::get<0>(_params);
     const auto& w=std::get<1>(_params);
-
+    double enabling_time=std::get<2>(_params);
     double from_time=current_time-enabling_time;
-    double U=uniform(rng)/std::get<2>(_params);
+    double U=uniform(rng)/std::get<4>(_params);
 
     // What is the first b not less than current time? Store as b_{i+1}.
     double S=1.0;
     double within_integral=0.0;
     auto ip1_iter=std::lower_bound(b.begin(), b.end(), from_time);
-    typename std::iterator_traits<decltype(ip1_iter)>::difference_type p0;
+    typename std::iterator_traits<decltype(ip1_iter)>::difference_type p0{0};
     if (ip1_iter==b.begin())
     {
       // time is before start of piecewise. Return the whole.
@@ -396,6 +492,7 @@ public:
         c);
     if (bp1_iter==_partial_sum.end())
     {
+      BOOST_LOG_TRIVIAL(info)<<"Piecewise distribution over bounds.";
       return std::numeric_limits<double>::infinity();
     }
     else
@@ -404,9 +501,20 @@ public:
       // substitute back into r+ x r- = c/a. This way we can
       // handle zero slope and zero weight.
       auto j=(bp1_iter-_partial_sum.begin())-1;
+      c-=_partial_sum[j];
       double m=(w[j+1]-w[j])/(b[j+1]-b[j]); // can be zero.
       double t=b[j]+2*c/(w[j]+std::sqrt(w[j]*w[j]+2*m*c));
-      return t;
+      if (t<=b[b.size()-1] && t>=0)
+      {
+        return t;
+      }
+      else
+      {
+        BOOST_LOG_TRIVIAL(error)<<"infinite piecewise j="<<j
+          <<" m="<<m<<" c="<<c<<" w="<<w[j]<<" w+1="<<w[j+1]
+          <<" discr="<<w[j]*w[j]+2*m*c<<" t="<<t;
+        return 0;
+      }
     }
   }
 

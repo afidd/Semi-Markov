@@ -27,10 +27,21 @@ def test_dist(cdf_estimator):
     plt.show()
 
 
-
+def compare_dist(a, b):
+    x, y=a
+    #y2=scipy.stats.gamma.cdf(x, 1, scale=0.5)
+    line, = plt.plot(x, y)
+    x2, y2=b
+    plt.plot(x2, y2, '-')
+    plt.show()
 
 
 
 if __name__=='__main__':
     samples=read_samples(sys.argv[1])
-    test_dist(samples)
+    if len(sys.argv)==2:
+        test_dist(samples)
+    else:
+        #python3 tests/distlook.py piecewise.txt stdpiece.txt
+        compare=read_samples(sys.argv[2])
+        compare_dist(samples, compare)

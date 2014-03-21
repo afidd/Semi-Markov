@@ -168,7 +168,7 @@ namespace smv
 {
 std::pair<bool,std::unique_ptr<TransitionDistribution<RandGen>>>
 enabled(const BrownionGSPN& et, TransitionType trans_id,
-  const BrownionState& s, const smv::LocalMarking<Mark>& lm)
+  const BrownionState& s, const smv::LocalMarking<Mark>& lm, double te)
 {
   if (lm.template length<0>(0)>0)
   {
@@ -176,11 +176,11 @@ enabled(const BrownionGSPN& et, TransitionType trans_id,
     // Brownion states.
     if (trans_id.from.state==0)
     {
-      return {true, std::unique_ptr<Weibull>(new Weibull(1.0,1.0))};
+      return {true, std::unique_ptr<Weibull>(new Weibull(1.0,1.0, te))};
     }
     else
     {
-      return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0))};
+      return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     }
   }
   else

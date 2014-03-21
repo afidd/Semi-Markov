@@ -50,22 +50,23 @@ public:
 
           bool isEnabled;
           std::unique_ptr<TransitionDistribution<RNG>> dist;
-          std::tie(isEnabled, dist)=enabled(_gspn, neighbor_id, _state, lm);
+          std::tie(isEnabled, dist)=
+              enabled(_gspn, neighbor_id, _state, lm, _state.current_time());
           auto previously_enabled=
-            (_state.enabling_time.find(neighbor_id)!=_state.enabling_time.end());
-          if (isEnabled && !previously_enabled)
+            (_distributions.find(neighbor_id)!=_distributions.end());
+          if (isEnabled)
           {
-            _state.enabling_time.emplace(neighbor_id, _state.current_time());
+            // Even if it was already enabled, take the new distribution
+            // in case it has changed.
             _distributions.emplace(neighbor_id, std::move(dist));
           }
           else if (!isEnabled && previously_enabled)
           {
-            _state.enabling_time.erase(neighbor_id);
             _distributions.erase(neighbor_id);
           }
           else
           {
-            ; // No change to this distribution.
+            ; // not enabled, not becoming enabled.
           }
         });
       BOOST_LOG_TRIVIAL(trace) << "Marking modified cnt: "<<
@@ -78,8 +79,7 @@ public:
     for (; begin!=_distributions.end(); ++begin)
     {
       trans_t<GSPN> trans_id=begin->first;
-      eval(begin->second, trans_id, _state.enabling_time[trans_id],
-        _state.current_time());
+      eval(begin->second, trans_id, _state.current_time());
     }
   }
 
@@ -93,7 +93,6 @@ public:
       << _state.marking.modified().size() << " places.";
 
     auto current_time=_state.add_time(when);
-    _state.enabling_time.erase(trans_id);
     _distributions.erase(trans_id);
   }
 };

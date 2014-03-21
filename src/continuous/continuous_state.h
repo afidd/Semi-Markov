@@ -65,7 +65,6 @@ public:
   typedef Mark Marking;
 
   Marking marking;
-  std::map<trans_t<PN>,double> enabling_time;
 };
 
 }

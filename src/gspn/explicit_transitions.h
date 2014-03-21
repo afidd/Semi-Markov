@@ -23,7 +23,7 @@ class ExplicitTransition
 public:
 
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<RNG>>>
-  enabled(const State& s, const LM& lm) const
+  enabled(const State& s, const LM& lm, double current_time) const
   {
     BOOST_LOG_TRIVIAL(debug) << "The base enabled is unlikely correct to call";
     return {false,
