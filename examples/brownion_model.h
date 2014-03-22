@@ -4,6 +4,7 @@
 #include "continuous_state.h"
 #include "marking.h"
 #include "distributions.h"
+#include "smv_algorithm.h"
 
 
 namespace smv=afidd::smv;
@@ -12,31 +13,6 @@ using namespace smv;
 using RandGen=ProviderGenerator<boost::random::mt19937>;
 
 
-// This helps make a correct less than operator for places and transitions.
-// I've gotten this logic wrong too many times before out of laziness. Hence.
-template<typename T>
-bool lazy_less(const T& a, const T& b)
-{
-  return (a<b);
-}
-
-
-template<typename T, typename...Ts>
-bool lazy_less(const T& a, const T& b, const Ts&... args)
-{
-  if (a<b)
-  {
-    return true;
-  }
-  else if (a==b)
-  {
-    return lazy_less(args...);
-  }
-  else
-  {
-    return false;
-  }
-}
 
 
 
