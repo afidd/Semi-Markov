@@ -8,9 +8,10 @@ public:
   double birthday;
   int sex;
   int parity;
+  double disease_time;
 
   Cow(size_t id, double time, int sex)
-  : id(id), birthday(time), sex(sex), parity(0)
+  : id{id}, birthday{time}, sex{sex}, parity{0}, disease_time{0}
   {}
 
   Cow() {}
