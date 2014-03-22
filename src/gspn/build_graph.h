@@ -170,13 +170,10 @@ public:
     PetriGraphType g(num_vertices(_g));
     using vert_n=boost::graph_traits<PetriGraphType>::vertex_descriptor;
 
-    // The index map turns vertex_descriptor from the build graph into
-    // an integer index into the list of vertex_descriptors.
-    //using index_map_t=boost::property_map<PetriBuildGraphType,
-    //    boost::vertex_index_t>::type;
-    //using IsoMap=boost::iterator_property_map<typename std::vector<vert>::iterator,
-    //    index_map_t,vert_n,vert_n&>;
-
+    // In order to use the boost copy_graph algorithm, the original
+    // graph has to have a vertex_index_t property, OR you have to 
+    // make a map from vertex_descriptor to an index, which is what
+    // we do here.
     std::map<vert,size_t> vertex_index;
     using viter=boost::graph_traits<PetriBuildGraphType>::vertex_iterator;
     viter ind_begin;
@@ -189,16 +186,14 @@ public:
     using IndMap=boost::associative_property_map<std::map<vert,size_t>>;
     IndMap vertex_index_map(vertex_index);
 
+    // The orig_to_copy argument is a way to save a translation
+    // table from the old vertex_descriptor to the new vertex_descriptor.
+    // All examples use the vector map, which uses a vertex_index_map
+    // to get size_t offsets, but let's just use a simple map.
     using TransMap=std::map<vert,vert_n>;
     TransMap translate;
     using TransPMap=boost::associative_property_map<TransMap>;
     TransPMap translate_pmap(translate);
-
-    using TransVec=std::vector<vert_n>;
-    TransVec trans_vec(num_vertices(_g));
-    using TransPVec=boost::iterator_property_map<TransVec::iterator,
-        IndMap,vert_n,vert_n&>;
-    TransPVec translate_pvec(trans_vec.begin(), vertex_index_map);
 
     //std::vector<vert> iso_vec(num_vertices(g));
     //IsoMap iso_map(iso_vec.begin(), get(boost::vertex_index, _g));

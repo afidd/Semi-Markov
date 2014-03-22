@@ -202,9 +202,8 @@ herd(size_t initial_cnt, size_t total_cnt)
   enum { c, h1, h2, d, death, sale, culling};
   // disease states
   enum { dm, ds, dti, dr, dpi};
-  std::map<size_t,double> params;
 
-  PetriGraphVertexProperty vprop;
+  std::map<CowT,std::unique_ptr<CowTransition>> trans_objects;
   for (auto sg : {c, h1, h2, d, death, sale, culling})
   {
     for (int who=0; who<total_cnt; ++who)
@@ -213,19 +212,44 @@ herd(size_t initial_cnt, size_t total_cnt)
       {
         bg.add_place({disease, who, sg}, 0);
       }
+      // same group, same cow, kind=0 is becoming susceptible.
       bg.add_transition({who, who, sg, sg, 0},
         {PlaceEdge{CowPlace{dm, who, sg}, -1},
          PlaceEdge{CowPlace{ds, who, sg}, 1}});
+      trans_objects.emplace(CowT{who, who, sg, sg, 0},
+        std::move(std::unique_ptr<CowTransition>(new InfectNeighbor(who))));
+
+      // same group, same cow, kind=1 is recovering.
+      bg.add_transition({who, who, sg, sg, 1},
+        {PlaceEdge{CowPlace{dti, who, sg}, -1},
+         PlaceEdge{CowPlace{dr, who, sg}, 1}});
+      trans_objects.emplace(CowT{who, who, sg, sg, 0},
+        std::move(std::unique_ptr<CowTransition>(new InfectNeighbor(who))));
     }
   }
 
+  for (auto sg : {c, h1, h2, d, death, sale, culling})
+  {
+    for (int who=0; who<total_cnt; ++who)
+    {
+      for (auto disease : std::vector<int>{dm, ds, dti, dr, dpi})
+      {
+      }
+    }
+  }
   PetriGraphType g;
   BuildGraph<CowPlace,CowT>::BiMap b;
   std::tie(g, b)=bg.compile();
 
+  // Now put the transitions into the map, using the new vertex_descriptor.
   auto et=CowTransitions(g);
-  et.transitions.emplace(17, std::move(std::unique_ptr<CowTransition>(
-      new InfectNeighbor(17))));
+  for (auto conv_iter=trans_objects.begin();
+      conv_iter!=trans_objects.end();
+      ++conv_iter)
+  {
+    auto vertex=b.tv.at(conv_iter->first);
+    et.transitions.emplace(vertex, std::move(conv_iter->second));
+  }
 
   return std::move(et);
 }
