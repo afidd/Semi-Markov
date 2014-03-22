@@ -167,6 +167,56 @@ void neighbors_of_places(PetriGraphType& g,
   }
 }
 
+
+
+
+template<typename Graph>
+bool is_bipartite_petri_graph(const Graph& g)
+{
+  bool pass=true;
+  using Vert=typename boost::graph_traits<Graph>::vertex_iterator;
+  Vert cur_vert;
+  Vert end_vert;
+  std::tie(cur_vert, end_vert)=vertices(g);
+  for (; cur_vert!=end_vert; ++cur_vert)
+  {
+    auto vert_color=g[*cur_vert].color;
+    auto oe=out_edges(*cur_vert, g);
+    for (; oe.first!=oe.second; ++oe.first)
+    {
+      if (vert_color==g[target(*oe.first, g)].color)
+      {
+        pass=false;
+      }
+    }
+  }
+  return pass;
+}
+
+
+
+
+
+
+template<typename Graph>
+size_t num_stochiometric_coefficients(const Graph& g)
+{
+  size_t cnt{0};
+  using Edge=typename boost::graph_traits<Graph>::edge_iterator;
+  Edge cur_edge;
+  Edge end_edge;
+  std::tie(cur_edge, end_edge)=edges(g);
+  for (; cur_edge!=end_edge; ++cur_edge)
+  {
+    if (g[*cur_edge].stochiometric_coefficient!=0)
+    {
+      ++cnt;
+    }
+  }
+  return cnt;
+}
+
+
 } // smv
 } // afidd
 
