@@ -12,8 +12,8 @@
 
 namespace afidd
 {
-  namespace smv
-  {
+namespace smv
+{
 
 
 template<typename BGPlace, typename BGTransition, typename vert_t>
@@ -131,7 +131,9 @@ public:
   bool add_edge(BGTransition t, BGPlace p, int weight)
   {
     auto tv=get_transition(_bimap, t);
+    assert(_g[tv].color==PetriGraphColor::Transition);
     auto pv=get_place(_bimap, p);
+    assert(_g[pv].color==PetriGraphColor::Place);
 
     if (weight<0)
     {
@@ -167,6 +169,14 @@ public:
    */
   std::tuple<PetriGraphType,BiMap> compile()
   {
+    // Check the current graph before we continue.
+    size_t stoch_start=num_stochiometric_coefficients(_g);
+    BOOST_LOG_TRIVIAL(debug)<< stoch_start
+        << " stochiometric coefficients start";
+    auto bipartite=is_bipartite_petri_graph(_g);
+    BOOST_LOG_TRIVIAL(debug)<< " is bipartite "<<bipartite;
+    assert(bipartite);
+
     PetriGraphType g(num_vertices(_g));
     using vert_n=boost::graph_traits<PetriGraphType>::vertex_descriptor;
 
@@ -195,10 +205,11 @@ public:
     using TransPMap=boost::associative_property_map<TransMap>;
     TransPMap translate_pmap(translate);
 
-    //std::vector<vert> iso_vec(num_vertices(g));
-    //IsoMap iso_map(iso_vec.begin(), get(boost::vertex_index, _g));
     copy_graph(_g, g, boost::vertex_index_map(vertex_index_map).
       orig_to_copy(translate_pmap));
+
+    //  vertex_copy(boost::vertex_copier(_g, g)).
+    //  edge_copy(boost::edge_copier(_g, g)));
 
 
     BiMap b;
@@ -224,6 +235,11 @@ public:
         BOOST_LOG_TRIVIAL(error) << "A vertex wasn't translated";
       }
     }
+
+    // Check out whether it looks right.
+    size_t stoch_cnt=num_stochiometric_coefficients(g);
+    BOOST_LOG_TRIVIAL(debug)<< stoch_cnt << " stochiometric coefficients found";
+    assert(is_bipartite_petri_graph(g));
     return std::make_tuple(g, b);
   }
 };
