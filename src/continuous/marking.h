@@ -8,6 +8,7 @@
 #include <array>
 #include <set>
 #include <utility>
+#include <algorithm>
 #include <type_traits>
 #include "boost/mpl/vector.hpp"
 #include "boost/mpl/apply.hpp"
@@ -303,7 +304,12 @@ public:
   inline friend std::ostream&
   operator<<(std::ostream& os, const Marking& m)
   {
-    return os << "Marking";
+    const auto& mmap=std::get<0>(m._maps);
+    for (auto& kv : mmap)
+    {
+      os << "("<< kv.first<<","<<kv.second.size() <<") ";
+    }
+    return os;
   }
 };
 
