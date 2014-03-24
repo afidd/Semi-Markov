@@ -200,6 +200,9 @@ public:
     // table from the old vertex_descriptor to the new vertex_descriptor.
     // All examples use the vector map, which uses a vertex_index_map
     // to get size_t offsets, but let's just use a simple map.
+    // While we created a vertex_index above, it will not be the same
+    // index as the new graph's vertex_descriptor, so we need this
+    // translation.
     using TransMap=std::map<vert,vert_n>;
     TransMap translate;
     using TransPMap=boost::associative_property_map<TransMap>;
@@ -207,10 +210,6 @@ public:
 
     copy_graph(_g, g, boost::vertex_index_map(vertex_index_map).
       orig_to_copy(translate_pmap));
-
-    //  vertex_copy(boost::vertex_copier(_g, g)).
-    //  edge_copy(boost::edge_copier(_g, g)));
-
 
     BiMap b;
     for (auto trans_iter=translate.begin();

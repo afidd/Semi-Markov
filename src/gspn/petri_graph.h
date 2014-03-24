@@ -198,6 +198,9 @@ bool is_bipartite_petri_graph(const Graph& g)
 
 
 
+/*! Count the number of stochiometric coefficients on edges.
+ *  This is just one check that two graphs are not different.
+ */
 template<typename Graph>
 size_t num_stochiometric_coefficients(const Graph& g)
 {
