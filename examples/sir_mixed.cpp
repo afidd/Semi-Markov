@@ -225,18 +225,6 @@ build_system(size_t individual_cnt)
 
 
 
-std::ostream& operator<<(std::ostream& os, const Mark& m)
-{
-  const auto& mmap=std::get<0>(m._maps);
-
-  for (auto kv : mmap)
-  {
-    os << "("<< kv.first << "," << kv.second.size() <<") ";
-  }
-  return os;
-}
-
-
 
 
 int main(int argc, char *argv[])
