@@ -299,6 +299,12 @@ public:
   Marking() {}
   const std::set<place_t>& modified() { return _modified; }
   void clear() { _modified.clear(); }
+
+  inline friend std::ostream&
+  operator<<(std::ostream& os, const Marking& m)
+  {
+    return os << "Marking";
+  }
 };
 
 
