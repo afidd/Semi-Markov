@@ -128,7 +128,7 @@ using PN=smv::PetriGraphType;
 using Mark=smv::Marking<size_t,
     smv::Colored<Cow>,smv::Uncolored<std::map<size_t,double>>>;
 using CowState=smv::GSPNState<Mark>;
-using CowTransitions=smv::ExplicitTransitions<CowState,CowGen>;
+using CowTransitions=smv::ExplicitTransitions<CowState,CowPlace,CowT,CowGen>;
 
 // We make a transition that meets the requirements of the GSPN object
 // by deriving it from the Transition type it defines.
@@ -147,6 +147,8 @@ public:
 using Dist=smv::TransitionDistribution<CowGen>;
 using ExpDist=smv::ExponentialDistribution<CowGen>;
 using NoDist=smv::NoDistribution<CowGen>;
+
+
 
 class InfectNeighbor : public CowTransition
 {
@@ -179,14 +181,13 @@ template<typename PN, typename LocalMarking, typename CowState>
 CowTransitions
 herd(size_t initial_cnt, size_t total_cnt)
 {
-  BuildGraph<CowPlace,CowT> bg;
-  using PlaceEdge=BuildGraph<CowPlace,CowT>::PlaceEdge;
+  BuildGraph<CowTransitions> bg;
+  using PlaceEdge=BuildGraph<CowTransitions>::PlaceEdge;
   // subgroups
   enum { c, h1, h2, d, death, sale, culling};
   // disease states
   enum { dm, ds, dti, dr, dpi};
 
-  std::map<CowT,std::unique_ptr<CowTransition>> trans_objects;
   for (auto sg : {c, h1, h2, d, death, sale, culling})
   {
     for (int who=0; who<total_cnt; ++who)
@@ -198,16 +199,16 @@ herd(size_t initial_cnt, size_t total_cnt)
       // same group, same cow, kind=0 is becoming susceptible.
       bg.add_transition({who, who, sg, sg, 0},
         {PlaceEdge{CowPlace{dm, who, sg}, -1},
-         PlaceEdge{CowPlace{ds, who, sg}, 1}});
-      trans_objects.emplace(CowT{who, who, sg, sg, 0},
-        std::move(std::unique_ptr<CowTransition>(new InfectNeighbor(who))));
+         PlaceEdge{CowPlace{ds, who, sg}, 1}},
+        std::unique_ptr<CowTransition>(new InfectNeighbor(who))
+        );
 
       // same group, same cow, kind=1 is recovering.
       bg.add_transition({who, who, sg, sg, 1},
         {PlaceEdge{CowPlace{dti, who, sg}, -1},
-         PlaceEdge{CowPlace{dr, who, sg}, 1}});
-      trans_objects.emplace(CowT{who, who, sg, sg, 0},
-        std::move(std::unique_ptr<CowTransition>(new InfectNeighbor(who))));
+         PlaceEdge{CowPlace{dr, who, sg}, 1}},
+        std::unique_ptr<CowTransition>(new InfectNeighbor(who))
+        );
     }
   }
 
@@ -220,21 +221,8 @@ herd(size_t initial_cnt, size_t total_cnt)
       }
     }
   }
-  PetriGraphType g;
-  BuildGraph<CowPlace,CowT>::BiMap b;
-  std::tie(g, b)=bg.compile();
-
-  // Now put the transitions into the map, using the new vertex_descriptor.
-  auto et=CowTransitions(g);
-  for (auto conv_iter=trans_objects.begin();
-      conv_iter!=trans_objects.end();
-      ++conv_iter)
-  {
-    auto vertex=b.tv.at(conv_iter->first);
-    et.transitions.emplace(vertex, std::move(conv_iter->second));
-  }
-
-  return std::move(et);
+  
+  return std::move(bg.build());
 }
 
 

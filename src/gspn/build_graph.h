@@ -33,6 +33,10 @@ template<typename BGPlace, typename BGTransition, typename vert_t>
 void put_place(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
     vert_t k, BGPlace val)
 {
+  if (map.pv.find(val)!=map.pv.end())
+  {
+    BOOST_LOG_TRIVIAL(error) << "Place "<<val<<" already exists.";
+  }
   map.pv.emplace(val, k);
   map.vp.emplace(k, val);
 }
@@ -43,14 +47,19 @@ template<typename BGPlace, typename BGTransition, typename vert_t>
 void put_transition(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
     vert_t k, BGTransition val)
 {
+  if (map.tv.find(val)!=map.tv.end())
+  {
+    BOOST_LOG_TRIVIAL(error) << "Transition "<<val<<" already exists.";
+  }
   map.tv.emplace(val, k);
   map.vt.emplace(k, val);
 }
 
 
+
 template<typename BGPlace, typename BGTransition, typename vert_t>
 typename BiGraphCorrespondence<BGPlace,BGTransition,vert_t>::vertex_descriptor
-get_place(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
+get_pvertex(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
     BGPlace& key)
 {
   auto it=map.pv.find(key);
@@ -67,7 +76,7 @@ get_place(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
 
 template<typename BGPlace, typename BGTransition, typename vert_t>
 typename BiGraphCorrespondence<BGPlace,BGTransition,vert_t>::vertex_descriptor
-get_transition(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
+get_tvertex(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
     BGTransition& key)
 {
   auto it=map.tv.find(key);
@@ -82,15 +91,56 @@ get_transition(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
 
 
 
+template<typename BGPlace, typename BGTransition, typename vert_t>
+BGPlace
+get_place(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
+  typename BiGraphCorrespondence<BGPlace,BGTransition,
+      vert_t>::vertex_descriptor& key)
+{
+  auto it=map.vp.find(key);
+  if (it==map.vp.end())
+  {
+    BOOST_LOG_TRIVIAL(error) << "Vertex for place does not exist: "<<key;
+    return BGPlace{};
+  }
+  return it->second;
+}
 
-template<typename BGPlace, typename BGTransition>
+
+
+
+template<typename BGPlace, typename BGTransition, typename vert_t>
+BGTransition
+get_transition(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
+    typename BiGraphCorrespondence<BGPlace,BGTransition,vert_t>::vertex_descriptor& key)
+{
+  auto it=map.vt.find(key);
+  if (it==map.vt.end())
+  {
+    BOOST_LOG_TRIVIAL(error) << "Vertex for transition does not exist: "<<key;
+    return BGTransition{};
+  }
+  return it->second;
+}
+
+
+
+/*! Build an ExplicitTransitions class.
+ *  Template argument ET is the type of an ExplicitTransitions class.
+ */
+template<typename ET>
 class BuildGraph
 {
+  using BGPlace=typename ET::PlaceKey;
+  using BGTransition=typename ET::TransitionKey;
+  using Transition=typename ET::Transition;
+
   PetriBuildGraphType _g;
   using vert=boost::graph_traits<PetriBuildGraphType>::vertex_descriptor;
   using edge_t=boost::graph_traits<PetriBuildGraphType>::edge_descriptor;
 
   BiGraphCorrespondence<BGPlace,BGTransition,vert> _bimap;
+  std::map<BGTransition,std::unique_ptr<Transition>> _transitions;
 
 public:
   // This is the translation map for the compiled graph,
@@ -112,7 +162,8 @@ public:
 
 
 
-  bool add_transition(BGTransition t, std::vector<PlaceEdge> e)
+  bool add_transition(BGTransition t, std::vector<PlaceEdge> e,
+    std::unique_ptr<Transition> transition)
   {
     auto tv=add_vertex({PetriGraphColor::Transition, 0}, _g);
     put_transition(_bimap, tv, t);
@@ -123,6 +174,9 @@ public:
       int weight=std::get<1>(edge);
       this->add_edge(t, p, weight);
     }
+
+    _transitions.emplace(t, std::move(transition));
+
     return true;
   }
 
@@ -130,9 +184,9 @@ public:
 
   bool add_edge(BGTransition t, BGPlace p, int weight)
   {
-    auto tv=get_transition(_bimap, t);
+    auto tv=get_tvertex(_bimap, t);
     assert(_g[tv].color==PetriGraphColor::Transition);
-    auto pv=get_place(_bimap, p);
+    auto pv=get_pvertex(_bimap, p);
     assert(_g[pv].color==PetriGraphColor::Place);
 
     if (weight<0)
@@ -167,7 +221,7 @@ public:
    *  for vertex_property. The fast time is based on vectors
    *  and uses size_t as the index type.
    */
-  std::tuple<PetriGraphType,BiMap> compile()
+  ET build()
   {
     // Check the current graph before we continue.
     size_t stoch_start=num_stochiometric_coefficients(_g);
@@ -177,7 +231,8 @@ public:
     BOOST_LOG_TRIVIAL(debug)<< " is bipartite "<<bipartite;
     assert(bipartite);
 
-    PetriGraphType g(num_vertices(_g));
+    ET et(num_vertices(_g));
+    PetriGraphType& g=et.graph;
     using vert_n=boost::graph_traits<PetriGraphType>::vertex_descriptor;
 
     // In order to use the boost copy_graph algorithm, the original
@@ -211,7 +266,8 @@ public:
     copy_graph(_g, g, boost::vertex_index_map(vertex_index_map).
       orig_to_copy(translate_pmap));
 
-    BiMap b;
+    typename ET::BiMap& b=et._bimap;
+
     for (auto trans_iter=translate.begin();
         trans_iter!=translate.end();
         ++trans_iter)
@@ -223,11 +279,24 @@ public:
       auto transition_iter=_bimap.vt.find(old_vertex);
       if (place_iter!=_bimap.vp.end())
       {
+        assert(transition_iter==_bimap.vt.end());
         put_place(b, new_vertex, place_iter->second);
       }
       else if (transition_iter!=_bimap.vt.end())
       {
         put_transition(b, new_vertex, transition_iter->second);
+
+        auto trans_obj_iter=_transitions.find(transition_iter->second);
+        if (trans_obj_iter!=_transitions.end())
+        {
+          et.transitions.emplace(new_vertex, std::move(trans_obj_iter->second));
+        }
+        else
+        {
+          BOOST_LOG_TRIVIAL(error) << "Every transition must have a transition"
+            " object.";
+          assert(trans_obj_iter!=_transitions.end());
+        }
       }
       else
       {
@@ -238,8 +307,13 @@ public:
     // Check out whether it looks right.
     size_t stoch_cnt=num_stochiometric_coefficients(g);
     BOOST_LOG_TRIVIAL(debug)<< stoch_cnt << " stochiometric coefficients found";
-    assert(is_bipartite_petri_graph(g));
-    return std::make_tuple(g, b);
+    bool n_bipartite=is_bipartite_petri_graph(g);
+    if (!n_bipartite)
+    {
+      BOOST_LOG_TRIVIAL(error)<< "The graph is not bipartite.";
+      assert(n_bipartite);
+    }
+    return std::move(et);
   }
 };
 

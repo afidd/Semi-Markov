@@ -9,6 +9,7 @@
 #include <type_traits>
 #include "boost/mpl/for_each.hpp"
 #include "boost/mpl/next_prior.hpp"
+#include "build_graph.h"
 #include "logging.h"
 
 
@@ -46,21 +47,29 @@ public:
 
 /*! This is one way to provide a set of transitions for a GSPN.
  */
-template<typename ETState,typename Random>
+template<typename ETState,typename PKey, typename TKey, typename Random>
 class ExplicitTransitions
 {
   // The GSPN gets the marking type from the State.
   typedef typename ETState::Marking ETMarking;
   typedef PetriGraphType PetriGraph;
+  typedef BiGraphCorrespondence<PKey,TKey,
+    boost::graph_traits<PetriGraph>::vertex_descriptor> BiMap;
+  BiMap _bimap;
 
 public:
   typedef smv::LocalMarking<ETMarking> LocalMarking;
+  typedef PKey PlaceKey;
+  typedef TKey TransitionKey;
   typedef Random RNG;
   typedef boost::graph_traits<PetriGraph>::vertex_descriptor place_type;
   typedef boost::graph_traits<PetriGraph>::vertex_descriptor transition_type;
   typedef smv::ExplicitTransition<LocalMarking,ETState,RNG> Transition;
 
-  ExplicitTransitions(PetriGraph& graph) : graph(std::move(graph)) {}
+  ExplicitTransitions(size_t num_vertices) : graph(num_vertices) {}
+
+  // These copy constructor and copy assignment operators are
+  // deleted because this type can only be moved with std::move();
   ExplicitTransitions(const ExplicitTransitions&)=delete;
   ExplicitTransitions& operator=(const ExplicitTransitions&)=delete;
 
@@ -87,39 +96,44 @@ public:
       std::unique_ptr<ExplicitTransition<LocalMarking,ETState,RNG>>>
       transitions;
   PetriGraph graph;
+
+  friend BuildGraph<ExplicitTransitions<ETState,PKey,TKey,Random>>;
 };
 
 
-template<typename State, typename Random>
-struct petri_place<ExplicitTransitions<State,Random>>
+
+// Now that we have the object, this is how it fulfills the
+// GSPN concept.
+template<typename State, typename P, typename T, typename Random>
+struct petri_place<ExplicitTransitions<State,P,T,Random>>
 {
-  typedef typename ExplicitTransitions<State,Random>::place_type type;
+  typedef typename ExplicitTransitions<State,P,T,Random>::place_type type;
 };
 
 
 
-template<typename State, typename Random>
-struct petri_transition<ExplicitTransitions<State,Random>>
+template<typename State, typename P, typename T, typename Random>
+struct petri_transition<ExplicitTransitions<State,P,T,Random>>
 {
-  typedef typename ExplicitTransitions<State,Random>::transition_type type;
+  typedef typename ExplicitTransitions<State,P,T,Random>::transition_type type;
 };
 
 
 
-template<typename State, typename Random>
+template<typename State, typename P, typename T, typename Random>
 std::vector<std::tuple<size_t,size_t,int>>
 neighbors_of_transition(
-  ExplicitTransitions<State,Random>& et,
-  typename ExplicitTransitions<State,Random>::transition_type trans_id)
+  ExplicitTransitions<State,P,T,Random>& et,
+  typename ExplicitTransitions<State,P,T,Random>::transition_type trans_id)
 {
   return neighbors_of_transition(et.graph, trans_id);
 }
 
 
-template<typename F, typename State, typename Random>
+template<typename F, typename State, typename P, typename T, typename Random>
 void neighbors_of_places(
-  ExplicitTransitions<State,Random>& et,
-  const std::set<typename ExplicitTransitions<State,Random>::place_type>& place_id, F func)
+  ExplicitTransitions<State,P,T,Random>& et,
+  const std::set<typename ExplicitTransitions<State,P,T,Random>::place_type>& place_id, F func)
 {
   return neighbors_of_places(et.graph, place_id, func);
 }
