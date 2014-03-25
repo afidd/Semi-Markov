@@ -298,7 +298,7 @@ public:
   Maps _maps;
 public:
   Marking() {}
-  const std::set<place_t>& modified() { return _modified; }
+  const std::set<place_t>& modified() const { return _modified; }
   void clear() { _modified.clear(); }
 
   inline friend std::ostream&
