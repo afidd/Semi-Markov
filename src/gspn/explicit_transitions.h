@@ -46,21 +46,32 @@ public:
 
 /*! This is one way to provide a set of transitions for a GSPN.
  */
-template<typename LocalMarking, typename State,
-    typename PetriGraph, typename Random>
+template<typename ETState,typename Random>
 class ExplicitTransitions
 {
+  // The GSPN gets the marking type from the State.
+  typedef typename ETState::Marking ETMarking;
+  typedef PetriGraphType PetriGraph;
+
 public:
+  typedef smv::LocalMarking<ETMarking> LocalMarking;
   typedef Random RNG;
-  typedef trans_t<PetriGraph> TransId;
+  typedef boost::graph_traits<PetriGraph>::vertex_descriptor place_type;
+  typedef boost::graph_traits<PetriGraph>::vertex_descriptor transition_type;
+  typedef smv::ExplicitTransition<LocalMarking,ETState,RNG> Transition;
+
   ExplicitTransitions(PetriGraph& graph) : graph(std::move(graph)) {}
   ExplicitTransitions(const ExplicitTransitions&)=delete;
   ExplicitTransitions& operator=(const ExplicitTransitions&)=delete;
+
+
   ExplicitTransitions(ExplicitTransitions&& other)
   {
     transitions=std::move(other.transitions);
     graph=std::move(other.graph);
   }
+
+
   ExplicitTransitions& operator=(ExplicitTransitions&& other)
   {
     if (this!=other)
@@ -72,47 +83,43 @@ public:
 
   ~ExplicitTransitions() {}
 
-  std::map<trans_t<PetriGraph>,
-      std::unique_ptr<ExplicitTransition<LocalMarking,State,RNG>>>
+  std::map<transition_type,
+      std::unique_ptr<ExplicitTransition<LocalMarking,ETState,RNG>>>
       transitions;
   PetriGraph graph;
 };
 
 
-template<typename LocalMarking, typename State,
-    typename PetriGraph, typename Random>
-struct petri_place<ExplicitTransitions<LocalMarking,State,PetriGraph,Random>>
+template<typename State, typename Random>
+struct petri_place<ExplicitTransitions<State,Random>>
 {
-  typedef typename boost::graph_traits<PetriGraph>::vertex_descriptor type;
+  typedef typename ExplicitTransitions<State,Random>::place_type type;
 };
 
 
 
-template<typename LocalMarking, typename State,
-    typename PetriGraph, typename Random>
-struct petri_transition<ExplicitTransitions<LocalMarking,State,PetriGraph,Random>>
+template<typename State, typename Random>
+struct petri_transition<ExplicitTransitions<State,Random>>
 {
-  typedef typename boost::graph_traits<PetriGraph>::vertex_descriptor type;
+  typedef typename ExplicitTransitions<State,Random>::transition_type type;
 };
 
 
 
-template<typename LocalMarking, typename State,
-    typename PetriGraph, typename Random>
+template<typename State, typename Random>
 std::vector<std::tuple<size_t,size_t,int>>
 neighbors_of_transition(
-  ExplicitTransitions<LocalMarking,State,PetriGraph,Random>& et,
-  typename petri_transition<PetriGraph>::type trans_id)
+  ExplicitTransitions<State,Random>& et,
+  typename ExplicitTransitions<State,Random>::transition_type trans_id)
 {
   return neighbors_of_transition(et.graph, trans_id);
 }
 
 
-template<typename F, typename LocalMarking, typename State,
-    typename PetriGraph, typename Random>
+template<typename F, typename State, typename Random>
 void neighbors_of_places(
-  ExplicitTransitions<LocalMarking,State,PetriGraph,Random>& et,
-  const std::set<typename petri_place<PetriGraph>::type>& place_id, F func)
+  ExplicitTransitions<State,Random>& et,
+  const std::set<typename ExplicitTransitions<State,Random>::place_type>& place_id, F func)
 {
   return neighbors_of_places(et.graph, place_id, func);
 }
@@ -120,7 +127,7 @@ void neighbors_of_places(
 
 template<typename Transitions, typename... Args>
 std::pair<bool,std::unique_ptr<TransitionDistribution<typename Transitions::RNG>>>
-enabled(const Transitions& et, typename Transitions::TransId trans_id,
+enabled(const Transitions& et, typename Transitions::transition_type trans_id,
   Args&&... args)
 {
   return et.transitions.at(trans_id)->enabled(std::forward<Args>(args)...);
@@ -130,10 +137,10 @@ enabled(const Transitions& et, typename Transitions::TransId trans_id,
 
 template<typename Transitions, typename... Args>
 void
-fire(Transitions& et, typename Transitions::TransId trans_id,
+fire(Transitions& et, typename Transitions::transition_type trans_id,
   Args&&... args)
 {
-  return et.transitions.at(trans_id)->fire(std::forward<Args>(args)...);
+  et.transitions.at(trans_id)->fire(std::forward<Args>(args)...);
 }
 
 

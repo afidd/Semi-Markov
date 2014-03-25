@@ -32,74 +32,6 @@ using CowGen=boost::random::mt19937;
 
 
 
-using PN=smv::PetriGraphType;
-
-namespace afidd{
-namespace smv{
-template<>
-struct petri_place<PetriGraphType>
-{
-  typedef size_t type;
-};
-
-
-template<>
-struct petri_transition<PetriGraphType>
-{
-  typedef size_t type;
-};
-
-
-template<>
-struct petri_graph<PetriGraphType>
-{
-  typedef PetriGraphType type;
-};
-} // smv
-} // afidd
-
-using Mark=smv::Marking<smv::place_t<PN>,
-    smv::Colored<Cow>,smv::Uncolored<std::map<size_t,double>>>;
-using CowState=smv::GSPNState<PN,Mark>;
-
-class CowTransition
-: public smv::ExplicitTransition<smv::LocalMarking<Mark>,CowState,CowGen>
-{
-public:
-  CowTransition(size_t cow_id) : cow_id(cow_id) {}
-  virtual ~CowTransition() {}
-
-  size_t cow_id;
-};
-
-
-using Dist=smv::TransitionDistribution<CowGen>;
-using ExpDist=smv::ExponentialDistribution<CowGen>;
-using NoDist=smv::NoDistribution<CowGen>;
-using CowTransitions=smv::ExplicitTransitions<smv::LocalMarking<Mark>,
-    CowState,PN,CowGen>;
-
-class InfectNeighbor : public CowTransition
-{
-public:
-  InfectNeighbor(size_t cow_id) : CowTransition(cow_id) {}
-
-  virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  enabled(const CowState& s,
-    const LocalMarking<Mark>& lm, double current_time) const
-  {
-    return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, current_time))};
-  }
-
-  virtual void fire(CowState& s, LocalMarking<Mark>& lm, CowGen& rng) const
-  {
-    return;
-  }
-};
-
-
-
-
 /*! A POD type for the id to a cow place.
  *  This is what it takes to make a class that is simple but
  *  also can be a key in a dictionary and initialize with
@@ -188,6 +120,57 @@ struct CowT
 
 
 
+using PN=smv::PetriGraphType;
+
+
+// This is the central set of definitions in order to use the
+// ExplicitTransitions representation of the GSPN.
+using Mark=smv::Marking<size_t,
+    smv::Colored<Cow>,smv::Uncolored<std::map<size_t,double>>>;
+using CowState=smv::GSPNState<Mark>;
+using CowTransitions=smv::ExplicitTransitions<CowState,CowGen>;
+
+// We make a transition that meets the requirements of the GSPN object
+// by deriving it from the Transition type it defines.
+class CowTransition
+: public CowTransitions::Transition
+{
+public:
+  CowTransition(size_t cow_id) : cow_id(cow_id) {}
+  virtual ~CowTransition() {}
+
+  size_t cow_id;
+};
+
+
+// These are just shorthand.
+using Dist=smv::TransitionDistribution<CowGen>;
+using ExpDist=smv::ExponentialDistribution<CowGen>;
+using NoDist=smv::NoDistribution<CowGen>;
+
+class InfectNeighbor : public CowTransition
+{
+public:
+  InfectNeighbor(size_t cow_id) : CowTransition(cow_id) {}
+
+  virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
+  enabled(const CowState& s,
+    const LocalMarking<Mark>& lm, double current_time) const
+  {
+    return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, current_time))};
+  }
+
+  virtual void fire(CowState& s, LocalMarking<Mark>& lm, CowGen& rng) const
+  {
+    return;
+  }
+};
+
+
+
+
+
+
 
 /*! The Petri Net we make depends only on the local marking, not
  *  the marking, because transitions are defined on local state.
@@ -265,7 +248,7 @@ int main(int argc, char *argv[])
   params[lambda]=1.0;
   params[beta]=1.7;
   params[gamma]=0.5;
-  place_t<PN> params_place_id=0;
+  size_t params_place_id=0;
   add<1>(m, params_place_id, params);
   assert(length<1>(m, params_place_id)==1);
   assert(length<0>(m, 27, 13)==0);

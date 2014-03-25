@@ -58,7 +58,7 @@ public:
 
 
 
-template<typename PN, typename Mark, typename TimeStrategy=KahanTime>
+template<typename Mark, typename TimeStrategy=KahanTime>
 class GSPNState : public TimeStrategy
 {
 public:
