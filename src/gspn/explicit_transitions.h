@@ -78,6 +78,7 @@ public:
   {
     transitions=std::move(other.transitions);
     graph=std::move(other.graph);
+    _bimap=std::move(other._bimap);
   }
 
 
@@ -87,10 +88,17 @@ public:
     {
       transitions=std::move(other.transitions);
       graph=std::move(other.graph);
+      _bimap=std::move(other._bimap);
     }
   }
 
   ~ExplicitTransitions() {}
+
+  size_t place_vertex(PlaceKey p)
+  {
+    return get_pvertex(_bimap, p);
+  }
+
 
   std::map<transition_type,
       std::unique_ptr<ExplicitTransition<LocalMarking,ETState,RNG>>>

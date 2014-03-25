@@ -22,6 +22,8 @@
 #include "explicit_transitions.h"
 #include "partial_core_matrix.h"
 #include "continuous_dynamics.h"
+#include "build_graph.h"
+#include "smv_algorithm.h"
 #include "logging.h"
 
 namespace smv=afidd::smv;
@@ -29,60 +31,111 @@ using namespace smv;
 using RandGen=std::mt19937_64;
 
 
-
-
-using PG=PetriGraphType;
-
-
-// Inject traits types for into the afidd namespace where
-// they are used to determine place and transition token types.
-namespace afidd{
-namespace smv{
-template<>
-struct petri_place<PG>
-{
-  typedef size_t type;
-};
-
-
-template<>
-struct petri_transition<PG>
-{
-  typedef size_t type;
-};
-
-
-template<>
-struct petri_graph<PG>
-{
-  typedef PG type;
-};
-} // smv
-} // afidd
-
-
 struct IndividualToken
 {
   IndividualToken()=default;
+
+  inline friend
+  std::ostream& operator<<(std::ostream& os, const IndividualToken& it)
+  {
+    return os << "T";
+  }
+};
+
+
+struct SIRPlace
+{
+  size_t disease;
+  size_t individual;
+
+  SIRPlace()=default;
+  SIRPlace(size_t d, size_t i)
+  : disease(d), individual(i)
+  {}
+
+  friend inline
+  bool operator<(const SIRPlace& a, const SIRPlace& b)
+  {
+    return lazy_less(a.disease, b.disease, a.individual,
+      b.individual);
+  }
+
+
+  friend inline
+  bool operator==(const SIRPlace& a, const SIRPlace& b)
+  {
+    return (a.disease==b.disease)&& (a.individual==b.individual);
+  }
+
+
+  friend inline
+  std::ostream&
+  operator<<(std::ostream& os, const SIRPlace& cp)
+  {
+    return os << '(' << cp.disease << ", " << cp.individual<<')';
+  }
+};
+
+
+
+/*! This identifies a cow transition.
+ *  We are being luxurious. If it's a cow-to-cow infection,
+ *  both cows identify the transition. Subgroup-to-subgroup
+ *  can also be recorded. The kind is then an identifier for
+ *  a particular infection or movement.
+ */
+struct SIRTKey
+{
+  size_t ind1;
+  size_t ind2;
+  size_t kind;
+
+  SIRTKey()=default;
+  SIRTKey(size_t c1, size_t c2, size_t k)
+  : ind1(c1), ind2(c2), kind(k)
+  {}
+
+  friend inline
+  bool operator<(const SIRTKey& a, const SIRTKey& b)
+  {
+    return lazy_less(a.ind1, b.ind1, a.ind2, b.ind2,
+      a.kind, b.kind);
+  }
+
+  friend inline
+  bool operator==(const SIRTKey& a, const SIRTKey& b)
+  {
+    return (a.ind1==b.ind1) && (a.ind2==b.ind2) && (a.kind==b.kind);
+  }
+
+  friend inline
+  std::ostream&
+  operator<<(std::ostream& os, const SIRTKey& cp)
+  {
+    return os << '(' << cp.ind1 << "," << cp.ind2 << ","
+      <<", " << cp.kind << ')';
+  }
 };
 
 
 // Marking of the net.
-using Mark=Marking<place_t<PG>, Uncolored<IndividualToken>>;
+using Mark=Marking<size_t, Uncolored<IndividualToken>>;
 // State of the continuous dynamical system.
-using SIRState=GSPNState<PG, Mark>;
+using SIRState=GSPNState<Mark>;
+
+// This class holds the transitions.
+using SIRGSPN=
+    ExplicitTransitions<SIRState, SIRPlace, SIRTKey, RandGen>;
+
 
 class SIRTransition
-: public ExplicitTransition<LocalMarking<Mark>, SIRState, RandGen>
+: public SIRGSPN::Transition
 {
 public:
   SIRTransition() {}
   virtual ~SIRTransition() {}
 };
 
-// This class holds the transitions.
-using SIRGSPN=
-    ExplicitTransitions<LocalMarking<Mark>,SIRState, PG, RandGen>;
 
 
 using Dist=TransitionDistribution<RandGen>;
@@ -112,7 +165,7 @@ class InfectNeighbor : public SIRTransition
   virtual void fire(SIRState& s, LocalMarking<Mark>& lm,
       RandGen& rng) const override
   {
-    BOOST_LOG_TRIVIAL(debug) << "Fire infection " << lm;
+    BOOST_LOG_TRIVIAL(trace) << "Fire infection " << lm;
     lm.template transfer_by_stochiometric_coefficient<0>(rng);
   }
 
@@ -142,7 +195,7 @@ class Recover : public SIRTransition
   virtual void fire(SIRState& s, LocalMarking<Mark>& lm,
       RandGen& rng) const override
   {
-    BOOST_LOG_TRIVIAL(debug) << "Fire recovery "<< lm;
+    BOOST_LOG_TRIVIAL(trace) << "Fire recovery "<< lm;
     lm.template transfer_by_stochiometric_coefficient<0>(rng);
   }
 
@@ -155,72 +208,44 @@ class Recover : public SIRTransition
 SIRGSPN
 build_system(size_t individual_cnt)
 {
-  size_t individual_state_cnt=3;
-  size_t place_cnt=individual_cnt * individual_state_cnt;
-  // Two infections for each combination, so the twos cancel.
-  size_t infection_cnt=individual_cnt*(individual_cnt-1);
-  size_t recovery_cnt=individual_cnt;
-  size_t transition_cnt=infection_cnt+recovery_cnt;
-
-  PG build_graph(place_cnt + transition_cnt);
-  SIRGSPN et(build_graph);
-  PG& graph=et.graph;
+  BuildGraph<SIRGSPN> bg;
+  using Edge=BuildGraph<SIRGSPN>::PlaceEdge;
 
   enum { s, i, r };
-  PetriGraphVertexProperty vprop;
-  size_t assigned_place_idx;
-  for (auto ind_idx=0; ind_idx<individual_cnt; ind_idx++)
+
+  for (size_t ind_idx=0; ind_idx<individual_cnt; ind_idx++)
   {
-    for (auto place : std::vector<int>{s, i, r})
+    for (size_t place : std::vector<int>{s, i, r})
     {
-      vprop.color=PetriGraphColor::Place;
-      vprop.token_layer=0;
-      assigned_place_idx=ind_idx*individual_state_cnt+place;
-      graph[assigned_place_idx]=vprop;
+      bg.add_place({place, ind_idx}, 0);
     }
   }
-  BOOST_LOG_TRIVIAL(trace) << "Places from "<<0<<" to "<<place_cnt;
-  assert(assigned_place_idx=place_cnt-1);
 
-  vprop.color=PetriGraphColor::Transition;
-
-  size_t trans_idx=place_cnt;
-  for (auto left_idx=0; left_idx<individual_cnt-1; left_idx++)
+  for (size_t left_idx=0; left_idx<individual_cnt-1; left_idx++)
   {
-    for (auto right_idx=left_idx+1; right_idx<individual_cnt; right_idx++)
-    {
-      graph[trans_idx]=vprop;
-      add_edge(left_idx*3+i, trans_idx, {-1}, graph);
-      add_edge(right_idx*3+s, trans_idx, {-1}, graph);
-      add_edge(trans_idx, left_idx*3+i, {1}, graph);
-      add_edge(trans_idx, right_idx*3+i, {1}, graph);
-      et.transitions.emplace(trans_idx++,
-        std::move(std::unique_ptr<SIRTransition>(new InfectNeighbor())));
 
-      graph[trans_idx]=vprop;
-      add_edge(left_idx*3+s, trans_idx, {-1}, graph);
-      add_edge(right_idx*3+i, trans_idx, {-1}, graph);
-      add_edge(trans_idx, left_idx*3+i, {1}, graph);
-      add_edge(trans_idx, right_idx*3+i, {1}, graph);
-      et.transitions.emplace(trans_idx++,
-        std::move(std::unique_ptr<SIRTransition>(new InfectNeighbor())));
+    for (size_t right_idx=left_idx+1; right_idx<individual_cnt; right_idx++)
+    {
+      SIRPlace left{i, left_idx};
+      SIRPlace rights{s, right_idx};
+      SIRPlace righti{i, right_idx};
+
+      bg.add_transition({left_idx, right_idx, 0},
+        {Edge{left, -1}, Edge{rights, 1}, Edge{left, 1}, Edge{righti, 1}},
+        std::unique_ptr<SIRTransition>(new InfectNeighbor()));
+
+      SIRPlace lefts{s, left_idx};
+      SIRPlace lefti{i, left_idx};
+      SIRPlace right{i, right_idx};
+
+      bg.add_transition({right_idx, left_idx, 0},
+        {Edge{right, -1}, Edge{lefts, 1}, Edge{right, 1}, Edge{lefti, 1}},
+        std::unique_ptr<SIRTransition>(new InfectNeighbor()));
     }
   }
-  BOOST_LOG_TRIVIAL(trace) << "Infections from "<<place_cnt<<" to "<<trans_idx;
-  assert(trans_idx==place_cnt+infection_cnt);
-
-  for (auto rec_idx=0; rec_idx<individual_cnt; rec_idx++)
-  {
-    graph[trans_idx]=vprop;
-    add_edge(rec_idx*3+i, trans_idx, {-1}, graph);
-    add_edge(trans_idx, rec_idx*3+r, {1}, graph);
-      et.transitions.emplace(trans_idx++,
-        std::move(std::unique_ptr<SIRTransition>(new Recover())));
-  }
-  BOOST_LOG_TRIVIAL(trace) << "Last transition "<< trans_idx-1;
 
   // std::move the transitions because they contain unique_ptr.
-  return std::move(et);
+  return std::move(bg.build());
 }
 
 
@@ -229,9 +254,9 @@ build_system(size_t individual_cnt)
 
 int main(int argc, char *argv[])
 {
-  afidd::log_init("debug");
+  afidd::log_init("info");
 
-  size_t individual_cnt=100;
+  size_t individual_cnt=10;
   enum { beta, gamma };
   std::map<size_t,double> params;
   params[beta]=1.0;
@@ -244,7 +269,8 @@ int main(int argc, char *argv[])
   SIRState state;
   for (size_t individual=0; individual<individual_cnt; ++individual)
   {
-    add<0>(state.marking, 3*individual, IndividualToken{});
+    auto susceptible=gspn.place_vertex({0, individual});
+    add<0>(state.marking, susceptible, IndividualToken{});
   }
 
   using Markov=PartialCoreMatrix<SIRGSPN, SIRState, RandGen>;
@@ -254,8 +280,10 @@ int main(int argc, char *argv[])
 
   // The initial input string moves a token from susceptible to infected.
   auto first_case=smv::uniform_index(rng, individual_cnt);
-  auto input_string=[&first_case](SIRState& state)->void {
-    move<0,0>(state.marking, first_case*3, first_case*3+1, 1);
+  size_t first_s=gspn.place_vertex({0, first_case});
+  size_t first_i=gspn.place_vertex({1, first_case});
+  auto input_string=[&first_s, &first_i](SIRState& state)->void {
+    move<0,0>(state.marking, first_s, first_i, 1);
   };
   auto next=propagate_competing_processes(system, input_string, rng);
 

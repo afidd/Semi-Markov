@@ -25,6 +25,13 @@ struct BiGraphCorrespondence
   std::map<vert_t,BGPlace> vp;
   std::map<BGTransition,vert_t> tv;
   std::map<vert_t,BGTransition> vt;
+
+  inline friend
+  std::ostream& operator<<(std::ostream& os, const BiGraphCorrespondence& bgc)
+  {
+    return os << "BiGraphCorrespondence(" << bgc.pv.size() << ", "
+      << bgc.vp.size() << ", " << bgc.tv.size() << ", " << bgc.vt.size() << ")";
+  }
 };
 
 
@@ -37,6 +44,7 @@ void put_place(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
   {
     BOOST_LOG_TRIVIAL(error) << "Place "<<val<<" already exists.";
   }
+  BOOST_LOG_TRIVIAL(trace)<< "Making place "<<val;
   map.pv.emplace(val, k);
   map.vp.emplace(k, val);
 }
@@ -65,7 +73,8 @@ get_pvertex(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
   auto it=map.pv.find(key);
   if (it==map.pv.end())
   {
-    BOOST_LOG_TRIVIAL(error) << "Place does not exist: "<<key;
+    BOOST_LOG_TRIVIAL(error) << "Place does not exist: "<<key
+      <<" map size " << map.pv.size();
     return vert_t{};
   }
   return it->second;
@@ -305,6 +314,7 @@ public:
     }
 
     // Check out whether it looks right.
+    BOOST_LOG_TRIVIAL(debug)<<b;
     size_t stoch_cnt=num_stochiometric_coefficients(g);
     BOOST_LOG_TRIVIAL(debug)<< stoch_cnt << " stochiometric coefficients found";
     bool n_bipartite=is_bipartite_petri_graph(g);
