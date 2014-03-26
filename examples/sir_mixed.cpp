@@ -14,6 +14,7 @@
 #include "boost/log/core.hpp"
 #include "boost/property_map/property_map.hpp"
 #include "boost/mpl/vector.hpp"
+#include "boost/program_options.hpp"
 #include "gspn.h"
 #include "petri_graph.h"
 #include "marking.h"
@@ -112,8 +113,8 @@ struct SIRTKey
   std::ostream&
   operator<<(std::ostream& os, const SIRTKey& cp)
   {
-    return os << '(' << cp.ind1 << "," << cp.ind2 << ","
-      <<", " << cp.kind << ')';
+    return os << '(' << cp.ind1 << ", " << cp.ind2 << ", "
+     << cp.kind << ')';
   }
 };
 
@@ -121,7 +122,18 @@ struct SIRTKey
 // Marking of the net.
 using Mark=Marking<size_t, Uncolored<IndividualToken>>;
 // State of the continuous dynamical system.
-using SIRState=GSPNState<Mark>;
+template<typename Mark, typename TimeStrategy=KahanTime>
+class WithParamsState : public TimeStrategy
+{
+public:
+  typedef Mark Marking;
+
+  Marking marking;
+  std::map<int,double> params;
+};
+
+using SIRState=WithParamsState<Mark>;
+
 
 // This class holds the transitions.
 using SIRGSPN=
@@ -154,7 +166,7 @@ class InfectNeighbor : public SIRTransition
   {
     if (lm.template input_tokens_sufficient<0>())
     {
-      return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
+      return {true, std::unique_ptr<ExpDist>(new ExpDist(s.params.at(0), te))};
     }
     else
     {
@@ -184,7 +196,7 @@ class Recover : public SIRTransition
   {
     if (lm.template input_tokens_sufficient<0>())
     {
-      return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
+      return {true, std::unique_ptr<ExpDist>(new ExpDist(s.params.at(1), te))};
     }
     else
     {
@@ -223,6 +235,10 @@ build_system(size_t individual_cnt)
 
   for (size_t left_idx=0; left_idx<individual_cnt-1; left_idx++)
   {
+    bg.add_transition({left_idx, left_idx, 0},
+      {Edge{{i, left_idx}, -1}, Edge{{r, left_idx}, 1}},
+      std::unique_ptr<SIRTransition>(new Recover())
+      );
 
     for (size_t right_idx=left_idx+1; right_idx<individual_cnt; right_idx++)
     {
@@ -231,7 +247,7 @@ build_system(size_t individual_cnt)
       SIRPlace righti{i, right_idx};
 
       bg.add_transition({left_idx, right_idx, 0},
-        {Edge{left, -1}, Edge{rights, 1}, Edge{left, 1}, Edge{righti, 1}},
+        {Edge{left, -1}, Edge{rights, -1}, Edge{left, 1}, Edge{righti, 1}},
         std::unique_ptr<SIRTransition>(new InfectNeighbor()));
 
       SIRPlace lefts{s, left_idx};
@@ -239,7 +255,7 @@ build_system(size_t individual_cnt)
       SIRPlace right{i, right_idx};
 
       bg.add_transition({right_idx, left_idx, 0},
-        {Edge{right, -1}, Edge{lefts, 1}, Edge{right, 1}, Edge{lefti, 1}},
+        {Edge{right, -1}, Edge{lefts, -1}, Edge{right, 1}, Edge{lefti, 1}},
         std::unique_ptr<SIRTransition>(new InfectNeighbor()));
     }
   }
@@ -254,19 +270,52 @@ build_system(size_t individual_cnt)
 
 int main(int argc, char *argv[])
 {
-  afidd::log_init("info");
-
+  namespace po=boost::program_options;
+  po::options_description desc("Well-mixed SIR");
   size_t individual_cnt=10;
-  enum { beta, gamma };
-  std::map<size_t,double> params;
-  params[beta]=1.0;
-  params[gamma]=0.5;
+  size_t rand_seed=1;
+  double beta=1.0;
+  double gamma=1.0;
+  std::string log_level;
 
-  RandGen rng(1);
-  
+  desc.add_options()
+    ("help", "show help message")
+    ("size,s",
+      po::value<size_t>(&individual_cnt)->default_value(10),
+      "size of the population")
+    ("seed,r",
+      po::value<size_t>(&rand_seed)->default_value(1),
+      "seed for random number generator")
+    ("beta",
+      po::value<double>(&beta)->default_value(1.0),
+      "parameter for infection of neighbor")
+    ("gamma",
+      po::value<double>(&gamma)->default_value(1.0),
+      "parameter for recovery")
+    ("loglevel", po::value<std::string>(&log_level)->default_value("info"),
+      "Set the logging level to trace, debug, info, warning, error, or fatal.")
+    ;
+
+  po::variables_map vm;
+  auto parsed_options=po::parse_command_line(argc, argv, desc);
+  po::store(parsed_options, vm);
+  po::notify(vm);
+
+  if (vm.count("help"))
+  {
+    std::cout << desc << std::endl;
+    return 0;
+  }
+
+  afidd::log_init(log_level);
+  RandGen rng(rand_seed);
+
   auto gspn=build_system(individual_cnt);
 
   SIRState state;
+  state.params[0]=beta;
+  state.params[1]=gamma;
+
   for (size_t individual=0; individual<individual_cnt; ++individual)
   {
     auto susceptible=gspn.place_vertex({0, individual});
