@@ -1,5 +1,6 @@
 #ifndef _BROWNION_MODEL_H_
 #define _BROWNION_MODEL_H_ 1
+#include <random>
 #include "gspn.h"
 #include "continuous_state.h"
 #include "marking.h"
@@ -10,7 +11,7 @@
 namespace smv=afidd::smv;
 using namespace smv;
 
-using RandGen=ProviderGenerator<boost::random::mt19937>;
+using RandGen=std::mt19937;
 
 
 
@@ -104,7 +105,7 @@ struct IndividualToken {};
 
 
 using Mark=smv::Marking<smv::place_t<BrownionGraph>, smv::Uncolored<IndividualToken>>;
-using BrownionState=smv::GSPNState<BrownionGraph,Mark>;
+using BrownionState=smv::GSPNState<Mark>;
 
 using Dist=smv::TransitionDistribution<RandGen>;
 using ExpDist=smv::ExponentialDistribution<RandGen>;

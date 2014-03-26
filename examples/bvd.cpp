@@ -4,6 +4,7 @@
 #include <limits>
 #include <algorithm>
 #include <memory>
+#include <random>
 #include <set>
 #include <functional>
 #include "stochnet.h"
@@ -27,7 +28,7 @@
 namespace smv=afidd::smv;
 using namespace afidd::smv;
 
-using CowGen=boost::random::mt19937;
+using CowGen=std::mt19937;
 
 
 
