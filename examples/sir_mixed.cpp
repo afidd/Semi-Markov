@@ -327,6 +327,7 @@ int main(int argc, char *argv[])
 
   BOOST_LOG_TRIVIAL(debug) << state.marking;
 
+  size_t step_cnt=0;
   // The initial input string moves a token from susceptible to infected.
   auto first_case=smv::uniform_index(rng, individual_cnt);
   size_t first_s=gspn.place_vertex({0, first_case});
@@ -335,6 +336,7 @@ int main(int argc, char *argv[])
     move<0,0>(state.marking, first_s, first_i, 1);
   };
   auto next=propagate_competing_processes(system, input_string, rng);
+  ++step_cnt;
 
   auto nothing=[](SIRState&)->void {};
   for ( ;
@@ -344,8 +346,9 @@ int main(int argc, char *argv[])
     BOOST_LOG_TRIVIAL(debug) << "trans " << std::get<0>(next) << " time " <<
         std::get<1>(next);
     BOOST_LOG_TRIVIAL(debug) << state.marking;
+    ++step_cnt;
   }
-
+  BOOST_LOG_TRIVIAL(info)<<"Took "<<step_cnt<<" transitions";
   return 0;
 }
 

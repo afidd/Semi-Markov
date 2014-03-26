@@ -15,7 +15,8 @@ namespace afidd
 namespace smv
 {
 
-
+/*! Maintains a mapping between PlaceKey, TransitionKey, and vertex_descriptor.
+ */
 template<typename BGPlace, typename BGTransition, typename vert_t>
 struct BiGraphCorrespondence
 {
@@ -37,30 +38,33 @@ struct BiGraphCorrespondence
 
 
 template<typename BGPlace, typename BGTransition, typename vert_t>
-void put_place(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
+bool put_place(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
     vert_t k, BGPlace val)
 {
   if (map.pv.find(val)!=map.pv.end())
   {
     BOOST_LOG_TRIVIAL(error) << "Place "<<val<<" already exists.";
+    return false;
   }
-  BOOST_LOG_TRIVIAL(trace)<< "Making place "<<val;
   map.pv.emplace(val, k);
   map.vp.emplace(k, val);
+  return true;
 }
 
 
 
 template<typename BGPlace, typename BGTransition, typename vert_t>
-void put_transition(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
+bool put_transition(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
     vert_t k, BGTransition val)
 {
   if (map.tv.find(val)!=map.tv.end())
   {
     BOOST_LOG_TRIVIAL(error) << "Transition "<<val<<" already exists.";
+    return false;
   }
   map.tv.emplace(val, k);
   map.vt.emplace(k, val);
+  return true;
 }
 
 
@@ -136,6 +140,10 @@ get_transition(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
 
 /*! Build an ExplicitTransitions class.
  *  Template argument ET is the type of an ExplicitTransitions class.
+ *  This uses a Boost::graph made with lists so that it preserves the
+ *  order of input and output edges but doesn't need to know ahead of
+ *  time how many vertices will be in the system. Then it copies that
+ *  graph to a Boost::graph which has O(1) access to edges.
  */
 template<typename ET>
 class BuildGraph
@@ -151,22 +159,22 @@ class BuildGraph
   BiGraphCorrespondence<BGPlace,BGTransition,vert> _bimap;
   std::map<BGTransition,std::unique_ptr<Transition>> _transitions;
 
-public:
   // This is the translation map for the compiled graph,
   // not for the one we use internally.
   using BiMap=BiGraphCorrespondence<BGPlace,BGTransition,
       boost::graph_traits<PetriGraphType>::vertex_descriptor>;
+
+public:
   using PlaceEdge=std::tuple<BGPlace,int>;
 
   BuildGraph()
   {}
 
 
-  bool add_place(BGPlace p, size_t token_layer)
+  bool add_place(BGPlace p, size_t token_layer=0)
   {
     auto v=add_vertex({PetriGraphColor::Place, token_layer}, _g);
-    put_place(_bimap, v, p);
-    return true;
+    return put_place(_bimap, v, p);
   }
 
 
@@ -175,18 +183,21 @@ public:
     std::unique_ptr<Transition> transition)
   {
     auto tv=add_vertex({PetriGraphColor::Transition, 0}, _g);
-    put_transition(_bimap, tv, t);
+    bool added=put_transition(_bimap, tv, t);
 
     for (auto edge : e)
     {
       BGPlace p=std::get<0>(edge);
       int weight=std::get<1>(edge);
-      this->add_edge(t, p, weight);
+      if (!this->add_edge(t, p, weight))
+      {
+        added=false;
+      }
     }
 
     _transitions.emplace(t, std::move(transition));
 
-    return true;
+    return added;
   }
 
 
@@ -247,7 +258,8 @@ public:
     // In order to use the boost copy_graph algorithm, the original
     // graph has to have a vertex_index_t property, OR you have to 
     // make a map from vertex_descriptor to an index, which is what
-    // we do here.
+    // we do here. The indices we assign here will _not_ be the same
+    // as the indices in the resulting graph.
     std::map<vert,size_t> vertex_index;
     using viter=boost::graph_traits<PetriBuildGraphType>::vertex_iterator;
     viter ind_begin;
@@ -288,7 +300,12 @@ public:
       auto transition_iter=_bimap.vt.find(old_vertex);
       if (place_iter!=_bimap.vp.end())
       {
-        assert(transition_iter==_bimap.vt.end());
+        if (transition_iter!=_bimap.vt.end())
+        {
+          BOOST_LOG_TRIVIAL(error)<<"The same vertex points both to a place "
+            "and a transition.";
+          assert(transition_iter==_bimap.vt.end());
+        }
         put_place(b, new_vertex, place_iter->second);
       }
       else if (transition_iter!=_bimap.vt.end())
@@ -309,7 +326,8 @@ public:
       }
       else
       {
-        BOOST_LOG_TRIVIAL(error) << "A vertex wasn't translated";
+        BOOST_LOG_TRIVIAL(error) << "A vertex wasn't translated during the "
+          "build step.";
       }
     }
 
