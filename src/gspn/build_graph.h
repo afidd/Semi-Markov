@@ -71,7 +71,7 @@ bool put_transition(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
 
 template<typename BGPlace, typename BGTransition, typename vert_t>
 typename BiGraphCorrespondence<BGPlace,BGTransition,vert_t>::vertex_descriptor
-get_pvertex(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
+get_pvertex(const BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
     BGPlace& key)
 {
   auto it=map.pv.find(key);
@@ -89,7 +89,7 @@ get_pvertex(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
 
 template<typename BGPlace, typename BGTransition, typename vert_t>
 typename BiGraphCorrespondence<BGPlace,BGTransition,vert_t>::vertex_descriptor
-get_tvertex(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
+get_tvertex(const BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
     BGTransition& key)
 {
   auto it=map.tv.find(key);
@@ -106,7 +106,7 @@ get_tvertex(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
 
 template<typename BGPlace, typename BGTransition, typename vert_t>
 BGPlace
-get_place(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
+get_place(const BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
   typename BiGraphCorrespondence<BGPlace,BGTransition,
       vert_t>::vertex_descriptor& key)
 {
@@ -124,7 +124,7 @@ get_place(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
 
 template<typename BGPlace, typename BGTransition, typename vert_t>
 BGTransition
-get_transition(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
+get_transition(const BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
     typename BiGraphCorrespondence<BGPlace,BGTransition,vert_t>::vertex_descriptor& key)
 {
   auto it=map.vt.find(key);

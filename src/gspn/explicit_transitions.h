@@ -106,9 +106,15 @@ public:
 
   ~ExplicitTransitions() {}
 
-  size_t place_vertex(PlaceKey p)
+  size_t place_vertex(PlaceKey p) const
   {
     return get_pvertex(_bimap, p);
+  }
+
+
+  PlaceKey vertex_place(size_t v) const
+  {
+    return get_place(_bimap, v);
   }
 
 
