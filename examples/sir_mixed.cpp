@@ -179,7 +179,7 @@ class InfectNeighbor : public SIRTransition
   virtual void fire(SIRState& s, Local& lm, RandGen& rng) const override
   {
     BOOST_LOG_TRIVIAL(trace) << "Fire infection " << lm;
-    //lm.template transfer_by_stochiometric_coefficient<0>(rng);
+    lm.template transfer_by_stochiometric_coefficient<0>(rng);
   }
 
 };
@@ -208,7 +208,7 @@ class Recover : public SIRTransition
   virtual void fire(SIRState& s, Local& lm, RandGen& rng) const override
   {
     BOOST_LOG_TRIVIAL(trace) << "Fire recovery "<< lm;
-    //lm.template transfer_by_stochiometric_coefficient<0>(rng);
+    lm.template transfer_by_stochiometric_coefficient<0>(rng);
   }
 
 };

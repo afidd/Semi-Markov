@@ -580,7 +580,7 @@ public:
       BOOST_LOG_TRIVIAL(error)<<"LocalMarking::remove Cannot remove from "
         "nonexistent container "<<place_idx<<" "<<I<<" "<<cnt;
     }
-    if (token_container.size()==0)
+    if (token_container->size()==0)
     {
       _removed.insert(place_idx);
     }
@@ -682,10 +682,9 @@ public:
 
 
 
-  template<size_t I, size_t J, typename Marking, typename Modifier>
+  template<size_t I, size_t J, typename Modifier>
   void
-  move(typename Marking::place_t place_from,
-      typename Marking::place_t place_to, size_t cnt,
+  move(size_t place_from, size_t place_to, size_t cnt,
       const Modifier& modify_token)
   {
     BOOST_LOG_TRIVIAL(trace)<< "Moving "<<cnt<<" tokens from "<<place_from
@@ -736,11 +735,14 @@ public:
     }
   }
 
+
+
   size_t layer(size_t place_idx) const
   {
     auto& place_container=_m.at(place_idx);
     return std::get<1>(place_container);
   }
+
 
 
   int stochiometric_coefficient(size_t place_idx) const
@@ -763,6 +765,161 @@ public:
     this->template move<I,J,LocalMarking,detail::DoNothing<TokenType>>(
       place_from, place_to, cnt, nothing, true);
   }
+  
+
+
+  template<size_t I, typename RNG, typename AndModify>
+  void transfer_by_stochiometric_coefficient(RNG& rng, const AndModify& mod)
+  {
+    using TokenType=typename boost::mpl::at<
+      typename LocalMarking::token_types,boost::mpl::int_<I>>::type&;
+    detail::DoNothing<TokenType> do_nothing;
+
+    std::vector<size_t> ins;
+    std::vector<size_t> outs;
+
+    size_t place_idx=0;
+    size_t layer=0;
+    int weight=0;
+
+    for (auto& collect_place : _m)
+    {
+      layer=std::get<1>(collect_place);
+      weight=std::get<2>(collect_place);
+
+      if (layer==I)
+      {
+        if (weight<0)
+        {
+          std::fill_n(std::back_inserter(ins), -weight, place_idx);
+        }
+        else if (weight>0)
+        {
+          std::fill_n(std::back_inserter(outs), weight, place_idx);
+        }
+        else
+        {
+          ; // Don't worry about stochiometric coefficients of 0.
+        }
+      }
+      ++place_idx;
+    }
+
+    // Optional shuffling of arrays.
+    if (ins.size()>outs.size())
+    {
+      std::shuffle(ins.begin(), ins.end(), rng);
+    }
+    else
+    {
+      std::shuffle(outs.begin(), outs.end(), rng);
+    }
+
+
+    auto initer=ins.begin();
+    auto outiter=outs.begin();
+    for ( ; initer!=ins.end() && outiter!=outs.end(); ++initer, ++outiter)
+    {
+      this->template move<I,I>(*initer, *outiter, 1ul, mod);
+    }
+
+    // If out needs extra tokens, create them.
+    for ( ; outiter!=outs.end(); ++outiter)
+    {
+      using TokenType=
+        typename boost::mpl::at<
+          typename LocalMarking::token_types,
+          boost::mpl::size_t<I>
+        >::type;
+      boost::value_initialized<TokenType> t;
+      this->template add<I>(*outiter, t.data());
+    }
+
+     // If in has extra tokens, destroy them.
+    for ( ; initer!=ins.end(); ++initer)
+    {
+      this->remove<I,RNG>(*initer, 1, rng);
+    }
+
+  }
+
+
+
+  template<size_t I, typename RNG>
+  void transfer_by_stochiometric_coefficient(RNG& rng)
+  {
+    using TokenType=typename boost::mpl::at<
+      typename LocalMarking::token_types,boost::mpl::int_<I>>::type&;
+    detail::DoNothing<TokenType> do_nothing;
+    
+    transfer_by_stochiometric_coefficient<I,RNG,detail::DoNothing<TokenType>>(
+      rng, do_nothing);
+  }
+
+
+
+  template<size_t I>
+  bool input_tokens_sufficient() const
+  {
+    size_t place_idx;
+    size_t layer;
+    int weight;
+
+    for (auto collect_place : this->place_indexes())
+    {
+      std::tie(place_idx, layer, weight)=collect_place;
+      if (layer==I)
+      {
+        if (weight<0)
+        {
+          auto available=static_cast<int>(this->template length<I>(place_idx));
+          if (available+weight<0)
+          {
+            return false;
+          }
+        }
+        else
+        {
+          ; // Don't worry about other stochiometric coefficients.
+        }
+      }
+    }
+    return true;
+  }
+
+
+
+  template<size_t I>
+  bool outputs_tokens_empty() const
+  {
+    size_t place_idx;
+    size_t layer;
+    int weight;
+
+    for (auto collect_place : _m.place_indexes())
+    {
+      std::tie(place_idx, layer, weight)=collect_place;
+      if (layer==I)
+      {
+        if (weight>0)
+        {
+          auto available=this->template length<I>(place_idx);
+          if (available>0)
+          {
+            return false;
+          }
+        }
+        else
+        {
+          ; // Don't worry about other stochiometric coefficients.
+        }
+      }
+    }
+    return true;
+  }
+
+
+
 
 
   inline friend
@@ -770,6 +927,7 @@ public:
   {
     return os << "Local marking "<<lm._m.size();
   }
+
 };
 
 
