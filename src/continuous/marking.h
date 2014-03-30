@@ -20,264 +20,13 @@
 #include "boost/mpl/size.hpp"
 #include "boost/utility/value_init.hpp"
 #include "gspn_random.h"
+#include "local_marking.h"
 
 
 namespace afidd
 {
 namespace smv
 {
-template<typename Place,typename... Ts>
-class Marking;
-
-
-template<typename Token>
-using Uncolored=std::vector<Token>;
-
-
-template<typename Token>
-struct color_type
-{
-  typedef size_t type;
-};
-
-
-template<typename Token>
-struct unique_color
-{
-  static const bool value=false;
-};
-
-
-template<typename Token>
-const typename color_type<Token>::type color(const Token&) {
-  return typename color_type<Token>::type();
-};
-
-
-template<typename Token>
-using Colored=std::map<typename color_type<Token>::type,Token>;
-
-
-namespace detail
-{
-using namespace std;
-namespace mpl=boost::mpl;
-
-template<typename Place,typename T>
-struct MakeMap
-{
-  typedef std::map<Place,T> type;
-};
-
-template<typename T, typename R>
-struct Tupleize {};
-
-
-template<typename... Ts, typename R>
-struct Tupleize<std::tuple<Ts...>,R>
-{
-  typedef std::tuple<Ts...,R> type;
-};
-
-
-// Given a vector or a map, find the type of the values
-// stored, so throw out the key of the map.
-template<typename Container>
-struct TokenOfContainer
-{
-  typedef typename Container::value_type type;
-};
-
-template<typename Color, typename Token>
-struct TokenOfContainer<std::map<Color,Token>>
-{
-  typedef Token type;
-};
-
-
-// A container is a Colored<Cow> or Uncolored<Cow>.
-template<typename... Ts>
-struct ContainerVector
-{
-  typedef boost::mpl::vector<Ts...> type;
-};
-
-
-// The map containers is std::tuple<std::map<place id, Colored<Cow>>, ...>
-template<typename Place,typename... Ts>
-struct MapContainers
-{
-  typedef boost::mpl::vector<Ts...> Containers;
-  typedef typename
-    boost::mpl::transform<Containers,typename MakeMap<Place,mpl_::_1>::type>::type Mapped;
-  typedef typename boost::mpl::fold<Mapped, std::tuple<>,
-    Tupleize<mpl_::_1,mpl_::_2>>::type result;
-};
-
-
-// Just the tokens, as in Cow() or Pig().
-template<typename... Ts>
-struct MarkTokens
-{
-  typedef boost::mpl::vector<Ts...> Containers;
-  typedef typename
-  boost::mpl::transform<Containers,TokenOfContainer<boost::mpl::_1>>::type type;
-};
-
-
-// This set of routines makes similar access to vectors and maps of tokens.
-template<typename Container, typename Token>
-int add_to_container(Container& c, const Token& t) { return 0; }
-
-
-template<typename Key,typename Token>
-int add_to_container(std::map<Key,Token>& c, const Token& t)
-{
-  c.emplace(color(t), t);
-  return 1;
-};
-
-
-template<typename Token>
-int add_to_container(std::vector<Token>& c, const Token& t)
-{
-  c.emplace_back(t);
-  return 1;
-};
-
-
-template<typename Container, typename RNG>
-void remove_from_container(Container& c, size_t cnt, RNG& rng)
-{
-  auto len=std::distance(c.begin(), c.end());
-  while (cnt>0)
-  {
-    size_t idx=uniform_index(rng, len);
-    auto to_erase=c.begin();
-    std::advance(to_erase, idx);
-    c.erase(to_erase);
-    --cnt;
-    --len;
-  }
-}
-
-
-template<typename Token, typename Functor>
-void apply_token_function(Token& token, const Functor& f)
-{
-  f(token);
-}
-
-
-template<typename Color, typename Token, typename Functor>
-void apply_token_function(std::pair<Color,Token>& val, const Functor& f)
-{
-  f(val.second);
-}
-
-
-// Convenience methods to move tokens.
-
-template<typename LM,typename RNG>
-struct NoCopy
-{
-  static void copy_layer(LM& lm, RNG& rng) {};
-};
-
-
-template<typename... Args>
-struct DoNothing
-{
-  void operator()(Args&&... args) const {}
-};
-
-
-template<typename First, typename Last, typename LM, typename RNG>
-struct CopyTokens
-{
-  static void copy_layer(LM& local_mark, RNG& rng)
-  {
-    using LayerConstant=typename boost::mpl::deref<First>::type;
-    static const size_t I=LayerConstant::value;
-
-    std::vector<size_t> ins;
-    std::vector<size_t> outs;
-
-    typename LM::place_t place;
-    size_t idx=0;
-    size_t layer;
-    int weight;
-
-    for (auto collect_place : local_mark.place_indexes())
-    {
-      std::tie(place, layer, weight)=collect_place;
-      if (layer==I)
-      {
-        if (weight<0)
-        {
-          std::fill_n(std::back_inserter(ins), -weight, idx);
-        }
-        else if (weight>0)
-        {
-          std::fill_n(std::back_inserter(outs), weight, idx);
-        }
-        else
-        {
-          ; // Don't worry about stochiometric coefficients of 0.
-        }
-      }
-      ++idx;
-    }
-
-    // Optional shuffling of arrays.
-    if (ins.size()>outs.size())
-    {
-      std::shuffle(ins.begin(), ins.end(), rng);
-    }
-    else
-    {
-      std::shuffle(outs.begin(), outs.end(), rng);
-    }
-
-
-    auto initer=ins.begin();
-    auto outiter=outs.begin();
-    for ( ; initer!=ins.end() && outiter!=outs.end(); ++initer, ++outiter)
-    {
-      static_assert(std::is_same<size_t,
-        typename LayerConstant::value_type>::value,
-        "I is not a size_t");
-      local_mark.template move<I,I>(*initer, *outiter, 1);
-    }
-
-    // If out needs extra tokens, create them.
-    for ( ; outiter!=outs.end(); ++outiter)
-    {
-      using TokenType=typename mpl::at<typename LM::Marking::token_types,LayerConstant>::type;
-      boost::value_initialized<TokenType> t;
-      local_mark.template add<I>(*outiter, t.data());
-    }
-
-     // If in has extra tokens, destroy them.
-    for ( ; initer!=ins.end(); ++initer)
-    {
-      local_mark.template remove<I,RNG>(*initer, 1, rng);
-    }
-
-    typedef typename std::conditional
-      <
-        std::is_same<typename boost::mpl::next<First>::type, Last>::value,
-        NoCopy<LM,RNG>,
-        CopyTokens<typename boost::mpl::next<First>::type, Last, LM, RNG>
-      >::type SubCopy;
-    SubCopy::copy_layer(local_mark, rng);
-  }
-};
-
-
-
-} // namespace detail
-
 
 
 /*! Marking contains a tuple of maps<Place,Container>
@@ -293,13 +42,84 @@ public:
   typedef typename detail::ContainerVector<Ts...>::type container_types;
   typedef typename detail::MarkTokens<Ts...>::type token_types;
   using Maps=typename detail::MapContainers<Place,Ts...>::result;
+  static constexpr size_t _layer_cnt=boost::mpl::size<container_types>::value;
 //private:
   std::set<Place> _modified;
   Maps _maps;
+
 public:
+  typedef LocalMarking<Ts...> LocalTyped;
+
   Marking() {}
   const std::set<place_t>& modified() const { return _modified; }
   void clear() { _modified.clear(); }
+
+
+  LocalTyped local_marking()
+  {
+    return LocalTyped{};
+  }
+
+
+  void init_local(LocalMarking<Ts...>& lm,
+      std::vector<std::tuple<size_t,size_t,int>> neighbor_places)
+  {
+    lm.resize(neighbor_places.size());
+    size_t idx=0;
+    detail::initialize_local<_layer_cnt,Maps,place_t,LocalTyped> il;
+
+    for (auto& line : neighbor_places)
+    {
+      auto& place_id=std::get<0>(line);
+      auto layer=std::get<1>(line);
+      auto stochiometric_coefficient=std::get<2>(line);
+
+      il(_maps, place_id, idx, layer, stochiometric_coefficient, lm);
+
+      ++idx;
+    }
+  }
+
+
+
+
+  void read_local(const LocalMarking<Ts...>& lm,
+    std::vector<std::tuple<size_t,size_t,int>> neighbor_places)
+  {
+    const auto changes=lm.changes();
+
+    // Modified places just need to be put on the modified list.
+    for (size_t midx : changes[0])
+    {
+      _modified.insert(std::get<0>(neighbor_places.at(midx)));
+    }
+
+    // Removed places need to be deleted.
+    detail::erase_by_layer<_layer_cnt,Maps,place_t> eraser;
+    for (size_t ridx : changes[1])
+    {
+      auto& neighbor_line=neighbor_places.at(ridx);
+      auto& place_id=std::get<0>(neighbor_line);
+      auto layer=std::get<1>(neighbor_line);
+
+      eraser(_maps, place_id, layer);
+      _modified.insert(place_id);
+    }
+
+    // Added places need to be copied here.
+    detail::add_by_layer<_layer_cnt,Maps,place_t,LocalTyped> abl;
+    for (size_t aidx : changes[2])
+    {
+      auto& neighbor_line=neighbor_places.at(aidx);
+      auto& place_id=std::get<0>(neighbor_line);
+      auto layer=std::get<1>(neighbor_line);
+
+      abl(_maps, place_id, layer, lm, aidx);
+      _modified.insert(place_id);
+    }
+  }
+
+
 
   inline friend std::ostream&
   operator<<(std::ostream& os, const Marking& m)
@@ -468,7 +288,6 @@ move(Marking& m, typename Marking::place_t place_from,
   BOOST_LOG_TRIVIAL(trace)<< "Moving "<<cnt<<" tokens from "<<place_from
     <<" to "<<place_to;
   if (0==cnt) return;
-  if (place_from==place_to) return;
 
   typedef typename boost::mpl::at<typename Marking::container_types,
     boost::mpl::int_<J>>::type container_type;
@@ -533,299 +352,6 @@ move(Marking& m, typename Marking::place_t place_from,
     m, place_from, place_to, cnt, nothing);
 }
 
-
-////////////////////////////////////////
-// LocalMarking
-////////////////////////////////////////
-
-
-/*! This presents that part of the marking upon which a transition depends.
- *  The places are ordered and indexed consecutively from 0.
- */
-template<typename MarkingType>
-class LocalMarking
-{
-public:
-  typedef MarkingType Marking;
-  typedef typename Marking::place_t place_t;
-  typedef typename boost::mpl::range_c<size_t,0,boost::mpl::size<
-      typename Marking::token_types>::value> layers;
-  typedef LocalMarking<Marking> type;
-private:
-  Marking& _m;
-  using PlaceVec=std::vector<std::tuple<place_t,size_t,int>>;
-  // place token, token_layer, stochiometric_coefficient
-  PlaceVec _places;
-
-
-public:
-  LocalMarking(Marking& marking, const PlaceVec& places)
-  : _m(marking), _places(places) {}
-
-
-  friend std::ostream& operator<<(std::ostream& os,
-      const LocalMarking<MarkingType>& lm)
-  {
-    for (auto& t : lm._places)
-    {
-      os << "(" << std::get<0>(t) << "," << std::get<1>(t) << ","
-        << std::get<2>(t) << ") ";
-    }
-    return os;
-  }
-
-
-  template<size_t I>
-  size_t length(size_t place_idx) const
-  {
-    return afidd::smv::length<I>(_m, std::get<0>(_places.at(place_idx)));
-  }
-
-
-  const PlaceVec& place_indexes() const
-  {
-    return _places;
-  }
-
-
-  size_t layer(size_t place_idx) const
-  {
-    return std::get<1>(_places.at(place_idx));
-  }
-
-
-
-  int stochiometric_coefficient(size_t place_idx) const
-  {
-    return std::get<2>(_places.at(place_idx));
-  }
-
-
-/*  template<size_t I, typename... Args>
-  decltype(afidd::smv::add(_m, std::forward<Args>(args)...))
-  add(Args&&... args)
-  -> decltype(f(std::forward<Args>(args)...))
-  {
-    afidd::smv::add(_m, std::forward<Args>(args)...);
-  }
-*/
-
-  template<size_t I, typename... Args>
-  void
-  add(Args&&... args)
-  {
-    afidd::smv::add<I>(_m, std::forward<Args>(args)...);
-  }
-
-
-  template<size_t I, typename RNG>
-  void remove(size_t place_idx, size_t cnt, RNG& rng)
-  {
-    afidd::smv::template remove<I>(_m, std::get<0>(_places.at(place_idx)), cnt, rng);
-  }
-
-
-
-  template<size_t I>
-  size_t length(size_t place_idx,
-    typename color_type<typename boost::mpl::at<
-      typename Marking::token_types,boost::mpl::int_<I>>::type>::type color) const
-  {
-    return afidd::smv::length<I>(_m, std::get<0>(_places.at(place_idx)), color);
-  }
-
-
-
-  template<size_t I, typename UnaryOperator>
-  std::pair
-    <
-      typename std::result_of<UnaryOperator(
-        typename boost::mpl::at<
-            typename Marking::token_types,boost::mpl::int_<I>>::type
-        )>::type,
-      bool
-    >
-  get(size_t place_idx, const UnaryOperator& op)
-  {
-    auto pid=std::get<0>(_places.at(place_idx));
-    return afidd::smv::get<I,Marking,UnaryOperator>(_m, pid, op);
-  }
-
-
-
-  template<size_t I, size_t J>
-  void
-  move(size_t place_from, size_t place_to, size_t cnt)
-  {
-    afidd::smv::move<I,J,Marking>(_m,
-        std::get<0>(_places.at(place_from)),
-        std::get<0>(_places.at(place_to)), cnt);
-  }
-
-
-  template<typename RNG>
-  void fire_by_stochiometric_coefficient(RNG& rng)
-  {
-    using TopCopy=detail::CopyTokens
-      <
-      typename boost::mpl::begin<layers>::type,
-      typename boost::mpl::end<layers>::type,
-      type,
-      RNG
-      >;
-    TopCopy::copy_layer(*this, rng);
-  }
-
-
-
-  template<size_t I, typename RNG, typename AndModify>
-  void transfer_by_stochiometric_coefficient(RNG& rng, const AndModify mod)
-  {
-    using TokenType=typename boost::mpl::at<
-      typename Marking::token_types,boost::mpl::int_<I>>::type&;
-    detail::DoNothing<TokenType> do_nothing;
-
-
-    std::vector<size_t> ins;
-    std::vector<size_t> outs;
-
-    place_t place;
-    size_t layer;
-    int weight;
-
-    for (auto collect_place : this->place_indexes())
-    {
-      std::tie(place, layer, weight)=collect_place;
-      if (layer==I)
-      {
-        if (weight<0)
-        {
-          std::fill_n(std::back_inserter(ins), -weight, place);
-        }
-        else if (weight>0)
-        {
-          std::fill_n(std::back_inserter(outs), weight, place);
-        }
-        else
-        {
-          ; // Don't worry about stochiometric coefficients of 0.
-        }
-      }
-    }
-
-    // Optional shuffling of arrays.
-    if (ins.size()>outs.size())
-    {
-      std::shuffle(ins.begin(), ins.end(), rng);
-    }
-    else
-    {
-      std::shuffle(outs.begin(), outs.end(), rng);
-    }
-
-
-    auto initer=ins.begin();
-    auto outiter=outs.begin();
-    for ( ; initer!=ins.end() && outiter!=outs.end(); ++initer, ++outiter)
-    {
-      afidd::smv::move<I,I>(_m, *initer, *outiter, 1, mod);
-    }
-
-    // If out needs extra tokens, create them.
-    for ( ; outiter!=outs.end(); ++outiter)
-    {
-      using TokenType=
-        typename boost::mpl::at<
-          typename Marking::token_types,
-          boost::mpl::size_t<I>
-        >::type;
-      boost::value_initialized<TokenType> t;
-      this->add<I>(*outiter, t.data());
-    }
-
-     // If in has extra tokens, destroy them.
-    for ( ; initer!=ins.end(); ++initer)
-    {
-      this->remove<I,RNG>(*initer, 1, rng);
-    }
-
-  }
-
-
-
-  template<size_t I, typename RNG>
-  void transfer_by_stochiometric_coefficient(RNG& rng)
-  {
-    using TokenType=typename boost::mpl::at<
-      typename Marking::token_types,boost::mpl::int_<I>>::type&;
-    detail::DoNothing<TokenType> do_nothing;
-    
-    transfer_by_stochiometric_coefficient<I,RNG,detail::DoNothing<TokenType>>(
-      rng, do_nothing);
-  }
-
-
-
-  template<size_t I>
-  bool input_tokens_sufficient() const
-  {
-    place_t place;
-    size_t layer;
-    int weight;
-
-    for (auto collect_place : this->place_indexes())
-    {
-      std::tie(place, layer, weight)=collect_place;
-      if (layer==I)
-      {
-        if (weight<0)
-        {
-          auto available=static_cast<int>(afidd::smv::length<I>(_m, place));
-          if (available+weight<0)
-          {
-            return false;
-          }
-        }
-        else
-        {
-          ; // Don't worry about other stochiometric coefficients.
-        }
-      }
-    }
-    return true;
-  }
-
-
-
-  template<size_t I>
-  bool outputs_tokens_empty() const
-  {
-    place_t place;
-    size_t layer;
-    int weight;
-
-    for (auto collect_place : _m.place_indexes())
-    {
-      std::tie(place, layer, weight)=collect_place;
-      if (layer==I)
-      {
-        if (weight>0)
-        {
-          auto available=afidd::smv::length<I>(_m, place);
-          if (available>0)
-          {
-            return false;
-          }
-        }
-        else
-        {
-          ; // Don't worry about other stochiometric coefficients.
-        }
-      }
-    }
-    return true;
-  }
-};
 
 
 

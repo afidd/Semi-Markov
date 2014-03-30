@@ -41,12 +41,14 @@ public:
     if (_state.marking.modified().size()>0)
     {
       // Check all neighbors of a place to see if they were enabled.
+      auto lm=_state.marking.local_marking();
+
       neighbors_of_places(_gspn, _state.marking.modified(),
         [&] (trans_t<GSPN> neighbor_id)
         {
           auto neighboring_places=
               neighbors_of_transition(_gspn, neighbor_id);
-          LocalMarking<Marking> lm(_state.marking, neighboring_places);
+          _state.marking.init_local(lm, neighboring_places);
 
           bool isEnabled;
           std::unique_ptr<TransitionDistribution<RNG>> dist;
@@ -87,8 +89,12 @@ public:
   void fire(trans_t<GSPN> trans_id, double when, RNG& rng)
   {
     auto neighboring_places=neighbors_of_transition(_gspn, trans_id);
-    LocalMarking<Marking> lm(_state.marking, neighboring_places);
+
+    auto lm=_state.marking.local_marking();
+    _state.marking.init_local(lm, neighboring_places);
     afidd::smv::fire(_gspn, trans_id, _state, lm, rng);
+    _state.marking.read_local(lm, neighboring_places);
+
     BOOST_LOG_TRIVIAL(trace) << "fire "<<trans_id << " modifies "
       << _state.marking.modified().size() << " places.";
 

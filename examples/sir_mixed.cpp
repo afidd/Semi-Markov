@@ -25,6 +25,7 @@
 #include "continuous_dynamics.h"
 #include "build_graph.h"
 #include "smv_algorithm.h"
+#include "local_marking.h"
 #include "logging.h"
 
 namespace smv=afidd::smv;
@@ -120,6 +121,7 @@ struct SIRTKey
 
 
 // Marking of the net.
+using Local=LocalMarking<Uncolored<IndividualToken>>;
 using Mark=Marking<size_t, Uncolored<IndividualToken>>;
 // State of the continuous dynamical system.
 template<typename Mark, typename TimeStrategy=KahanTime>
@@ -137,11 +139,11 @@ using SIRState=WithParamsState<Mark>;
 
 // This class holds the transitions.
 using SIRGSPN=
-    ExplicitTransitions<SIRState, SIRPlace, SIRTKey, RandGen>;
+    ExplicitTransitions<SIRState, SIRPlace, SIRTKey, Local, RandGen>;
 
 
 class SIRTransition
-: public SIRGSPN::Transition
+: public ExplicitTransition<Local,SIRState,RandGen>
 {
 public:
   SIRTransition() {}
@@ -160,11 +162,11 @@ using NoDist=NoDistribution<RandGen>;
 // Now make specific transitions.
 class InfectNeighbor : public SIRTransition
 {
-
   virtual std::pair<bool, std::unique_ptr<Dist>>
-  enabled(const SIRState& s, const LocalMarking<Mark>& lm, double te) const override
+  enabled(const SIRState& s, const Local& lm, double te) const override
   {
-    if (lm.template input_tokens_sufficient<0>())
+    bool go=true; //lm.template input_tokens_sufficient<0>();
+    if (go)
     {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(s.params.at(0), te))};
     }
@@ -174,11 +176,10 @@ class InfectNeighbor : public SIRTransition
     }
   }
 
-  virtual void fire(SIRState& s, LocalMarking<Mark>& lm,
-      RandGen& rng) const override
+  virtual void fire(SIRState& s, Local& lm, RandGen& rng) const override
   {
     BOOST_LOG_TRIVIAL(trace) << "Fire infection " << lm;
-    lm.template transfer_by_stochiometric_coefficient<0>(rng);
+    //lm.template transfer_by_stochiometric_coefficient<0>(rng);
   }
 
 };
@@ -190,11 +191,11 @@ class InfectNeighbor : public SIRTransition
 // Now make specific transitions.
 class Recover : public SIRTransition
 {
-
   virtual std::pair<bool, std::unique_ptr<Dist>>
-  enabled(const SIRState& s, const LocalMarking<Mark>& lm, double te) const override
+  enabled(const SIRState& s, const Local& lm, double te) const override
   {
-    if (lm.template input_tokens_sufficient<0>())
+    bool go=true; //lm.template input_tokens_sufficient<0>()
+    if (go)
     {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(s.params.at(1), te))};
     }
@@ -204,11 +205,10 @@ class Recover : public SIRTransition
     }
   }
 
-  virtual void fire(SIRState& s, LocalMarking<Mark>& lm,
-      RandGen& rng) const override
+  virtual void fire(SIRState& s, Local& lm, RandGen& rng) const override
   {
     BOOST_LOG_TRIVIAL(trace) << "Fire recovery "<< lm;
-    lm.template transfer_by_stochiometric_coefficient<0>(rng);
+    //lm.template transfer_by_stochiometric_coefficient<0>(rng);
   }
 
 };
