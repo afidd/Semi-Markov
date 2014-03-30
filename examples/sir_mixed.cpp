@@ -4,6 +4,7 @@
 #include <tuple>
 #include <map>
 #include <iostream>
+#include <fstream>
 #include <limits>
 #include <algorithm>
 #include <memory>
@@ -165,7 +166,7 @@ class InfectNeighbor : public SIRTransition
   virtual std::pair<bool, std::unique_ptr<Dist>>
   enabled(const SIRState& s, const Local& lm, double te) const override
   {
-    bool go=true; //lm.template input_tokens_sufficient<0>();
+    bool go=lm.template input_tokens_sufficient<0>();
     if (go)
     {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(s.params.at(0), te))};
@@ -194,7 +195,7 @@ class Recover : public SIRTransition
   virtual std::pair<bool, std::unique_ptr<Dist>>
   enabled(const SIRState& s, const Local& lm, double te) const override
   {
-    bool go=true; //lm.template input_tokens_sufficient<0>()
+    bool go=lm.template input_tokens_sufficient<0>();
     if (go)
     {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(s.params.at(1), te))};
@@ -267,6 +268,28 @@ build_system(size_t individual_cnt)
 
 
 
+/*! Write a file showing place ids and the internal indices for debugging.
+ */
+template<typename GSPN>
+void write_ids(const GSPN& gspn, const std::string& fname,
+    size_t individual_cnt)
+{
+  std::ofstream out{fname};
+
+  for (size_t individual=0; individual<individual_cnt; ++individual)
+  {
+    for (size_t disease=0; disease<3; disease++)
+    {
+      SIRPlace p{disease, individual};
+      auto vert=gspn.place_vertex(p);
+      out << vert << '\t' << p << std::endl;
+    }
+  }
+}
+
+
+
+
 
 int main(int argc, char *argv[])
 {
@@ -277,6 +300,7 @@ int main(int argc, char *argv[])
   double beta=1.0;
   double gamma=1.0;
   std::string log_level;
+  std::string translation_file;
 
   desc.add_options()
     ("help", "show help message")
@@ -294,6 +318,9 @@ int main(int argc, char *argv[])
       "parameter for recovery")
     ("loglevel", po::value<std::string>(&log_level)->default_value("info"),
       "Set the logging level to trace, debug, info, warning, error, or fatal.")
+    ("translate",
+      po::value<std::string>(&translation_file)->default_value(""),
+      "write file relating place ids to internal ids")
     ;
 
   po::variables_map vm;
@@ -311,6 +338,11 @@ int main(int argc, char *argv[])
   RandGen rng(rand_seed);
 
   auto gspn=build_system(individual_cnt);
+
+  if (translation_file.size()>0)
+  {
+    write_ids(gspn, translation_file, individual_cnt);
+  }
 
   SIRState state;
   state.params[0]=beta;
@@ -330,6 +362,7 @@ int main(int argc, char *argv[])
   size_t step_cnt=0;
   // The initial input string moves a token from susceptible to infected.
   auto first_case=smv::uniform_index(rng, individual_cnt);
+  BOOST_LOG_TRIVIAL(trace)<<"First case is "<<first_case;
   size_t first_s=gspn.place_vertex({0, first_case});
   size_t first_i=gspn.place_vertex({1, first_case});
   auto input_string=[&first_s, &first_i](SIRState& state)->void {

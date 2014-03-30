@@ -74,6 +74,8 @@ public:
       auto layer=std::get<1>(line);
       auto stochiometric_coefficient=std::get<2>(line);
 
+      BOOST_LOG_TRIVIAL(trace)<<"Marking::init_local<"<<layer<<">("
+        <<place_id<<", "<<idx<<", "<<stochiometric_coefficient<<")";
       il(_maps, place_id, idx, layer, stochiometric_coefficient, lm);
 
       ++idx;
@@ -94,27 +96,27 @@ public:
       _modified.insert(std::get<0>(neighbor_places.at(midx)));
     }
 
-    // Removed places need to be deleted.
-    detail::erase_by_layer<_layer_cnt,Maps,place_t> eraser;
-    for (size_t ridx : changes[1])
-    {
-      auto& neighbor_line=neighbor_places.at(ridx);
-      auto& place_id=std::get<0>(neighbor_line);
-      auto layer=std::get<1>(neighbor_line);
-
-      eraser(_maps, place_id, layer);
-      _modified.insert(place_id);
-    }
-
     // Added places need to be copied here.
     detail::add_by_layer<_layer_cnt,Maps,place_t,LocalTyped> abl;
-    for (size_t aidx : changes[2])
+    for (size_t aidx : changes[1])
     {
       auto& neighbor_line=neighbor_places.at(aidx);
       auto& place_id=std::get<0>(neighbor_line);
       auto layer=std::get<1>(neighbor_line);
 
       abl(_maps, place_id, layer, lm, aidx);
+      _modified.insert(place_id);
+    }
+
+    // Removed places need to be deleted.
+    detail::erase_by_layer<_layer_cnt,Maps,place_t> eraser;
+    for (size_t ridx : changes[2])
+    {
+      auto& neighbor_line=neighbor_places.at(ridx);
+      auto& place_id=std::get<0>(neighbor_line);
+      auto layer=std::get<1>(neighbor_line);
+
+      eraser(_maps, place_id, layer);
       _modified.insert(place_id);
     }
   }

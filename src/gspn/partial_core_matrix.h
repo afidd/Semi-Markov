@@ -90,12 +90,14 @@ public:
   {
     auto neighboring_places=neighbors_of_transition(_gspn, trans_id);
 
+    BOOST_LOG_TRIVIAL(trace)<<"Fire "<<trans_id<<" neighbors: "<<
+      neighboring_places.size();
     auto lm=_state.marking.local_marking();
     _state.marking.init_local(lm, neighboring_places);
     afidd::smv::fire(_gspn, trans_id, _state, lm, rng);
     _state.marking.read_local(lm, neighboring_places);
 
-    BOOST_LOG_TRIVIAL(trace) << "fire "<<trans_id << " modifies "
+    BOOST_LOG_TRIVIAL(trace) << "Fire "<<trans_id << " modifies "
       << _state.marking.modified().size() << " places.";
 
     auto current_time=_state.add_time(when);

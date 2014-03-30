@@ -297,11 +297,15 @@ struct initialize_local
       auto place_tokens=typed_dict.find(place_id);
       if (place_tokens!=typed_dict.end())
       {
+        BOOST_LOG_TRIVIAL(trace)<<"initialize_local<"<<layer<<"> "<<place_id
+          <<" "<<idx<<" "<<place_tokens->second.size();
         lm.template set<I-1ul>(idx, &place_tokens->second,
                            stochiometric_coefficient);
       }
       else
       {
+        BOOST_LOG_TRIVIAL(trace)<<"initialize_local<"<<layer<<"> "<<place_id
+          <<" "<<idx<<" null";
         lm.template set<I-1ul>(idx, nullptr, stochiometric_coefficient);
       }
     }
@@ -518,7 +522,6 @@ public:
     int stochiometric_coefficient
     )
   {
-    BOOST_LOG_TRIVIAL(trace)<<"LocalMarking::set "<<I<<" "<<place_idx<<" "<<ptr;
     auto& place_container=_m.at(place_idx);
 
     auto& token_container=std::get<0>(place_container);
@@ -598,7 +601,14 @@ public:
   {
     auto& place_container=_m.at(place_idx);
     auto& token_container=std::get<I>(std::get<0>(place_container));
-    return token_container->size();
+    if (token_container!=nullptr)
+    {
+      return token_container->size();
+    }
+    else
+    {
+      return 0;
+    }
   }
 
 
@@ -704,21 +714,40 @@ public:
         auto& to_container=std::get<J>(std::get<0>(place_to_container));
         if (to_container==nullptr)
         {
+          BOOST_LOG_TRIVIAL(trace)<< "Moving to_container null";
           to_container=new to_container_type{};
           _added.insert(place_to);
         }
-        for (auto didx=cnt; didx>0; --didx)
+        else
+        {
+          BOOST_LOG_TRIVIAL(trace)<< "Moving to_container exists";
+        }
+        if (from_container!=to_container)
+        {
+          for (auto didx=cnt; didx>0; --didx)
+          {
+            auto begin=from_container->begin();
+            if (begin!=from_container->end())
+            {
+              detail::apply_token_function(*begin, modify_token);
+              detail::add_to_container(*to_container, *begin);
+              from_container->erase(begin);
+            }
+          }
+        }
+        else
+        // If the two containers are different, still apply the functor.
         {
           auto begin=from_container->begin();
-          if (begin!=from_container->end())
+          for (auto didx=cnt; didx>0; --didx)
           {
             detail::apply_token_function(*begin, modify_token);
-            detail::add_to_container(*to_container, *begin);
-            from_container->erase(begin);
+            ++begin;
           }
         }
         if (from_container->size()==0)
         {
+          BOOST_LOG_TRIVIAL(trace)<<"Moving mark "<<place_from<<" to erase.";
           _removed.insert(place_from);
         }
       }
@@ -730,9 +759,10 @@ public:
     }
     else
     {
-      BOOST_LOG_TRIVIAL(error)<<"Cannot move a token from an empty container"
+      BOOST_LOG_TRIVIAL(error)<<"Cannot move a token from an empty container "
         <<place_from<<" "<<place_to<<" "<<I<<" "<<cnt;
     }
+    BOOST_LOG_TRIVIAL(trace)<< "~Moving "<<cnt<<" tokens from "<<place_from;
   }
 
 
@@ -765,12 +795,13 @@ public:
     this->template move<I,J,LocalMarking,detail::DoNothing<TokenType>>(
       place_from, place_to, cnt, nothing, true);
   }
-  
+
 
 
   template<size_t I, typename RNG, typename AndModify>
   void transfer_by_stochiometric_coefficient(RNG& rng, const AndModify& mod)
   {
+    BOOST_LOG_TRIVIAL(trace)<<"transfer_by_stochiometric_coefficient";
     using TokenType=typename boost::mpl::at<
       typename LocalMarking::token_types,boost::mpl::int_<I>>::type&;
     detail::DoNothing<TokenType> do_nothing;
@@ -840,7 +871,7 @@ public:
     {
       this->remove<I,RNG>(*initer, 1, rng);
     }
-
+    BOOST_LOG_TRIVIAL(trace)<<"~transfer_by_stochiometric_coefficient";
   }
 
 
@@ -861,13 +892,16 @@ public:
   template<size_t I>
   bool input_tokens_sufficient() const
   {
-    size_t place_idx;
-    size_t layer;
-    int weight;
+    BOOST_LOG_TRIVIAL(trace)<<"input_tokens_sufficient";
 
-    for (auto collect_place : this->place_indexes())
+    size_t place_idx=0;
+    size_t layer=0;
+    int weight=0;
+
+    for (auto& collect_place : _m)
     {
-      std::tie(place_idx, layer, weight)=collect_place;
+      layer=std::get<1>(collect_place);
+      weight=std::get<2>(collect_place);
       if (layer==I)
       {
         if (weight<0)
@@ -883,6 +917,7 @@ public:
           ; // Don't worry about other stochiometric coefficients.
         }
       }
+      ++place_idx;
     }
     return true;
   }
