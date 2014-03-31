@@ -58,13 +58,15 @@ public:
 
 
 
-template<typename Mark, typename TimeStrategy=KahanTime>
+template<typename Mark, typename UserState=detail::NoExtraState,
+    typename TimeStrategy=KahanTime>
 class GSPNState : public TimeStrategy
 {
 public:
   typedef Mark Marking;
 
   Marking marking;
+  UserState user;
 };
 
 }

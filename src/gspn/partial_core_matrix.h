@@ -52,15 +52,18 @@ public:
 
           bool isEnabled;
           std::unique_ptr<TransitionDistribution<RNG>> dist;
-          std::tie(isEnabled, dist)=
-              enabled(_gspn, neighbor_id, _state, lm, _state.current_time());
           auto previously_enabled=
             (_distributions.find(neighbor_id)!=_distributions.end());
+          std::tie(isEnabled, dist)=
+              enabled(_gspn, neighbor_id, _state.user, lm, _state.current_time());
           if (isEnabled)
           {
             // Even if it was already enabled, take the new distribution
             // in case it has changed.
-            _distributions.emplace(neighbor_id, std::move(dist));
+            if (dist!=nullptr)
+            {
+              _distributions.emplace(neighbor_id, std::move(dist));
+            }
           }
           else if (!isEnabled && previously_enabled)
           {
@@ -94,7 +97,7 @@ public:
       neighboring_places.size();
     auto lm=_state.marking.local_marking();
     _state.marking.init_local(lm, neighboring_places);
-    afidd::smv::fire(_gspn, trans_id, _state, lm, rng);
+    afidd::smv::fire(_gspn, trans_id, _state.user, lm, rng);
     _state.marking.read_local(lm, neighboring_places);
 
     BOOST_LOG_TRIVIAL(trace) << "Fire "<<trans_id << " modifies "

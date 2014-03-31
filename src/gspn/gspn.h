@@ -8,6 +8,12 @@ namespace afidd
 namespace smv
 {
 
+namespace detail
+{
+  struct NoExtraState {};
+}
+
+
 template<typename PetriNet>
 struct petri_place
 {

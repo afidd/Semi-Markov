@@ -147,7 +147,7 @@ namespace smv
 {
 std::pair<bool,std::unique_ptr<TransitionDistribution<RandGen>>>
 enabled(const BrownionGSPN& et, TransitionType trans_id,
-  const BrownionState& s, const Local& lm, double te)
+  const detail::NoExtraState& s, const Local& lm, double te)
 {
   if (lm.template length<0>(0)>0)
   {
@@ -174,7 +174,7 @@ enabled(const BrownionGSPN& et, TransitionType trans_id,
 template<typename RNG>
 void
 fire(BrownionGSPN& et, TransitionType trans_id,
-  BrownionState& s, Local& lm, RNG& rng)
+  detail::NoExtraState& s, Local& lm, RNG& rng)
 {
   lm.template move<0,0>(0, 1, 1);
 }

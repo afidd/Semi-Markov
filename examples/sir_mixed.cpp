@@ -124,27 +124,20 @@ struct SIRTKey
 // Marking of the net.
 using Local=LocalMarking<Uncolored<IndividualToken>>;
 using Mark=Marking<size_t, Uncolored<IndividualToken>>;
-// State of the continuous dynamical system.
-template<typename Mark, typename TimeStrategy=KahanTime>
-class WithParamsState : public TimeStrategy
+// Extra state to add to the continuous dynamical system.
+struct WithParams
 {
-public:
-  typedef Mark Marking;
-
-  Marking marking;
   std::map<int,double> params;
 };
-
-using SIRState=WithParamsState<Mark>;
 
 
 // This class holds the transitions.
 using SIRGSPN=
-    ExplicitTransitions<SIRState, SIRPlace, SIRTKey, Local, RandGen>;
+    ExplicitTransitions<SIRPlace, SIRTKey, Local, RandGen, WithParams>;
 
 
 class SIRTransition
-: public ExplicitTransition<Local,SIRState,RandGen>
+: public ExplicitTransition<Local,RandGen,WithParams>
 {
 public:
   SIRTransition() {}
@@ -164,7 +157,7 @@ using NoDist=NoDistribution<RandGen>;
 class InfectNeighbor : public SIRTransition
 {
   virtual std::pair<bool, std::unique_ptr<Dist>>
-  enabled(const SIRState& s, const Local& lm, double te) const override
+  enabled(const UserState& s, const Local& lm, double te) const override
   {
     bool go=lm.template input_tokens_sufficient<0>();
     if (go)
@@ -177,7 +170,7 @@ class InfectNeighbor : public SIRTransition
     }
   }
 
-  virtual void fire(SIRState& s, Local& lm, RandGen& rng) const override
+  virtual void fire(UserState& s, Local& lm, RandGen& rng) const override
   {
     BOOST_LOG_TRIVIAL(trace) << "Fire infection " << lm;
     lm.template transfer_by_stochiometric_coefficient<0>(rng);
@@ -193,7 +186,7 @@ class InfectNeighbor : public SIRTransition
 class Recover : public SIRTransition
 {
   virtual std::pair<bool, std::unique_ptr<Dist>>
-  enabled(const SIRState& s, const Local& lm, double te) const override
+  enabled(const UserState& s, const Local& lm, double te) const override
   {
     bool go=lm.template input_tokens_sufficient<0>();
     if (go)
@@ -206,7 +199,7 @@ class Recover : public SIRTransition
     }
   }
 
-  virtual void fire(SIRState& s, Local& lm, RandGen& rng) const override
+  virtual void fire(UserState& s, Local& lm, RandGen& rng) const override
   {
     BOOST_LOG_TRIVIAL(trace) << "Fire recovery "<< lm;
     lm.template transfer_by_stochiometric_coefficient<0>(rng);
@@ -344,9 +337,12 @@ int main(int argc, char *argv[])
     write_ids(gspn, translation_file, individual_cnt);
   }
 
+
+  using SIRState=GSPNState<Mark,WithParams>;
+
   SIRState state;
-  state.params[0]=beta;
-  state.params[1]=gamma;
+  state.user.params[0]=beta;
+  state.user.params[1]=gamma;
 
   for (size_t individual=0; individual<individual_cnt; ++individual)
   {

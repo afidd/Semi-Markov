@@ -10,6 +10,7 @@
 #include "boost/mpl/for_each.hpp"
 #include "boost/mpl/next_prior.hpp"
 #include "build_graph.h"
+#include "gspn.h"
 #include "logging.h"
 
 
@@ -18,13 +19,15 @@ namespace afidd
 namespace smv
 {
 
-template<typename LM, typename State, typename RNG>
+
+template<typename LM, typename RNG, typename ExtraState=detail::NoExtraState>
 class ExplicitTransition
 {
 public:
+  typedef ExtraState UserState;
 
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<RNG>>>
-  enabled(const State& s, const LM& lm, double current_time) const
+  enabled(const ExtraState& s, const LM& lm, double current_time) const
   {
     BOOST_LOG_TRIVIAL(debug) << "The base enabled is unlikely correct to call";
     return {false,
@@ -33,12 +36,9 @@ public:
 
 
 
-  virtual void fire(State& s, LM& lm, RNG& rng) const
+  virtual void fire(ExtraState& s, LM& lm, RNG& rng) const
   {
-    //static const auto layer_cnt=boost::mpl::size<typename LM::layers>::value;
-    //static_assert(std::is_same<size_t,boost::mpl::size<typename LM::layers>::value>::value,
-    //  "It's not really a size_t, is it?");
-    //lm.fire_by_stochiometric_coefficient(rng);
+    lm.template transfer_by_stochiometric_coefficient<0>(rng);
   }
 };
 
@@ -50,11 +50,10 @@ public:
  *  for the place. TKey is the identifier for the transition. Random
  *  is the random number generator.
  */
-template<typename ETState,typename PKey, typename TKey, typename Local,
-  typename ETRand>
+template<typename PKey, typename TKey, typename Local,
+  typename ETRand, typename ExtraState=detail::NoExtraState>
 class ExplicitTransitions
 {
-  typedef typename ETState::Marking ETMarking;
   typedef PetriGraphType PetriGraph;
   typedef BiGraphCorrespondence<PKey,TKey,
     boost::graph_traits<PetriGraph>::vertex_descriptor> BiMap;
@@ -67,7 +66,7 @@ public:
   typedef boost::graph_traits<PetriGraph>::vertex_descriptor transition_type;
   // This gspn expects transitions to be of this base class.
   // Derive from this base class to make transitions.
-  typedef smv::ExplicitTransition<Local,ETState,RNG> Transition;
+  typedef smv::ExplicitTransition<Local,RNG,ExtraState> Transition;
 
 private:
   // The GSPN gets the marking type from the State.
@@ -116,7 +115,7 @@ public:
   }
 
 
-  friend BuildGraph<ExplicitTransitions<ETState,PKey,TKey,Local,ETRand>>;
+  friend BuildGraph<ExplicitTransitions<PKey,TKey,Local,ETRand,ExtraState>>;
 
   template<typename State, typename P, typename T, typename L, typename Random>
   friend
@@ -151,37 +150,37 @@ public:
 
 // Now that we have the object, this is how it fulfills the
 // GSPN concept.
-template<typename State, typename P, typename T, typename L, typename Random>
-struct petri_place<ExplicitTransitions<State,P,T,L,Random>>
+template<typename P, typename T, typename L, typename Random, typename State>
+struct petri_place<ExplicitTransitions<P,T,L,Random,State>>
 {
-  typedef typename ExplicitTransitions<State,P,T,L,Random>::place_type type;
+  typedef typename ExplicitTransitions<P,T,L,Random,State>::place_type type;
 };
 
 
 
-template<typename State, typename P, typename T, typename L, typename Random>
-struct petri_transition<ExplicitTransitions<State,P,T,L,Random>>
+template<typename P, typename T, typename L, typename Random, typename State>
+struct petri_transition<ExplicitTransitions<P,T,L,Random,State>>
 {
-  typedef typename ExplicitTransitions<State,P,T,L,Random>::transition_type type;
+  typedef typename ExplicitTransitions<P,T,L,Random,State>::transition_type type;
 };
 
 
 
-template<typename State, typename P, typename T, typename L, typename Random>
+template<typename P, typename T, typename L, typename Random, typename State>
 std::vector<std::tuple<size_t,size_t,int>>
 neighbors_of_transition(
-  ExplicitTransitions<State,P,T,L,Random>& et,
-  typename ExplicitTransitions<State,P,T,L,Random>::transition_type trans_id)
+  ExplicitTransitions<P,T,L,Random,State>& et,
+  typename ExplicitTransitions<P,T,L,Random,State>::transition_type trans_id)
 {
   return neighbors_of_transition(et.graph, trans_id);
 }
 
 
-template<typename F, typename State, typename P, typename T, typename L,
-  typename Random>
+template<typename F, typename P, typename T, typename L,
+  typename Random, typename State>
 void neighbors_of_places(
-  ExplicitTransitions<State,P,T,L,Random>& et,
-  const std::set<typename ExplicitTransitions<State,P,T,L,Random>::place_type>&
+  ExplicitTransitions<P,T,L,Random,State>& et,
+  const std::set<typename ExplicitTransitions<P,T,L,Random,State>::place_type>&
   place_id, F func)
 {
   return neighbors_of_places(et.graph, place_id, func);
