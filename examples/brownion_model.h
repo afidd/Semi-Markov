@@ -78,6 +78,8 @@ struct TransitionType
 };
 
 
+struct UserState {};
+
 
 struct BrownionGraph
 {
@@ -107,7 +109,7 @@ struct IndividualToken {};
 using Local=smv::LocalMarking<smv::Uncolored<IndividualToken>>;
 using Mark=smv::Marking<smv::place_t<BrownionGraph>,
                         smv::Uncolored<IndividualToken>>;
-using BrownionState=smv::GSPNState<Mark>;
+using BrownionState=smv::GSPNState<Mark,UserState>;
 
 using Dist=smv::TransitionDistribution<RandGen>;
 using ExpDist=smv::ExponentialDistribution<RandGen>;
@@ -147,7 +149,7 @@ namespace smv
 {
 std::pair<bool,std::unique_ptr<TransitionDistribution<RandGen>>>
 enabled(const BrownionGSPN& et, TransitionType trans_id,
-  const detail::NoExtraState& s, const Local& lm, double te)
+  const UserState& s, const Local& lm, double te)
 {
   if (lm.template length<0>(0)>0)
   {
@@ -174,7 +176,7 @@ enabled(const BrownionGSPN& et, TransitionType trans_id,
 template<typename RNG>
 void
 fire(BrownionGSPN& et, TransitionType trans_id,
-  detail::NoExtraState& s, Local& lm, RNG& rng)
+  UserState& s, Local& lm, RNG& rng)
 {
   lm.template move<0,0>(0, 1, 1);
 }
