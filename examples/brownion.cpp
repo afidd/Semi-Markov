@@ -9,6 +9,7 @@
 #include "boost/log/core.hpp"
 #include "boost/property_map/property_map.hpp"
 #include "boost/mpl/vector.hpp"
+#include "boost/program_options.hpp"
 #include "brownion_model.h"
 #include "partial_core_matrix.h"
 #include "continuous_dynamics.h"
@@ -22,10 +23,46 @@ namespace smv=afidd::smv;
 int main(int argc, char *argv[])
 {
   size_t iteration_cnt=100;
-  unsigned int random_seed=1U;
-  afidd::log_init("debug");
 
-  RandGen rng(1);
+  namespace po=boost::program_options;
+  po::options_description desc("Two-state Brownion.");
+  size_t rand_seed=1;
+  double beta=1.0;
+  double gamma=1.0;
+  std::string log_level;
+
+  desc.add_options()
+    ("help", "show help message")
+    ("size,s",
+      po::value<size_t>(&iteration_cnt)->default_value(100),
+      "number of steps to take")
+    ("seed,r",
+      po::value<size_t>(&rand_seed)->default_value(1),
+      "seed for random number generator")
+    ("beta",
+      po::value<double>(&beta)->default_value(1.0),
+      "parameter")
+    ("gamma",
+      po::value<double>(&gamma)->default_value(1.0),
+      "parameter")
+    ("loglevel", po::value<std::string>(&log_level)->default_value("info"),
+      "Set the logging level to trace, debug, info, warning, error, or fatal.")
+    ;
+
+  po::variables_map vm;
+  auto parsed_options=po::parse_command_line(argc, argv, desc);
+  po::store(parsed_options, vm);
+  po::notify(vm);
+
+  if (vm.count("help"))
+  {
+    std::cout << desc << std::endl;
+    return 0;
+  }
+
+  afidd::log_init(log_level);
+
+  RandGen rng(rand_seed);
   BrownionGSPN gspn;
   BrownionState state;
 
@@ -40,7 +77,7 @@ int main(int argc, char *argv[])
   auto next=propagate_competing_processes(system, input_string, rng);
   for (size_t iteration_idx=0; iteration_idx<iteration_cnt; ++iteration_idx)
   {
-    BOOST_LOG_TRIVIAL(debug) << "trans " << std::get<0>(next) << " time " <<
+    BOOST_LOG_TRIVIAL(info) << "trans " << std::get<0>(next) << " time " <<
         std::get<1>(next);
     next=propagate_competing_processes(system, nothing, rng);
   }

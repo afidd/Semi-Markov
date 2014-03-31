@@ -6,6 +6,7 @@
 #include "marking.h"
 #include "distributions.h"
 #include "smv_algorithm.h"
+#include "local_marking.h"
 
 
 namespace smv=afidd::smv;
@@ -103,8 +104,9 @@ namespace afidd
 
 struct IndividualToken {};
 
-
-using Mark=smv::Marking<smv::place_t<BrownionGraph>, smv::Uncolored<IndividualToken>>;
+using Local=smv::LocalMarking<smv::Uncolored<IndividualToken>>;
+using Mark=smv::Marking<smv::place_t<BrownionGraph>,
+                        smv::Uncolored<IndividualToken>>;
 using BrownionState=smv::GSPNState<Mark>;
 
 using Dist=smv::TransitionDistribution<RandGen>;
@@ -145,7 +147,7 @@ namespace smv
 {
 std::pair<bool,std::unique_ptr<TransitionDistribution<RandGen>>>
 enabled(const BrownionGSPN& et, TransitionType trans_id,
-  const BrownionState& s, const smv::LocalMarking<Mark>& lm, double te)
+  const BrownionState& s, const Local& lm, double te)
 {
   if (lm.template length<0>(0)>0)
   {
@@ -172,7 +174,7 @@ enabled(const BrownionGSPN& et, TransitionType trans_id,
 template<typename RNG>
 void
 fire(BrownionGSPN& et, TransitionType trans_id,
-  BrownionState& s, smv::LocalMarking<Mark>& lm, RNG& rng)
+  BrownionState& s, Local& lm, RNG& rng)
 {
   lm.template move<0,0>(0, 1, 1);
 }

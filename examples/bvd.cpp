@@ -21,6 +21,7 @@
 #include "partial_core_matrix.h"
 #include "continuous_dynamics.h"
 #include "cow_token.h"
+#include "local_marking.h"
 #include "build_graph.h"
 #include "smv_algorithm.h"
 
@@ -126,15 +127,19 @@ using PN=smv::PetriGraphType;
 
 // This is the central set of definitions in order to use the
 // ExplicitTransitions representation of the GSPN.
+using Local=smv::LocalMarking<smv::Colored<Cow>,
+    smv::Uncolored<std::map<size_t,double>>>;
 using Mark=smv::Marking<size_t,
     smv::Colored<Cow>,smv::Uncolored<std::map<size_t,double>>>;
 using CowState=smv::GSPNState<Mark>;
-using CowTransitions=smv::ExplicitTransitions<CowState,CowPlace,CowT,CowGen>;
+using CowTransitions=smv::ExplicitTransitions<
+    CowState,CowPlace,CowT,Local,CowGen>;
 
 // We make a transition that meets the requirements of the GSPN object
 // by deriving it from the Transition type it defines.
+
 class CowTransition
-: public CowTransitions::Transition
+: public smv::ExplicitTransition<Local,CowState,CowGen>
 {
 public:
   CowTransition(size_t cow_id) : cow_id(cow_id) {}
@@ -158,12 +163,12 @@ public:
 
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
   enabled(const CowState& s,
-    const LocalMarking<Mark>& lm, double current_time) const
+    const Local& lm, double current_time) const
   {
     return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, current_time))};
   }
 
-  virtual void fire(CowState& s, LocalMarking<Mark>& lm, CowGen& rng) const
+  virtual void fire(CowState& s, Local& lm, CowGen& rng) const
   {
     return;
   }
@@ -178,7 +183,7 @@ public:
 /*! The Petri Net we make depends only on the local marking, not
  *  the marking, because transitions are defined on local state.
  */
-template<typename PN, typename LocalMarking, typename CowState>
+template<typename PN>
 CowTransitions
 herd(size_t initial_cnt, size_t total_cnt)
 {
@@ -245,7 +250,7 @@ int main(int argc, char *argv[])
   CowGen rng{1};
 
   CowState state;
-  auto gspn=herd<PN,LocalMarking<Mark>,CowState>(100, 10);
+  auto gspn=herd<PN>(100, 10);
 
   PartialCoreMatrix<CowTransitions,CowState,CowGen>
       system(gspn, state);

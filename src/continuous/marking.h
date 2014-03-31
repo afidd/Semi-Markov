@@ -62,7 +62,7 @@ public:
 
 
   void init_local(LocalMarking<Ts...>& lm,
-      std::vector<std::tuple<size_t,size_t,int>> neighbor_places)
+      std::vector<std::tuple<place_t,size_t,int>> neighbor_places)
   {
     lm.resize(neighbor_places.size());
     size_t idx=0;
@@ -86,7 +86,7 @@ public:
 
 
   void read_local(const LocalMarking<Ts...>& lm,
-    std::vector<std::tuple<size_t,size_t,int>> neighbor_places)
+    std::vector<std::tuple<place_t,size_t,int>> neighbor_places)
   {
     const auto changes=lm.changes();
 

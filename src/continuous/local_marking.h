@@ -72,18 +72,19 @@ struct Tupleize<std::tuple<Ts...>,R>
 
 
 
-// Turn a variadic template into a tuple of reference to values.
+// Turn a variadic template into a tuple of pointers to values.
 // Have to forward declare so that we can specialize.
 template<typename T, typename R>
 struct PTupleize {};
 
 
-// Add a type to a tuple of types from a variadic template.
+
 template<typename... Ts, typename R>
 struct PTupleize<std::tuple<Ts...>,R>
 {
-  typedef std::tuple<Ts...,typename std::add_pointer<R>::type> type;
+  typedef std::tuple<Ts..., typename std::add_pointer<R>::type> type;
 };
+
 
 
 
@@ -116,7 +117,8 @@ struct MapContainers
 {
   typedef boost::mpl::vector<Ts...> Containers;
   typedef typename
-    boost::mpl::transform<Containers,typename MakeMap<Place,mpl_::_1>::type>::type Mapped;
+    boost::mpl::transform<Containers,
+                          typename MakeMap<Place,mpl_::_1>::type>::type Mapped;
   typedef typename boost::mpl::fold<Mapped, std::tuple<>,
     Tupleize<mpl_::_1,mpl_::_2>>::type result;
 };
@@ -460,9 +462,14 @@ template<typename... Tokens>
 class LocalMarking
 {
   // A tuple of pointers to TokenContainers.
-  typedef typename detail::PTupleize<std::tuple<>,Tokens...>::type ptuple;
   typedef typename detail::ContainerVector<Tokens...>::type container_types;
   typedef typename detail::MarkTokens<Tokens...>::type token_types;
+
+  //typedef typename boost::mpl::transform<container_types,
+  //  typename std::add_pointer<mpl_::_1>::type>::type WithPointer;
+
+  typedef typename boost::mpl::fold<container_types, std::tuple<>,
+      detail::PTupleize<mpl_::_1,mpl_::_2>>::type ptuple;
   // The core data structure is a vector which containes stochiometric
   // coefficent, token_layer, and a tuple of
   // references to the different kinds of containers of tokens, one
@@ -792,8 +799,8 @@ public:
 
     detail::DoNothing<TokenType> nothing;
 
-    this->template move<I,J,LocalMarking,detail::DoNothing<TokenType>>(
-      place_from, place_to, cnt, nothing, true);
+    this->template move<I,J,detail::DoNothing<TokenType>>(
+      place_from, place_to, cnt, nothing);
   }
 
 
