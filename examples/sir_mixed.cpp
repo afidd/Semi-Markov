@@ -115,23 +115,19 @@ struct SIRTKey
 };
 
 
+
 // This is as much of the marking as the transition will see.
 using Local=LocalMarking<Uncolored<IndividualToken>>;
-// Extra state to add to the continuous dynamical system.
+// Extra state to add to the system state. Will be passed to transitions.
 struct WithParams
 {
+  // Put our parameters here.
   std::map<int,double> params;
 };
 
 
-
-class SIRTransition
-: public ExplicitTransition<Local,RandGen,WithParams>
-{
-public:
-  SIRTransition() {}
-  virtual ~SIRTransition() {}
-};
+// The transition needs to know the local marking and any extra state.
+using SIRTransition=ExplicitTransition<Local,RandGen,WithParams>;
 
 
 using Dist=TransitionDistribution<RandGen>;
@@ -196,7 +192,7 @@ class Recover : public SIRTransition
 };
 
 
-// This class holds the transitions.
+// The GSPN itself.
 using SIRGSPN=
     ExplicitTransitions<SIRPlace, SIRTKey, Local, RandGen, WithParams>;
 
@@ -332,6 +328,8 @@ int main(int argc, char *argv[])
 
 
   // Marking of the net.
+  static_assert(std::is_same<size_t,SIRGSPN::place_type>::value,
+    "The GSPN's internal place type is size_t.");
   using Mark=Marking<size_t, Uncolored<IndividualToken>>;
   using SIRState=GSPNState<Mark,WithParams>;
 
@@ -369,7 +367,7 @@ int main(int argc, char *argv[])
   {
     BOOST_LOG_TRIVIAL(debug) << "trans " << std::get<0>(next) << " time " <<
         std::get<1>(next);
-    BOOST_LOG_TRIVIAL(debug) << state.marking;
+    BOOST_LOG_TRIVIAL(trace) << state.marking;
     ++step_cnt;
   }
   BOOST_LOG_TRIVIAL(info)<<"Took "<<step_cnt<<" transitions";
