@@ -81,12 +81,6 @@ struct SIRPlace
 
 
 
-/*! This identifies a cow transition.
- *  We are being luxurious. If it's a cow-to-cow infection,
- *  both cows identify the transition. Subgroup-to-subgroup
- *  can also be recorded. The kind is then an identifier for
- *  a particular infection or movement.
- */
 struct SIRTKey
 {
   size_t ind1;
@@ -121,19 +115,14 @@ struct SIRTKey
 };
 
 
-// Marking of the net.
+// This is as much of the marking as the transition will see.
 using Local=LocalMarking<Uncolored<IndividualToken>>;
-using Mark=Marking<size_t, Uncolored<IndividualToken>>;
 // Extra state to add to the continuous dynamical system.
 struct WithParams
 {
   std::map<int,double> params;
 };
 
-
-// This class holds the transitions.
-using SIRGSPN=
-    ExplicitTransitions<SIRPlace, SIRTKey, Local, RandGen, WithParams>;
 
 
 class SIRTransition
@@ -145,11 +134,8 @@ public:
 };
 
 
-
 using Dist=TransitionDistribution<RandGen>;
 using ExpDist=ExponentialDistribution<RandGen>;
-using NoDist=NoDistribution<RandGen>;
-
 
 
 
@@ -157,7 +143,8 @@ using NoDist=NoDistribution<RandGen>;
 class InfectNeighbor : public SIRTransition
 {
   virtual std::pair<bool, std::unique_ptr<Dist>>
-  enabled(const UserState& s, const Local& lm, double te) const override
+  enabled(const UserState& s, const Local& lm,
+    double te, double t0) const override
   {
     bool go=lm.template input_tokens_sufficient<0>();
     if (go)
@@ -166,7 +153,7 @@ class InfectNeighbor : public SIRTransition
     }
     else
     {
-      return {false, std::unique_ptr<NoDist>(new NoDist())};
+      return {false, std::unique_ptr<Dist>(nullptr)};
     }
   }
 
@@ -186,7 +173,8 @@ class InfectNeighbor : public SIRTransition
 class Recover : public SIRTransition
 {
   virtual std::pair<bool, std::unique_ptr<Dist>>
-  enabled(const UserState& s, const Local& lm, double te) const override
+  enabled(const UserState& s, const Local& lm,
+    double te, double t0) const override
   {
     bool go=lm.template input_tokens_sufficient<0>();
     if (go)
@@ -195,7 +183,7 @@ class Recover : public SIRTransition
     }
     else
     {
-      return {false, std::unique_ptr<NoDist>(new NoDist())};
+      return {false, std::unique_ptr<Dist>(nullptr)};
     }
   }
 
@@ -206,6 +194,11 @@ class Recover : public SIRTransition
   }
 
 };
+
+
+// This class holds the transitions.
+using SIRGSPN=
+    ExplicitTransitions<SIRPlace, SIRTKey, Local, RandGen, WithParams>;
 
 
 
@@ -338,6 +331,8 @@ int main(int argc, char *argv[])
   }
 
 
+  // Marking of the net.
+  using Mark=Marking<size_t, Uncolored<IndividualToken>>;
   using SIRState=GSPNState<Mark,WithParams>;
 
   SIRState state;

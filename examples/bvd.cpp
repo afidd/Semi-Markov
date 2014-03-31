@@ -126,8 +126,6 @@ struct CowT
 // ExplicitTransitions representation of the GSPN.
 using Local=smv::LocalMarking<smv::Colored<Cow>,
     smv::Uncolored<std::map<size_t,double>>>;
-using Mark=smv::Marking<size_t,
-    smv::Colored<Cow>,smv::Uncolored<std::map<size_t,double>>>;
 using CowTransitions=smv::ExplicitTransitions<
     CowPlace,CowT,Local,CowGen>;
 
@@ -148,7 +146,6 @@ public:
 // These are just shorthand.
 using Dist=smv::TransitionDistribution<CowGen>;
 using ExpDist=smv::ExponentialDistribution<CowGen>;
-using NoDist=smv::NoDistribution<CowGen>;
 
 
 
@@ -158,15 +155,21 @@ public:
   InfectNeighbor(size_t cow_id) : CowTransition(cow_id) {}
 
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  enabled(const UserState& s,
-    const Local& lm, double current_time) const
+  enabled(const UserState& s, const Local& lm, double te, double t0) const
   {
-    return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, current_time))};
+    if (lm.template input_tokens_sufficient<0>())
+    {
+      return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
+    }
+    else
+    {
+      return {false, std::unique_ptr<Dist>(nullptr)};
+    }
   }
 
   virtual void fire(UserState& s, Local& lm, CowGen& rng) const
   {
-    return;
+    lm.template transfer_by_stochiometric_coefficient<0>(rng);
   }
 };
 
@@ -231,7 +234,16 @@ herd(size_t initial_cnt, size_t total_cnt)
 
 int main(int argc, char *argv[])
 {
+  CowGen rng{1};
+
+  auto gspn=herd(100, 10);
+
+  using Mark=smv::Marking<size_t,
+      smv::Colored<Cow>,smv::Uncolored<std::map<size_t,double>>>;
   Mark m;
+  using CowState=smv::GSPNState<Mark>;
+  CowState state;
+
   enum { lambda, beta, gamma };
   std::map<size_t,double> params;
   params[lambda]=1.0;
@@ -242,11 +254,6 @@ int main(int argc, char *argv[])
   assert(length<1>(m, params_place_id)==1);
   assert(length<0>(m, 27, 13)==0);
 
-  CowGen rng{1};
-
-  using CowState=smv::GSPNState<Mark>;
-  CowState state;
-  auto gspn=herd(100, 10);
 
   PartialCoreMatrix<CowTransitions,CowState,CowGen>
       system(gspn, state);

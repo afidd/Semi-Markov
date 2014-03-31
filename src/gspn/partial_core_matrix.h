@@ -46,16 +46,29 @@ public:
       neighbors_of_places(_gspn, _state.marking.modified(),
         [&] (trans_t<GSPN> neighbor_id)
         {
+          // Was this transition enabled? When?
+          auto previous_distribution=_distributions.find(neighbor_id);
+          double enabling_time;
+          bool previously_enabled=previous_distribution!=_distributions.end();
+          if (previously_enabled)
+          {
+            enabling_time=previous_distribution->second->enabling_time();
+          }
+          else
+          {
+            enabling_time=_state.current_time();
+          }
+
+          // Set up the local marking.
           auto neighboring_places=
               neighbors_of_transition(_gspn, neighbor_id);
           _state.marking.init_local(lm, neighboring_places);
 
-          bool isEnabled;
+          bool isEnabled=false;
           std::unique_ptr<TransitionDistribution<RNG>> dist;
-          auto previously_enabled=
-            (_distributions.find(neighbor_id)!=_distributions.end());
-          std::tie(isEnabled, dist)=
-              enabled(_gspn, neighbor_id, _state.user, lm, _state.current_time());
+          std::tie(isEnabled, dist)=enabled(_gspn, neighbor_id, _state.user, lm,
+              enabling_time, _state.current_time());
+
           if (isEnabled)
           {
             // Even if it was already enabled, take the new distribution
@@ -64,6 +77,7 @@ public:
             {
               _distributions.emplace(neighbor_id, std::move(dist));
             }
+            // else it's OK if they return nullptr. Use old distribution.
           }
           else if (!isEnabled && previously_enabled)
           {

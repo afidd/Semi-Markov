@@ -114,7 +114,6 @@ using BrownionState=smv::GSPNState<Mark,UserState>;
 using Dist=smv::TransitionDistribution<RandGen>;
 using ExpDist=smv::ExponentialDistribution<RandGen>;
 using Weibull=smv::WeibullDistribution<RandGen>;
-using NoDist=smv::NoDistribution<RandGen>;
 
 
 class BrownionGSPN
@@ -149,7 +148,7 @@ namespace smv
 {
 std::pair<bool,std::unique_ptr<TransitionDistribution<RandGen>>>
 enabled(const BrownionGSPN& et, TransitionType trans_id,
-  const UserState& s, const Local& lm, double te)
+  const UserState& s, const Local& lm, double te, double t0)
 {
   if (lm.template length<0>(0)>0)
   {
@@ -166,7 +165,7 @@ enabled(const BrownionGSPN& et, TransitionType trans_id,
   }
   else
   {
-    return {false, std::unique_ptr<NoDist>(new NoDist())};
+    return {false, std::unique_ptr<Dist>(nullptr)};
   }
 }
 

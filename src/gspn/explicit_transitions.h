@@ -27,11 +27,11 @@ public:
   typedef ExtraState UserState;
 
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<RNG>>>
-  enabled(const ExtraState& s, const LM& lm, double current_time) const
+  enabled(const ExtraState& s, const LM& lm,
+          double enabling_time, double current_time) const
   {
     BOOST_LOG_TRIVIAL(debug) << "The base enabled is unlikely correct to call";
-    return {false,
-      std::unique_ptr<NoDistribution<RNG>>(new NoDistribution<RNG>())};
+    return {false,std::unique_ptr<TransitionDistribution<RNG>>(nullptr)};
   }
 
 
@@ -112,6 +112,18 @@ public:
   PlaceKey vertex_place(size_t v) const
   {
     return get_place(_bimap, v);
+  }
+
+
+  size_t transition_vertex(TransitionKey t) const
+  {
+    return get_tvertex(_bimap, t);
+  }
+
+
+  TransitionKey vertex_transition(size_t v) const
+  {
+    return get_transition(_bimap, v);
   }
 
 

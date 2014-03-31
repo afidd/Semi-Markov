@@ -46,7 +46,6 @@ using Colored=std::map<typename color_type<Token>::type,Token>;
 namespace detail
 {
 
-using namespace std;
 namespace mpl=boost::mpl;
 
 // Given a place and a token, construct a map.
@@ -293,26 +292,27 @@ struct initialize_local
   void operator()(Maps& maps, PlaceKey& place_id, size_t idx,
     size_t layer, int stochiometric_coefficient, LM& lm)
   {
-    if (layer==I-1ul)
+    static constexpr size_t J=I-1ul;
+    if (layer==J)
     {
-      auto& typed_dict=std::get<I-1ul>(maps);
+      auto& typed_dict=std::get<J>(maps);
       auto place_tokens=typed_dict.find(place_id);
       if (place_tokens!=typed_dict.end())
       {
         BOOST_LOG_TRIVIAL(trace)<<"initialize_local<"<<layer<<"> "<<place_id
           <<" "<<idx<<" "<<place_tokens->second.size();
-        lm.template set<I-1ul>(idx, &place_tokens->second,
+        lm.template set<J>(idx, &place_tokens->second,
                            stochiometric_coefficient);
       }
       else
       {
         BOOST_LOG_TRIVIAL(trace)<<"initialize_local<"<<layer<<"> "<<place_id
           <<" "<<idx<<" null";
-        lm.template set<I-1ul>(idx, nullptr, stochiometric_coefficient);
+        lm.template set<J>(idx, nullptr, stochiometric_coefficient);
       }
     }
 
-    initialize_local<I-1ul,Maps,PlaceKey,LM> il;
+    initialize_local<J,Maps,PlaceKey,LM> il;
     il(maps, place_id, idx, layer, stochiometric_coefficient, lm);
   }
 };

@@ -46,6 +46,7 @@ class TransitionDistribution
 {
 public:
   virtual double sample(double current_time, RNG& rng) const=0;
+  virtual double enabling_time() const=0;
 };
 
 
@@ -56,6 +57,7 @@ class NoDistribution : public TransitionDistribution<RNG>
 public:
   virtual double sample(double current_time, RNG& rng) const
   { return std::numeric_limits<double>::infinity(); };
+  virtual double enabling_time() const { return 0; }
 };
 
 
@@ -82,6 +84,11 @@ public:
     return -std::log(U)/std::get<0>(_params);
   }
 
+
+  virtual double enabling_time() const
+  {
+    return std::get<1>(_params);
+  }
 
 
   double sample_vector(
@@ -167,6 +174,12 @@ public:
   }
 
 
+  virtual double enabling_time() const
+  {
+    return std::get<1>(_params);
+  }
+
+
   double sample_vector(
     const std::vector<ParamType> params,
     const std::vector<double>& enabling_time,
@@ -249,6 +262,12 @@ public:
     }
   }
 
+
+
+  virtual double enabling_time() const
+  {
+    return std::get<2>(_params);
+  }
 
 
   /*! Check estimators to see if the distribution is correct.
@@ -371,6 +390,14 @@ public:
   }
 
 
+
+  virtual double enabling_time() const
+  {
+    return std::get<2>(_params);
+  }
+
+
+
   bool check_samples(const std::vector<double>& samples, double dt)
   {
     bool pass=true;
@@ -451,6 +478,12 @@ public:
     _partial_sum[b.size()-1]=total;
   }
 
+
+
+  virtual double enabling_time() const
+  {
+    return std::get<2>(_params);
+  }
 
 
   virtual double sample(double current_time, RNG& rng) const
