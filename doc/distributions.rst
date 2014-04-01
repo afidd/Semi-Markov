@@ -1,6 +1,6 @@
-==========================
-Continuous Distributions
-==========================
+==================================
+Continuous Distributions Reference
+==================================
 
 The core matrix of a semi-Markov system is defined on a joint
 discrete and continuous space, where the discrete set is of
@@ -19,7 +19,18 @@ distribution doesn't change. It just gets renormalized to account
 for knowledge that it has not yet fired. If we label the 
 cumulative distribution by :math:`F(t)` and a distribution is shifted
 by a time :math:`\Delta=t_0-t_e`, then the new distribution is
-sampled with a shifted quantile,
+sampled with a shifted quantile. If we know the original cumulative
+distribution function, :math:`F(t,t_e),` where :math:`t_e` is the
+enabling time of the distribution function, then we can calulate
+the distribution, *given that it hasn't fired before time* :math:`t_0`,
+with
+
+.. math::
+
+  F(t, t_0, t_e)=\frac{F(t,t_e)-F(t_0,t_e)}{1-F(t_0,t_e)}
+
+This makes the calculation of the quantile, using the original
+quantile, :math:`F^{-1},` look like
 
 .. math::
 
@@ -31,24 +42,27 @@ and cumulative distribution.
 
 Transitions for this library implement the following interface.::
 
-   template<typename RNG>
+   template<typename RandomGenerator>
    class TransitionDistribution
    {
    public:
-       virtual double sample(double enabling_time, double current_time, RNG& rng);
+       virtual double sample(double current_time, RandomGenerator& rng);
    };
 
+The template argument RandomGenerator fulfills the concept of the Boost
+random number generator concept and the std::random random number
+generator concept.
 Each sample can be taken from the difference between the two times,
 :math:`(t_c-t_e)`, but passing both separately will be better for vectorization
 of sampling.
 
 The following distributions are currently in the library.
 
-**NoDistribution**
-This has no parameters and always returns infinity.
+.. cpp:class:: afidd::smv::ExponentialDistribution<RandomNumberGenerator>
 
-**ExponentialDistribution** The `exponential distribution <http://en.wikipedia.org/wiki/Exponential_distribution>`_
-is the classic Markovian distribution.
+   The `exponential distribution <http://en.wikipedia.org/wiki/Exponential_distribution>`_
+   is the classic Markovian distribution. The cumulative
+   distribution and quantile are defined as the following.
 
 .. math::
 
@@ -58,18 +72,78 @@ is the classic Markovian distribution.
 
   Q(x,\Delta)=Q(x)
 
-**WeibullDistribution** `Weibull distributions <http://en.wikipedia.org/wiki/Weibull_distribution>`_ can model either
-infant mortality or aging processes.
+
+.. cpp:function:: afidd::smv::ExponentialDistribution::ExponentialDistribution(double lambda, double enabling_time)
+
+   The constructor takes the parameter `lambda,` an enabling time for the
+   distribution as an absolute system time.
+
+
+.. cpp:class:: afidd::smv::ShiftedExponentialDistribution<RandomNumberGenerator>
+
+   The `exponential distribution <http://en.wikipedia.org/wiki/Exponential_distribution>`_
+   is the classic Markovian distribution.
+   The shift is a displacement
+   of the cumulative distribution function by an amount :math:`t_s.`
 
 .. math::
 
-  F(x)=1-e^{-\left(x/\lambda\right)^k}
+     F(x) = 1-e^{-λ(x-t_s)}
 
-  Q(p; k,\lambda)=\lambda\left[-\ln(1-p)\right]^{1/k}
 
-  Q(p,\Delta; k,\lambda)=\lambda\left[-\ln(1-p)+\left(\Delta/\lambda\right)^k\right]^{1/k}-\Delta
+.. cpp:function:: afidd::smv::ShiftedExponentialDistribution::ExponentialDistribution(double lambda, double enabling_time, double shift=0.0, double normal=1.0)
 
-This transformation accounts for the time shifting.
+   The constructor takes the parameter `lambda,` an enabling time for the
+   distribution as an absolute system time, and a normalization constant.
+   If `normal` is less than one, it represents the probability that
+   this distribution will fire at all. 
 
-**GammaDistribution** This uses the Boost::Math::gamma_distribution.
-It has two parameters, shape and scale.
+
+
+.. cpp:class:: afidd::smv::WeibullDistribution<RandomNumberGenerator>
+
+   `Weibull distributions <http://en.wikipedia.org/wiki/Weibull_distribution>`_ can model either infant mortality or aging processes. Parameters
+   may be defined different ways. This class uses the following
+   cumulative distribution and quantile.
+
+.. math::
+
+      F(x)=1-e^{-\left(x/\lambda\right)^k}
+
+      Q(p; k,\lambda)=\lambda\left[-\ln(1-p)\right]^{1/k}
+
+      Q(p,\Delta; k,\lambda)=\lambda\left[-\ln(1-p)+\left(\Delta/\lambda\right)^k\right]^{1/k}-\Delta
+
+.. cpp:function:: afidd::smv::WeibullDistribution::WeibullDistribution(double lambda, double k, double enabling_time, double shift, double normal=1.0)
+
+   This creates a Weibull distribution with parameters as defined above.
+   The shift moves the distribution to the right.
+
+
+.. cpp:class:: afidd::smv::GammaDistribution<RandomNumberGenerator>
+
+   This uses the Boost::Math::gamma_distribution.
+   It has two parameters, shape and scale.
+
+.. cpp:function:: afidd::smv::GammaDistribution::GammaDistribution(double alpha, double theta, double enabling_time, double shift=0.0, double normal=1.0)
+
+   The constructor initializes the two parameters, :math:`\alpha` and :math:`\theta.` It also sets the enabling time and optional shift and normal.
+
+
+.. cpp:class:: afidd::smv::PiecewiseLinearDistribution<RandomNumberGenerator>
+
+   This distribution represents piecewise, linear, continuous distributions.
+   It is an expansion on the `std::piecewise_linear_distribution` from
+   the `std::random` header. The piecewise curve defines an un-normalized
+   probability density function, from which the cumulative distribution
+   function is calculated.
+
+.. cpp:function:: afidd::smv::PiecewiseLinearDistribution::PiecewiseLinearDistribution( const std::vector<double>& b, const std::vector<double>& w, double enabling_time, double shift=0.0, double normal=1.0)
+
+   The vector `b` specifies intercepts on the x-axis. The domain of the
+   probability distribution function is from the first to last value of
+   `b`. The weight vector, `w,` is the height of the unnormalized
+   function at each point `b.` The arrays `b` and `w` must have at
+   least two points and must be the same length.
+   The `shift` moves the whole distribution to the right. `normal`
+   is the probability that this distribution will fire at all.

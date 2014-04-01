@@ -18,6 +18,7 @@ stochastic Petri nets (GSPN). The source is available at
    mathematics
    explicit
    gspntrajectory
+   observestate
    marking
    distributions
 

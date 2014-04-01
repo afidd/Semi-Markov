@@ -146,7 +146,10 @@ The ``enabled()`` method's parameters are
 * **current time** - The current absolute time of the system.
 
 For a newly-enabled transition, the current time and enabling time
-will be the same.
+will be the same. The `enable` method will be called any time
+a transition fires which shares an input or output place.
+If this transition was enabled and should remain so, then it
+likely wants to keep its original enabling time.
 
 
 

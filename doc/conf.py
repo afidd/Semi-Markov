@@ -34,6 +34,8 @@ templates_path = ['_templates']
 # The suffix of source filenames.
 source_suffix = '.rst'
 
+primary_domain = 'cpp'
+
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
 

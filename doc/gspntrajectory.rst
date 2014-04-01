@@ -19,7 +19,18 @@ random number generator.::
   template<typename GSPN, typename State, typename Rand>
   class PartialCoreMatrix;
 
-Given a GSPN, its responsiblity is to present to a propagator
+The partial core matrix has two responsibilities. For the
+underlying GSPN, it enforces the rule, central to this kind
+of semi-Markov model, that distributions of transitions are
+recalculated only when a transition fires which shares marking.
+Sharing markings is the only permitted way to express dependence among
+processes in the system. A distribution may depend arbitrarily
+on external state, such as temperature, but no transition can
+affect the distribution of another transition except by changing
+the marking.
+
+The partial core matrix also has a responsiblity
+to present to a propagator
 distributions in time of the currently-enabled competing processes.
 The propagator is a function which samples these distributions to
 return the next transition to fire.::
@@ -54,4 +65,3 @@ As a whole, sampling the trajectory of a GSPN might look like this::
   	  << std::get<1>(next) << std::endl;
   }
 
-We have not described here observations on the state.
