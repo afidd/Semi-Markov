@@ -6,7 +6,9 @@
 AFIDD: Semi-Markov
 =======================================
 
-Contents:
+A C++ library to specify and simulate trajectories of generalized
+stochastic Petri nets (GSPN). The source is available at
+`Semi-Markov <https://github.com/afidd/Semi-Markov>`_ on Github.
 
 .. toctree::
    :maxdepth: 2
@@ -14,7 +16,6 @@ Contents:
    intro
    install
    mathematics
-   concepts
    explicit
    gspntrajectory
    distributions

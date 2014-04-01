@@ -2,14 +2,120 @@
 Mathematics of the Semi-Markov Model and GSPN
 ==============================================
 
+
+
+Generalized Stochastic Petri Net
+-----------------------------------
+There are many flavors of GSPN defined by various authors.
+The following model was chosen to support complex epidemiological
+simulations while still representing a semi-Markov system.
+In brief, for those familiar with GSPN, this system supports
+non-exponential distributions, without inhibitor arcs, with
+colored tokens, without immediate transitions, permitting
+simultaneous transitions.
+
+The **what** of the GSPN is
+
+* Places, :math:`p_1, p_2, p_3\ldots`.
+
+* Transitions, :math:`e_1, e_2, e_3\ldots`. Each transition has
+  input places, :math:`p_k\in I(e_i)` and output places,
+  :math:`p_k\in J(e_i)`. For each pair of transition and input
+  or output place, there is an integer stochiometric coefficient.
+  There are no inhibitor places in this representation.
+
+* Marking at each place, :math:`s_1, s_2, s_3\ldots`. The marking
+  at a place is a non-negative number of tokens, :math:`q_i`. Tokens may
+  have properties, :math:`\xi(q_i)`.
+
+The **how** of the GSPN is
+
+#. A transition becomes *enabled* when there are as many tokens on
+   the input places as the stochiometric coefficients require.
+   Whether the output places need to be empty is a policy choice.
+   The enabling time of a transition is part of the state of the
+   system.
+
+#. An enabled transition computes from the marking on its input
+   and output places, and from any properties of the tokens in that
+   marking, a continuous stochastic variable which determines the
+   likelihood the transition will fire at any time in the future.
+   This stochastic variable need not be an exponential distribution.
+
+#. The system samples jointly from the stochastic variables of every
+   enabled transition in order to determine which transition fires
+   next. This is described in grave detail later.
+
+#. When a transition fires, it removes from the marking of its input
+   places the specified number of tokens and puts them in the output
+   places. Any disparity in token count destroys or creates tokens.
+   Which token is moved is specified by policy to be the first,
+   last, or random token in the marking of the place.
+
+#. Transitions which do not fire fall into four classes. Those
+   transitions whose input and output places are not shared with
+   inputs and outputs of the fired transitions retain their
+   enabling time and may not make any changes to how their
+   continuous variable distributions depend on the marking.
+   Any dependence between transitions must be expressed by
+   sharing intput or output places.
+
+   Those previously-enabled transitions which share input or output
+   places, and for which the new marking still meets their
+   enabling requirements, retain their original enabling times
+   but may recalculate their stochastic variable distributions
+   depending on the marking.
+
+   Previously-enabled transitions whose input or output
+   places no longer have requisite tokens for enabling become
+   disabled.
+
+   All transitions which may become enabled after the firing
+   are enabled with an enabling time set to the current system
+   time.
+
+
+
+Each transition defines an independent continuous stochastic variable,
+whose density is :math:`f_\alpha(\tau, t_e)` and cumulative density
+is :math:`F_\alpha(\tau, t_e)`, where :math:`t_e` is the time
+at which the transition was enabled. If we define a new stochastic variable,
+whose value is the minimum of all of the :math:`f_\alpha`, then it
+defines the time of the next transition, and the index :math:`\alpha` of
+the transition that came first determines, by its transition's 
+change to the marking, the new system state, :math:`j`. This means we have
+a race. The racing processes are dependent only when they modify
+shared marking.
+
+If the :math:`f_\alpha` are all exponential processes, then the minimum
+of the stochastic variates is analytically-tractable, and the result
+is exactly Gillespie's method. Using a random number generator to sample
+each process separately would, again for exponential processes, result
+in the First Reaction method. The Next Reaction method is just another
+way to do this sampling in a statistically-correct manner, valid only
+for exponential processes.
+
+For general distributions, the non-zero part of the core matrix,
+which we will call :math:`p_{nm}(\tau)` for partial core matrix,
+right after the firing of any transition, is
+
+.. math::
+
+   p_{nm}(\tau)=\frac{f_\alpha(\tau,t_0,t_e)}{1-F_\alpha(\tau,t_0,t_e)}\prod_\beta(1-F_\beta(s, t_0, t_e))
+
+Here :math:`(n,m)` label states determined by how each transition, :math:`\alpha`
+changes the marking. The system has, inherently, a core matrix, but we
+compute its trajectory from this partial core matrix.
+
+
+Semi-Markov Processes
+----------------------
 There are many excellent books on semi-Markov models,
 notably [Howard2007]_. Our goal here is to define the generalized
 stochastic Petri net as a representation of a semi-Markov
 model in order to explain how the library decomposes it
 into algorithms.
 
-Semi-Markov Processes
-----------------------
 
 We define the semi-Markov process from the Markov process, following
 [Pyke1961]_. A *Markov chain* is a discrete variable on a set of
@@ -75,98 +181,6 @@ non-zero entries would be finite. We could simulate such a system
 by looking at the non-zero entries after each transition. We would just
 need to track which transitions existed at each step.
 
-
-GSPN
---------
-The generalized stochastic Petri net, or GSPN, specifies a semi-Markov
-system not by specifying the core matrix but by specifying long-lived,
-competing processes from which, after any transition,
-we can determine the non-zero part of the semi-Markov core matrix.
-
-For the semi-Markov system, the state was chosen from a set :math:`J` and
-enumerated with :math:`i` and :math:`j`. For the GSPN, the state is
-partitioned into mutually-exclusive sub-states, each identified with
-a *place.* The state of the system is the number of *tokens* at each
-places, along with any state within the tokens. The whole state
-is called the *marking.* A single state :math:`i` is now associated with
-the number and values of tokens at every places in the marking.
-
-A set of *transitions* defines the next possible states of the system.
-Each transition can move and modify tokens in the marking, so the set
-of tokens moved associates a particular transition with a particular
-change of state. Each transition represents a competing process
-which is independent over the life of the transition, meaning
-it is a continuous stochastic variable whose distribution is
-independent of any change in the marking which does not disable
-the transition. (It may, however, change due to other changes of
-state, such as inhomogenous factors. Think of dependence on weather.)
-A transition is enabled by the presence and/or value
-of tokens at places; it depends on a subset of the total marking.
-It can be disabled when other transitions move or modify tokens. This
-is how we model dependence among physical processes when using
-transitions whose distributions are independent between the firing
-of transitions.
-
-Because each transition depends upon a subset of the places, we represent
-the relationship as a bipartite graph, :math:`(P,T)`. Many models,
-such as chemical master equations, move tokens around in fixed numbers
-for each transition (or reaction), according to stochiometry,
-so we label each edge with the number of tokens a transition consumes
-and a number it produces, as stochiometric coefficients. A transition
-is then enabled when there are sufficient input tokens.
-
-We were able to sample from a semi-Markov model by factorizing
-the core matrix. How do we represent, and sample from, the GSPN
-representation?
-
-Each transition defines an independent continuous stochastic variable,
-whose density is :math:`f_\alpha(\tau, t_e)` and cumulative density
-is :math:`F_\alpha(\tau, t_e)`, where :math:`t_e` is the time
-at which the transition was enabled. If we define a new stochastic variable,
-whose value is the minimum of all of the :math:`f_\alpha`, then it
-defines the time of the next transition, and the index :math:`\alpha` of
-the transition that came first determines, by its transition's 
-change to the marking, the new system state, :math:`j`. This means we have
-a race. The racing processes are dependent only when they modify
-shared marking.
-
-If the :math:`f_\alpha` are all exponential processes, then the minimum
-of the stochastic variates is analytically-tractable, and the result
-is exactly Gillespie's method. Using a random number generator to sample
-each process separately would, again for exponential processes, result
-in the First Reaction method. The Next Reaction method is just another
-way to do this sampling in a statistically-correct manner, valid only
-for exponential processes.
-
-For general distributions, the non-zero part of the core matrix,
-which we will call :math:`p_{nm}(\tau)` for partial core matrix,
-right after the firing of any transition, is
-
-.. math::
-
-   p_{nm}(\tau)=\frac{f_\alpha(\tau,t_0,t_e)}{1-F_\alpha(\tau,t_0,t_e)}\prod_\beta(1-F_\beta(s, t_0, t_e))
-
-Here :math:`(n,m)` label states determined by how each transition, :math:`\alpha`
-changes the marking. The system has, inherently, a core matrix, but we
-compute its trajectory from this partial core matrix.
-
-We consider the GSPN model to be:
-
-* The set of places.
-* The set of transitions.
-* For each transition,
-   * The set of places on whose marking the enabling
-     and distribution depends.
-   * The distribution itself, to be calculated at any time :math:`t_0`.
-   * How the transition modifies tokens when it fires, and the places
-   	 whose markings change as a result.
-
-The state of the system is:
-
-* The tokens at each place in the marking.
-* The enabling time of every transition.
-
-These provide a roadmap for library implementation.
 
 
 

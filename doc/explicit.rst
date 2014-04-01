@@ -1,143 +1,242 @@
-========================
-ExplicitTransitions
-========================
+===============================================
+Using ExplicitTransitions to Construct a GSPN
+===============================================
 
 
-The ExplicitTransitions class implements the GSPN concept in two parts.
-The Petri net, with stochiometry, is represented by a graph from
-the Boost Graph Library. The transitions of the GSPN are represented
-by Transition objects, each of which can calculate whether a transition
-is enabled and what it does when it fires.
+The ExplicitTransitions class implements the GSPN concept.
 
-There are three steps to making a GSPN using ExplicitTransitions:
-Build the graph, make a marking, then add Transitions and the graph
-to the ExplicitTransitions object, which represents the GSPN concept.
+The Type of the GSPN Model
+------------------------------
 
-The Boost graph models the bipartite Petri net by having vertices
-with two colors, Place and Transition. It is a bidirectional graph,
-meaning it is directed but with O(1) access to the inputs of a transition,
-which a simple directional graph would not offer. The input and output
-edges of all transitions are ordered, because a transition in a GSPN
-can depend arbitrarily on the marking. This means a transition can
-as for its second input instead of asking for the input of a particular
-place. The Boost graph implementation is therefore::
+The author of the code supplies building blocks to this class:
 
-    enum class PetriGraphColor : int { Unused, Place, Transition };
+* A token type. It should have an ostream ``operator<<`` defined.
+  It may have any necessary data, such as a birth date
+  or size of truck. It must have a default constructor. The simplest
+  choice is to construct a `POD type <http://en.wikipedia.org/wiki/C++11#Modification_to_the_definition_of_plain_old_data>`_.
 
-    struct PetriGraphVertexProperty
+* A storage container for tokens at a place. The allowed option
+  is Uncolored<TokenType>, which is an ``std::vector.``
+
+* A PlaceKey, which is another POD type to uniquely identify
+  a place in the GSPN. It needs less-than, equal-to, and print
+  operators.
+
+* A TransitionKey, which uniquely identifies transitions in the
+  GSPN. It needs less-than, equal-to, and print
+  operators.
+
+* UserState. The system state consists of marking, enabled
+  transitions, and the absolute time. The optional UserState
+  struct will add arbitrary members to the state for convenience.
+  If a transition were to modify this state such that other
+  transitions would have new different enabling or distributions,
+  the system would no longer be semi-Markov. This state is
+  a good place to put constant parameters or links to
+  external data, such as weather.
+
+* A random number generator. The system assumes a single
+  generator for everything. This class supports the C++
+  ``random`` requirements.
+
+An example of a ``PlaceKey`` from an SIR model shows that defining
+such a struct is verbose but painless::
+   
+    struct SIRPlace
     {
-      PetriGraphColor color;
-      size_t token_layer;
-    };
+      size_t disease;
+      size_t individual;
 
-    struct PetriGraphEdgeProperty
-    {
-      int stochiometric_coefficient;
-    };
+      SIRPlace()=default;
+      SIRPlace(size_t d, size_t i)
+      : disease(d), individual(i)
+      {}
 
-    struct PetriGraphProperty {};
-
-    using PetriGraphType=boost::adjacency_list<
-        boost::vecS, // VertexList container
-        boost::vecS, // OutEdgeList container
-        boost::bidirectionalS, // directionality
-        PetriGraphVertexProperty, // Vertex property
-        PetriGraphEdgeProperty, // Edge property
-        PetriGraphProperty, // Graph property
-        boost::vecS // EdgeList container
-        >;
-
-A single graph can have different types of tokens. Maybe one represents
-available food and another represents a consumer of that food. Each
-token type is stored in a separate layer within the marking. The
-token_layer vertex property is a sanity check that the correct token
-is at the correct place.
-The actual GSPN implementation stores a copy of this graph, not a reference.
-
-Decide what types this model uses. We can do this first to get the dependencies among types out of the way.::
-
-   // Everybody always needs a random number generator.
-   using RandGen=boost::random::mt19937;
-   // The Net.
-   using ModelGraph=PetriGraphType;
-   // The type of token.
-   struct IndividualToken {};
-   // The marking on the net.
-   using ModelMarking=Marking<place_t<ModelGraph>, Uncolored<IndividualToken>>;
-   // The state of the system.
-   using ModelState=GSPNState<ModelGraph, ModelMarking>;
-   // Now we can make the GSPN type.
-   using ModelGSPN=ExplicitTransitions<LocalMarking<Mark>,
-     ModelState,ModelGraph,RandGen>;
-
-Each transition is derived from a base class, ExplicitTransitions::Transition.
-Different transitions in the model are different derived classes of this.
-A transition defines two methods. The enabled() method returns whether a
-transition is enabled and what its distribution is if it is enabled.
-The fire() method determines how to move and change tokens when they fire.
-Both read and/or modify the current system state and the local marking, which
-has convenience functions to read or move tokens automatically given
-stochiometry of the transition.::
-
-   class ModelMovement : public ModelGSPN::Transition
-   {
-      virtual std::pair<bool, std::unique_ptr<Dist>>
-      enabled(const SIRState& s, const LocalMarking<Mark>& lm) const override
+      friend inline
+      bool operator<(const SIRPlace& a, const SIRPlace& b)
       {
-        if (lm.template input_tokens_sufficient<0>())
+        return lazy_less(a.disease, b.disease, a.individual,
+          b.individual);
+      }
+
+      friend inline
+      bool operator==(const SIRPlace& a, const SIRPlace& b)
+      {
+        return (a.disease==b.disease)&& (a.individual==b.individual);
+      }
+
+      friend inline
+      std::ostream&
+      operator<<(std::ostream& os, const SIRPlace& cp)
+      {
+        return os << '(' << cp.disease << ", " << cp.individual<<')';
+      }
+    };
+
+
+The template parameters for ``ExplicitTransitions`` are as above::
+
+  typedef LocalMarking<Uncolored<TokenType>> Local;
+  typedef ExplicitTransitions<PlaceKey, TransitionKey, Local,
+                              RandGen, UserState> GSPN;
+
+The ``LocalMarking`` class is the marking of input and output tokens
+for a particular transition. Instead of using ``PlaceKey`` to identify
+particular sets of tokens, it assumes the transition can access its
+edges with an ordinal (first, second, third). The idea is to define
+transitions which don't need to know how their marking is indexed and
+stored.
+
+Define Transitions
+-------------------
+
+A transition has three responsibilities. Determine when it
+is enabled, choose a continuous variable distribution function
+for its firing time, and modify the marking when it fires.
+Enabling and calculating a distribution happen at the same time,
+so they are in one function.
+
+A transition inherits from the ``ExplicitTransition`` template.
+It acts on the local marking to produce distributions or move
+tokens::
+
+    using Transition=ExplicitTransition<Local,RandGen,WithParams>;
+    using Dist=TransitionDistribution<RandGen>;
+
+    class InfectNeighbor : public Transition
+    {
+      virtual std::pair<bool, std::unique_ptr<Dist>>
+      enabled(const UserState& s, const Local& local_marking,
+              double te, double t0) const override
+      {
+        if (local_marking.template input_tokens_sufficient<0>())
         {
-          return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0))};
+          return {true, std::unique_ptr<Dist>(
+              new WeibullDistribution(s.params.at(0), te))};
         }
         else
         {
-          return {false, std::unique_ptr<NoDist>(new NoDist())};
+          return {false, std::unique_ptr<Dist>(nullptr)};
         }
       }
 
-      virtual void fire(SIRState& s, LocalMarking<Mark>& lm,
-          RandGen& rng) const override
+      virtual void fire(UserState& s, Local& local_marking,
+                        RandGen& rng) const override
       {
-        BOOST_LOG_TRIVIAL(debug) << "Fire movement " << lm;
-        lm.template transfer_by_stochiometric_coefficient<0>(rng);
+        local_marking.template transfer_by_stochiometric_coefficient<0>(rng);
       }
-   };
+    };
 
-There are likely many types of transitions in any given GSPN.
+The ``enabled()`` method's parameters are
 
-Finally the types are decided. Now we create the objects.
-The order of instantiation depends on the problem For this exercise,
-assume there are lists containing places, transitions, and edges.::
+* **UserState** - This is the same as specified above. It could
+  include parameters or a pointer to inhomogeneous drivers of the system.
 
-    // Initialize the Boost Graph with a number of vertices.
-    ModelGraph graph(37);
-    ModelGSPN gspn(graph); // Make the GSPN.
+* **local_marking** - Most of the work here is manipulation of the
+  local marking. It has methods to add a token, remove a token, move
+  a token, read a value from a token, or modify a token. It also has
+  convenience methods to move all tokens associated with a marking.
+  The local_marking contains stochiometric coefficients for the
+  transition.
 
-    // Identify each place in the graph.
-    PetriGraphVertexProperty vprop;
-    for (auto place_idx : places)
+* **enabling_time** - If the transition was previously-enabled,
+  this is the previous enabling time. Otherwise, it is the current
+  absolute time of the GSPN.
+
+* **current time** - The current absolute time of the system.
+
+For a newly-enabled transition, the current time and enabling time
+will be the same.
+
+
+
+Using ExplicitTransitionsBuilder
+----------------------------------
+The implementation of ``ExplicitTransitions`` requires that
+we construct it with a builder which then produces the GSPN
+object. The builder has just three methods, `add_place()`,
+`add_transition()`, and `build()`. It checks that transitions
+have, as inputs and outputs, places which exist. It ensures
+every PlaceKey and TransitionKey is unique.
+
+For example::
+
+    GSPN
+    build_system(size_t individual_cnt)
     {
-      vprop.color=PetriGraphColor::Place;
-      vprop.token_layer=0;
-      gspn.graph[place_idx]=vprop;
+      BuildGraph<GSPN> bg;
+      using Edge=BuildGraph<GSPN>::PlaceEdge;
+
+      enum { s, i, r };
+
+      for (size_t ind_idx=0; ind_idx<individual_cnt; ind_idx++)
+      {
+        for (size_t place : std::vector<int>{s, i, r})
+        {
+          bg.add_place({place, ind_idx}, 0);
+        }
+      }
+
+      for (size_t left_idx=0; left_idx<individual_cnt-1; left_idx++)
+      {
+        bg.add_transition({left_idx, left_idx, 0},
+          {Edge{{i, left_idx}, -1}, Edge{{r, left_idx}, 1}},
+          std::unique_ptr<SIRTransition>(new Recover())
+          );
+
+        for (size_t right_idx=left_idx+1; right_idx<individual_cnt; right_idx++)
+        {
+          SIRPlace left{i, left_idx};
+          SIRPlace rights{s, right_idx};
+          SIRPlace righti{i, right_idx};
+
+          bg.add_transition({left_idx, right_idx, 0},
+            {Edge{left, -1}, Edge{rights, -1}, Edge{left, 1}, Edge{righti, 1}},
+            std::unique_ptr<SIRTransition>(new InfectNeighbor()));
+
+          SIRPlace lefts{s, left_idx};
+          SIRPlace lefti{i, left_idx};
+          SIRPlace right{i, right_idx};
+
+          bg.add_transition({right_idx, left_idx, 0},
+            {Edge{right, -1}, Edge{lefts, -1}, Edge{right, 1}, Edge{lefti, 1}},
+            std::unique_ptr<SIRTransition>(new InfectNeighbor()));
+        }
+      }
+
+      // std::move the transitions because they contain unique_ptr.
+      return std::move(bg.build());
     }
 
-    // Identify each transition.
-    for (auto transition_idx : transitions)
-    {
-      vprop.color=PetriGraph::Transition;
-      gspn.graph[transition_idx]=vprop;
-      gspn.transitions.emplace(transition_idx,
-        std::move(std::unique_ptr<ModelGSPN::Transition>(
-        new ModelMovement())));
-    }
+Create Marking and State
+----------------------------------
+The last step is to create the marking and state.
+There is one implementation of a marking in the library.
+While we defined a `PlaceKey` above, the `ExplicitTransitions`
+class uses a different place and transition key internally,
+chosen by the Boost Graph Library implementation. Both are
+just type `size_t`. The marking and state are therefore::
 
-    // Edges get stochiometry.
-    for (auto edge : edges)
-    {
-      auto left_vertex=std::get<0>(edge);
-      auto right_vertex=std::get<1>(edge);
-      auto stochiometry=std::get<2>(edge);
-      add_edge(left_vertex, right_vertex, stochiometry, gspn.graph);
-    }
+  using Mark=Marking<size_t, Uncolored<IndividualToken>>;
+  using State=GSPNState<Mark,UserState>;
 
-By the end, a GSPN with places and transitions is complete.
+  State state;
+
+If the `UserState` had a member named `parameters`, then we could access
+it as `state.user.parameters`.
+
+How do we initialize the marking? Unfortunately, the marking doesn't
+use our `PlaceKey`, so we have to add a translation step from
+the `PlaceKey` we know to the `size_t` we don't::
+
+  size_t susceptible=gspn.place_vertex(
+      PlaceKey{Disease::Susceptible, individual_idx});
+  add<0>(state.marking, susceptible, IndividualToken{});
+
+The GSPN remembers the original `PlaceKey` and will translate
+for us. The second line adds a new token to the marking.
+
+That's everything that defines the model and the state of the system.
+We made places, transitions, and a marking. The next step is
+to simulate a trajectory of the system.
+

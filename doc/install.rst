@@ -2,6 +2,9 @@
 Requirements and Installation
 ==============================
 
+This is a header-only library. Running ``./configure`` and ``make``
+will build example codes and copy header files into the specified
+``include`` directory.
 
 Requirements:
 
@@ -10,26 +13,59 @@ Requirements:
 
 * Boost libraries, version 1.54 or newer.
 
-* Make. The configure script and Makefile were created with autoconnf
+* Make. The configure script and Makefile were created with autoconf
   and automake.
 
-* The random number generation can use std::random, Boost::random,
-  or RNGSSELIB or PRAND from the `Computer Physics Communications Program Library of ScienceDirect <http://cpc.cs.qub.ac.uk/overview.html>`_.
-  RNGSSELIB uses SSE instructions and more modern generators. PRAND
-  augments this capability with GPU generation of random numbers.
+* Testing is regularly done on Linux and Mac, but the library is just C++
+  so it should compile anywhere.
+
 
 Installation:
 
-#. Run "./configure --prefix=$HOME". Change the compiler or flags using
-   environmental variables, CC, CFLAGS, and LDFLAGS before
-   running configure. The only real option is specification of the 
-   location of Boost and the variant to link. If Boost libraries are in
-   /usr/local/lib/libboost and headers are in /usr/local/include/boost/,
-   then specify "./configure --with-boost=/usr/local". Boost has library
-   variants. If your libraries look like "libboost_system-mt.so", then
-   use "./configure --enable-variant=-mt".
+#. Determine the flavor of your boost libraries. The names of Boost
+   binaries may contain extra information, most commonly ending in ``-mt``,
+   such as libboost_system-mt.so. Locate your libraries with
+   ``locate libboost_chrono`` or, on the mac, ``mdfind -name libboost_chrono``
+   and ensure you have a full set of one of the
+   variants. If your library sits somewhere like
+   ``/usr/local/boost_1_54_0mt/lib/libboost_chrono-mt.so,`` then build
+   with the following options to configure::
 
-#. Run "make". This makes examples only.
+     ./configure --with-boost=/usr/local/boost_1_54_0mt --enable-variant=-mt
 
-#. Run "make install". This will just copy header files to
-   $HOME/includes.
+   Proper choice of boost directory and variant will lead to a string of
+   ``yes`` in the configure output::
+
+      checking for exit in -lpthread... yes
+      checking for exit in -lboost_system... yes
+      checking for exit in -lboost_random... yes
+      checking for exit in -lboost_program_options... yes
+      checking for exit in -lboost_filesystem... yes
+      checking for exit in -lboost_date_time... yes
+      checking for exit in -lboost_log... yes
+      checking for exit in -lboost_log_setup... yes
+      checking for exit in -lboost_unit_test_framework... yes
+
+
+#. Modify the destination directory by adding a flag to configure::
+
+     ./configure --prefix=$HOME
+
+   With this option, the headers will install into the directory
+   ``$HOME/include/semimarkov-0.1``.
+   It is possible to modify the compiler and linker flags::
+
+     ./configure CXX=g++ CXXFLAGS="-O2 -march=native"
+
+   All of these sample flags can be used in combination, and help
+   is found with ./configure --help.
+
+#. Lastly, make the examples and install the headers::
+
+      make
+      make install
+
+Should it be necessary to rebuild the ``configure`` script:
+
+#. Run ``autoreconf --force --install``. This will run ``aclocal``,
+   ``autoconf``, and ``automake``.

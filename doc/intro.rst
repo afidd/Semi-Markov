@@ -2,21 +2,67 @@
 Introduction
 ==================================================
 
-This is a library to simulate trajectories of semi-Markov processes in
-continuous time. It represents these processes as Generalized
-Stochastic Petri Nets. The goal of this library is to create a 
-clear specification for, and efficient computation of, these systems.
+The ``Semi-Markov`` library to simulates trajectories of semi-Markov
+processes in continuous time. Its main use is to specify and simulate
+represents these processes as Generalized Stochastic Petri Nets (GSPN).
+These nets are used in many areas, from reliability analysis and
+computer performance modeling to chemical systems. While it would
+support those uses, as well, the flavor of GSPN chosen for this
+library is tuned to model epidemiological and ecological models.
+It can model the stages of a disease, life history of an individual,
+movement of individuals, or all of these at once.
+
+There are a number of common techniques for epidemiological
+and ecological dynamical modeling, such as
+
+* deterministic differential equations
+
+* stochastic differential equations, and
+
+* individual-level models in discrete time.
+
+The GSPN can be a specification for either a discrete time system or,
+as used here, continuous time system. We emphasize that, given
+field measurements at the individual level, a GSPN can produce
+a model most faithful to the measured data, so that it serves as
+specification even when solution of larger systems is not tractable.
+At the same time, this library uses algorithms to make possible
+enormous stochastic, continuous-time simulations.
+
+This library was created the Analytical Framework for Infectious Disease
+Dynamics (AFIDD) group at Cornell University in conjunction with
+the USDA. The code is in the Public Domain and is offered without
+copyright.
+
+What is a GSPN?
+-----------------
 
 A Generalized Stochastic Petri Net (GSPN) is a formal way to specify a
-a system of interacting, competing processes. We think of the system
-as having mutually-exclusive sub-states which together determine the
-whole state. Like checkers on a game board, the state of this system
-is determined by *tokens* located at *places.* The location of all the
-tokens together is called the *marking.*
-Each independent process is competing to move tokens from one place
-to another, which changes the system state and may enable or disable
-other processes.
+a system of interacting, competing processes. Different organisms
+can compete, but, for this system, the likelihood of infecting
+a neighbor versus the likelihood of recovery are seen as competing,
+as well.
 
+Define a system by placing *tokens* at *places,* the way you would
+put checkers on a game board. Each place represents a sub-state of
+the system, such as herd of animals. Five tokens on a place representing
+a herd means the herd has five animals.
+
+*Transitions* compete to move the tokens. Each transition is
+an independent process. (We explain later how and why independent processes
+are able to represent biological processes that are clearly dependent.)
+Only transitions change the state. Each one triggers according to its
+own internal clock. This library can model non-exponential distributions
+of firing times.
+
+To get a flavor, try the following small examples.
+
+
+Frogs on Lily Pads
+---------------------
+
+Susceptible-Infected-Susceptible
+----------------------------------
 
 
 Dairy Herd Example
