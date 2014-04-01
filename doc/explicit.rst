@@ -157,9 +157,23 @@ we construct it with a builder which then produces the GSPN
 object. The builder has just three methods, `add_place()`,
 `add_transition()`, and `build()`. It checks that transitions
 have, as inputs and outputs, places which exist. It ensures
-every PlaceKey and TransitionKey is unique.
+every PlaceKey and TransitionKey is unique. The signatures
+of its methods::
 
-For example::
+   void BuildGraph::add_place(const PlaceKey&, size_t token_layer);
+
+   typedef std::tuple<PlaceKey,int> BuildGraph::PlaceEdge;
+
+   void BuildGraph::add_transition(const TransitionKey&,
+       const std::vector<BuildGraph::PlaceEdge>&,
+       std::unique_ptr<ExplicitTransition<<Local,RandGen,WithParams>);
+
+The `PlaceEdge` contains a PlaceKey and a stochiometric coefficient,
+which should be negative on inputs and positive on outputs, and specifies
+the number of tokens required and the number to move when firing.
+
+For example, we can take advantage of the C++ initializer_list
+to construct a GSPN succinctly::
 
     GSPN
     build_system(size_t individual_cnt)
