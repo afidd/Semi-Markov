@@ -10,10 +10,10 @@
 #include "boost/property_map/property_map.hpp"
 #include "boost/mpl/vector.hpp"
 #include "boost/program_options.hpp"
-#include "brownion_model.h"
 #include "partial_core_matrix.h"
 #include "continuous_dynamics.h"
 #include "logging.h"
+#include "brownion_model.h"
 
 
 

@@ -6,11 +6,11 @@ namespace afidd
 namespace smv
 {
 template<typename PartialCore, typename T, typename RNG>
-std::tuple<trans_t<typename PartialCore::PetriNet>, double>
+std::tuple<typename PartialCore::TransitionKey, double>
 propagate_competing_processes(PartialCore& system, T& token, RNG& rng)
 {
   system.state_machine_token(token);
-  using Transition=trans_t<typename PartialCore::PetriNet>;
+  using Transition=typename PartialCore::TransitionKey;
 
   auto least=std::make_tuple(Transition{}, std::numeric_limits<double>::infinity());
 
@@ -29,7 +29,7 @@ propagate_competing_processes(PartialCore& system, T& token, RNG& rng)
 
   if (std::get<1>(least)<std::numeric_limits<double>::infinity())
   {
-    system.fire(std::get<0>(least), std::get<1>(least), rng);
+    system.trigger(std::get<0>(least), std::get<1>(least), rng);
   }
   return least;
 }

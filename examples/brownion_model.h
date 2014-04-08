@@ -81,33 +81,10 @@ struct TransitionType
 struct UserState {};
 
 
-struct BrownionGraph
-{
-};
-
-
-namespace afidd
-{
-  namespace smv
-  {
-  template<>
-  struct petri_place<BrownionGraph>
-  {
-    typedef PlaceType type;
-  };
-
-  template<>
-  struct petri_transition<BrownionGraph>
-  {
-    typedef TransitionType type;
-  };
-  }
-}
-
 struct IndividualToken {};
 
 using Local=smv::LocalMarking<smv::Uncolored<IndividualToken>>;
-using Mark=smv::Marking<smv::place_t<BrownionGraph>,
+using Mark=smv::Marking<PlaceType,
                         smv::Uncolored<IndividualToken>>;
 using BrownionState=smv::GSPNState<Mark,UserState>;
 
@@ -118,34 +95,15 @@ using Weibull=smv::WeibullDistribution<RandGen>;
 
 class BrownionGSPN
 {
+public:
+  typedef PlaceType PlaceKey;
+  typedef TransitionType TransitionKey;
   // Could store the state parameters and distributions here
   // if we wanted.
 };
 
 
-namespace afidd
-{
-  namespace smv
-  {
-  template<>
-  struct petri_place<BrownionGSPN>
-  {
-    typedef PlaceType type;
-  };
 
-  template<>
-  struct petri_transition<BrownionGSPN>
-  {
-    typedef TransitionType type;
-  };
-  }
-}
-
-
-namespace afidd
-{
-namespace smv
-{
 std::pair<bool,std::unique_ptr<TransitionDistribution<RandGen>>>
 enabled(const BrownionGSPN& et, TransitionType trans_id,
   const UserState& s, const Local& lm, double te, double t0)
@@ -182,10 +140,10 @@ fire(BrownionGSPN& et, TransitionType trans_id,
 
 
 
-std::vector<std::tuple<place_t<BrownionGSPN>,size_t,int>>
-neighbors_of_transition(BrownionGSPN& g, trans_t<BrownionGSPN> trans_id)
+std::vector<std::tuple<PlaceType,size_t,int>>
+neighbors_of_transition(BrownionGSPN& g, TransitionType trans_id)
 {
-  std::vector<std::tuple<place_t<BrownionGSPN>,size_t,int>> place_ids;
+  std::vector<std::tuple<PlaceType,size_t,int>> place_ids;
   place_ids.push_back(std::make_tuple(trans_id.from, 0, -1));
   place_ids.push_back(std::make_tuple(trans_id.to, 0, -1));
   return place_ids;
@@ -195,7 +153,7 @@ neighbors_of_transition(BrownionGSPN& g, trans_t<BrownionGSPN> trans_id)
 
 template<typename F>
 void neighbors_of_places(BrownionGSPN& g,
-  const std::set<place_t<BrownionGSPN>>& place_id, const F& func)
+  const std::set<PlaceType>& place_id, const F& func)
 {
   for (auto p : place_id)
   {
@@ -215,9 +173,6 @@ void neighbors_of_places(BrownionGSPN& g,
     func(TransitionType{p, {p.i, p.j, 1-p.state}});
   }
 }
-
-} // smv
-} // afidd
 
 
 #endif /* _BROWNION_MODEL_H_ */

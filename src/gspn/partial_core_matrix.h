@@ -4,6 +4,7 @@
 #include <memory>
 #include <map>
 #include "logging.h"
+#include "distributions.h"
 
 namespace afidd
 {
@@ -17,10 +18,13 @@ class PartialCoreMatrix
   using Marking=typename State::Marking;
   State& _state;
   using Dist=TransitionDistribution<RNG>;
-  std::map<trans_t<GSPN>,std::unique_ptr<Dist>> _distributions;
+  std::map<typename GSPN::TransitionKey,std::unique_ptr<Dist>> _distributions;
 
 public:
   typedef GSPN PetriNet;
+  // Re-advertise the transition key.
+  typedef typename GSPN::TransitionKey TransitionKey;
+
   PartialCoreMatrix(GSPN& gspn, State& s)
   : _gspn(gspn), _state(s)
   {}
@@ -44,7 +48,7 @@ public:
       auto lm=_state.marking.local_marking();
 
       neighbors_of_places(_gspn, _state.marking.modified(),
-        [&] (trans_t<GSPN> neighbor_id)
+        [&] (TransitionKey neighbor_id)
         {
           // Was this transition enabled? When?
           auto previous_distribution=_distributions.find(neighbor_id);
@@ -97,13 +101,13 @@ public:
     auto begin=_distributions.begin();
     for (; begin!=_distributions.end(); ++begin)
     {
-      trans_t<GSPN> trans_id=begin->first;
+      TransitionKey trans_id=begin->first;
       eval(begin->second, trans_id, _state.current_time());
     }
   }
 
 
-  void fire(trans_t<GSPN> trans_id, double when, RNG& rng)
+  void trigger(TransitionKey trans_id, double when, RNG& rng)
   {
     auto neighboring_places=neighbors_of_transition(_gspn, trans_id);
 
@@ -111,7 +115,7 @@ public:
       neighboring_places.size();
     auto lm=_state.marking.local_marking();
     _state.marking.init_local(lm, neighboring_places);
-    afidd::smv::fire(_gspn, trans_id, _state.user, lm, rng);
+    fire(_gspn, trans_id, _state.user, lm, rng);
     _state.marking.read_local(lm, neighboring_places);
 
     BOOST_LOG_TRIVIAL(trace) << "Fire "<<trans_id << " modifies "

@@ -328,7 +328,7 @@ int main(int argc, char *argv[])
 
 
   // Marking of the net.
-  static_assert(std::is_same<size_t,SIRGSPN::place_type>::value,
+  static_assert(std::is_same<size_t,SIRGSPN::PlaceKey>::value,
     "The GSPN's internal place type is size_t.");
   using Mark=Marking<size_t, Uncolored<IndividualToken>>;
   using SIRState=GSPNState<Mark,WithParams>;

@@ -148,8 +148,8 @@ get_transition(const BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
 template<typename ET>
 class BuildGraph
 {
-  using BGPlace=typename ET::PlaceKey;
-  using BGTransition=typename ET::TransitionKey;
+  using BGPlace=typename ET::UserPlaceKey;
+  using BGTransition=typename ET::UserTransitionKey;
   using Transition=typename ET::Transition;
 
   PetriBuildGraphType _g;
