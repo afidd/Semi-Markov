@@ -7,7 +7,7 @@ AM_INIT_AUTOMAKE
 AC_CONFIG_MACRO_DIR([m4])
 #AC_CONFIG_SRCDIR([src/stochnet.h])
 
-AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_HEADERS([src/smv_config.h])
 
 # Checks for programs.
 AC_PROG_CXX([clang++ g++])
