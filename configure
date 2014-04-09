@@ -2729,7 +2729,7 @@ fi
 
 #AC_CONFIG_SRCDIR([src/stochnet.h])
 
-ac_config_headers="$ac_config_headers src/smv_config.h"
+ac_config_headers="$ac_config_headers src/smv_config.hpp"
 
 
 # Checks for programs.
@@ -6207,7 +6207,7 @@ cat >>$CONFIG_STATUS <<\_ACEOF || ac_write_fail=1
 for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
-    "src/smv_config.h") CONFIG_HEADERS="$CONFIG_HEADERS src/smv_config.h" ;;
+    "src/smv_config.hpp") CONFIG_HEADERS="$CONFIG_HEADERS src/smv_config.hpp" ;;
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
 
