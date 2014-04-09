@@ -188,7 +188,7 @@ public:
   BuildGraph() {}
 
 
-  bool AddPlace(BGPlace p, size_t token_layer=0) {
+  bool AddPlace(BGPlace p, int token_layer=0) {
     auto v=add_vertex({PetriGraphColor::Place, token_layer}, _g);
     return PutPlace(_bimap, v, p);
   }
@@ -247,7 +247,7 @@ public:
   /*! Translate the graph from a buildable type to a fast type.
    *  The buildable type is based on lists and has pointers
    *  for vertex_property. The fast time is based on vectors
-   *  and uses size_t as the index type.
+   *  and uses int64_t as the index type.
    */
   ET Build()
   {
@@ -268,21 +268,21 @@ public:
     // make a map from vertex_descriptor to an index, which is what
     // we do here. The indices we assign here will _not_ be the same
     // as the indices in the resulting graph.
-    std::map<vert,size_t> vertex_index;
+    std::map<vert,int64_t> vertex_index;
     using viter=boost::graph_traits<PetriBuildGraphType>::vertex_iterator;
     viter ind_begin;
     viter ind_end;
     std::tie(ind_begin, ind_end)=vertices(_g);
-    for (size_t idx=0; ind_begin!=ind_end; ++ind_begin, ++idx) {
+    for (int64_t idx=0; ind_begin!=ind_end; ++ind_begin, ++idx) {
       vertex_index.emplace(*ind_begin, idx);
     }
-    using IndMap=boost::associative_property_map<std::map<vert,size_t>>;
+    using IndMap=boost::associative_property_map<std::map<vert,int64_t>>;
     IndMap vertex_index_map(vertex_index);
 
     // The orig_to_copy argument is a way to save a translation
     // table from the old vertex_descriptor to the new vertex_descriptor.
     // All examples use the vector map, which uses a vertex_index_map
-    // to get size_t offsets, but let's just use a simple map.
+    // to get int64_t offsets, but let's just use a simple map.
     // While we created a vertex_index above, it will not be the same
     // index as the new graph's vertex_descriptor, so we need this
     // translation.
@@ -311,9 +311,10 @@ public:
             "and a transition.";
           assert(transition_iter==_bimap.vt.end());
         }
-        PutPlace(b, new_vertex, place_iter->second);
+        PutPlace(b, static_cast<int64_t>(new_vertex), place_iter->second);
       } else if (transition_iter!=_bimap.vt.end()) {
-        PutTransition(b, new_vertex, transition_iter->second);
+        PutTransition(b, static_cast<int64_t>(new_vertex),
+            transition_iter->second);
 
         auto trans_obj_iter=_transitions.find(transition_iter->second);
         if (trans_obj_iter!=_transitions.end()) {

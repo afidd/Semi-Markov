@@ -67,7 +67,7 @@ public:
   typedef typename detail::ContainerVector<Ts...>::type container_types;
   typedef typename detail::MarkTokens<Ts...>::type token_types;
   using Maps=typename detail::MapContainers<Place,Ts...>::result;
-  static constexpr size_t _layer_cnt=boost::mpl::size<container_types>::value;
+  static constexpr int _layer_cnt=boost::mpl::size<container_types>::value;
 //private:
   std::set<Place> _modified;
   Maps _maps;
@@ -87,9 +87,9 @@ public:
 
 
   void InitLocal(LocalMarking<Ts...>& lm,
-      std::vector<std::tuple<place_t,size_t,int>> neighbor_places) {
+      std::vector<std::tuple<place_t,int,int>> neighbor_places) {
     lm.Resize(neighbor_places.size());
-    size_t idx=0;
+    int idx=0;
     detail::initialize_local<_layer_cnt,Maps,place_t,LocalTyped> il;
 
     for (auto& line : neighbor_places) {
@@ -109,17 +109,17 @@ public:
 
 
   void ReadLocal(const LocalMarking<Ts...>& lm,
-    std::vector<std::tuple<place_t,size_t,int>> neighbor_places) {
+    std::vector<std::tuple<place_t,int,int>> neighbor_places) {
     const auto changes=lm.Changes();
 
     // Modified places just need to be put on the modified list.
-    for (size_t midx : changes[0]) {
+    for (int midx : changes[0]) {
       _modified.insert(std::get<0>(neighbor_places.at(midx)));
     }
 
     // Added places need to be copied here.
     detail::add_by_layer<_layer_cnt,Maps,place_t,LocalTyped> abl;
-    for (size_t aidx : changes[1]) {
+    for (int aidx : changes[1]) {
       auto& neighbor_line=neighbor_places.at(aidx);
       auto& place_id=std::get<0>(neighbor_line);
       auto layer=std::get<1>(neighbor_line);
@@ -130,7 +130,7 @@ public:
 
     // Removed places need to be deleted.
     detail::erase_by_layer<_layer_cnt,Maps,place_t> eraser;
-    for (size_t ridx : changes[2]) {
+    for (int ridx : changes[2]) {
       auto& neighbor_line=neighbor_places.at(ridx);
       auto& place_id=std::get<0>(neighbor_line);
       auto layer=std::get<1>(neighbor_line);
@@ -156,7 +156,7 @@ public:
 
 
 
-template<size_t I, typename Marking>
+template<int I, typename Marking>
 void Add(Marking& m, typename Marking::place_t place_id,
   const typename boost::mpl::at<
       typename Marking::token_types,boost::mpl::int_<I>>::type& token) {
@@ -179,7 +179,7 @@ void Add(Marking& m, typename Marking::place_t place_id,
 
 
 
-template<size_t I, typename Marking, typename RNG>
+template<int I, typename Marking, typename RNG>
 void Remove(Marking& m, typename Marking::place_t place_id,
   size_t cnt, RNG& rng) {
   typedef typename boost::mpl::at<typename Marking::container_types,
@@ -205,8 +205,8 @@ void Remove(Marking& m, typename Marking::place_t place_id,
 
 
 
-template<size_t I, typename Marking>
-size_t Length(const Marking& m, typename Marking::place_t place_id)
+template<int I, typename Marking>
+int Length(const Marking& m, typename Marking::place_t place_id)
 {
   const auto& typed_dict=std::get<I>(m._maps);
   auto place_tokens=typed_dict.find(place_id);
@@ -220,7 +220,7 @@ size_t Length(const Marking& m, typename Marking::place_t place_id)
 
 
 
-template<size_t I, typename Marking>
+template<int I, typename Marking>
 size_t Length(const Marking& m, typename Marking::place_t place_id,
   typename color_type<typename boost::mpl::at<
       typename Marking::token_types,boost::mpl::int_<I>>::type>::type color) {
@@ -241,7 +241,7 @@ size_t Length(const Marking& m, typename Marking::place_t place_id,
  *  The template argument is index of the type of token in the Marking.
  *  Runs only against the first token found.
  */
-template<size_t I, typename Marking, typename UnaryOperator>
+template<int I, typename Marking, typename UnaryOperator>
 std::pair<
 typename std::result_of<UnaryOperator(
   typename boost::mpl::at<
@@ -275,7 +275,7 @@ Get(const Marking& m, typename Marking::place_t place_id,
  */
 
 
-template<size_t I, size_t J, typename Marking, typename Modifier>
+template<int I, int J, typename Marking, typename Modifier>
 void Move(Marking& m, typename Marking::place_t place_from,
     typename Marking::place_t place_to, size_t cnt,
     const Modifier& modify_token) {
@@ -325,7 +325,7 @@ void Move(Marking& m, typename Marking::place_t place_from,
 }
 
 
-template<size_t I, size_t J, typename Marking>
+template<int I, int J, typename Marking>
 void Move(Marking& m, typename Marking::place_t place_from,
     typename Marking::place_t place_to, size_t cnt) {
   using TokenType=typename boost::mpl::at<

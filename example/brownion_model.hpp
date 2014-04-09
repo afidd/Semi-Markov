@@ -46,11 +46,11 @@ using RandGen=std::mt19937;
 struct PlaceType
 {
   PlaceType()=default;
-  PlaceType(int i, int j, int state) : i(i), j(j), state(state) {}
+  PlaceType(int64_t i, int64_t j, int state) : i(i), j(j), state(state) {}
   PlaceType(const PlaceType&)=default;
   PlaceType& operator=(const PlaceType&)=default;
 
-  int i, j;
+  int64_t i, j;
   int state;
 
   friend inline
@@ -153,10 +153,10 @@ Fire(BrownionGSPN& et, TransitionType trans_id,
 
 
 
-std::vector<std::tuple<PlaceType,size_t,int>>
+std::vector<std::tuple<PlaceType,int,int>>
 NeighborsOfTransition(BrownionGSPN& g, TransitionType trans_id)
 {
-  std::vector<std::tuple<PlaceType,size_t,int>> place_ids;
+  std::vector<std::tuple<PlaceType,int,int>> place_ids;
   place_ids.push_back(std::make_tuple(trans_id.from, 0, -1));
   place_ids.push_back(std::make_tuple(trans_id.to, 0, -1));
   return place_ids;

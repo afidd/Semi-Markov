@@ -77,15 +77,14 @@ template<typename PKey, typename TKey, typename Local,
 class ExplicitTransitions
 {
   typedef PetriGraphType PetriGraph;
-  typedef BiGraphCorrespondence<PKey,TKey,
-    boost::graph_traits<PetriGraph>::vertex_descriptor> BiMap;
+  typedef BiGraphCorrespondence<PKey,TKey,int64_t> BiMap;
 
 public:
   typedef PKey UserPlaceKey;
   typedef TKey UserTransitionKey;
   typedef ETRand RNG;
-  typedef boost::graph_traits<PetriGraph>::vertex_descriptor PlaceKey;
-  typedef boost::graph_traits<PetriGraph>::vertex_descriptor TransitionKey;
+  typedef int64_t PlaceKey;
+  typedef int64_t TransitionKey;
   // This gspn expects transitions to be of this base class.
   // Derive from this base class to make transitions.
   typedef smv::ExplicitTransition<Local,RNG,ExtraState> Transition;
@@ -97,7 +96,7 @@ private:
   PetriGraph graph;
 
 public:
-  ExplicitTransitions(size_t num_vertices) : graph(num_vertices) {}
+  explicit ExplicitTransitions(size_t num_vertices) : graph(num_vertices) {}
 
   // These copy constructor and copy assignment operators are
   // deleted because this type can only be moved with std::move();
@@ -125,25 +124,25 @@ public:
 
   ~ExplicitTransitions() {}
 
-  size_t PlaceVertex(UserPlaceKey p) const
+  int64_t PlaceVertex(UserPlaceKey p) const
   {
     return GetPvertex(_bimap, p);
   }
 
 
-  UserPlaceKey VertexPlace(size_t v) const
+  UserPlaceKey VertexPlace(int64_t v) const
   {
     return GetPlace(_bimap, v);
   }
 
 
-  size_t TransitionVertex(UserTransitionKey t) const
+  int64_t TransitionVertex(UserTransitionKey t) const
   {
     return GetTvertex(_bimap, t);
   }
 
 
-  UserTransitionKey VertexTransition(size_t v) const
+  UserTransitionKey VertexTransition(int64_t v) const
   {
     return GetTransition(_bimap, v);
   }
@@ -153,7 +152,7 @@ public:
 
   template<typename State, typename P, typename T, typename L, typename Random>
   friend
-  std::vector<std::tuple<size_t,size_t,int>>
+  std::vector<std::tuple<int64_t,int,int>>
   NeighborsOfTransition(
     ExplicitTransitions<State,P,T,L,Random>& et,
     typename ExplicitTransitions<State,P,T,L,Random>::TransitionKey trans_id);
@@ -181,7 +180,7 @@ public:
 
 
 template<typename P, typename T, typename L, typename Random, typename State>
-std::vector<std::tuple<size_t,size_t,int>>
+std::vector<std::tuple<int64_t,int,int>>
 NeighborsOfTransition(
   ExplicitTransitions<P,T,L,Random,State>& et,
   typename ExplicitTransitions<P,T,L,Random,State>::TransitionKey trans_id)

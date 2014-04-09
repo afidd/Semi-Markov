@@ -61,11 +61,11 @@ struct IndividualToken
 
 struct SIRPlace
 {
-  size_t disease;
-  size_t individual;
+  int64_t disease;
+  int64_t individual;
 
   SIRPlace()=default;
-  SIRPlace(size_t d, size_t i) : disease(d), individual(i) {}
+  SIRPlace(int64_t d, int64_t i) : disease(d), individual(i) {}
 
   friend inline
   bool operator<(const SIRPlace& a, const SIRPlace& b) {
@@ -90,12 +90,12 @@ struct SIRPlace
 
 struct SIRTKey
 {
-  size_t ind1;
-  size_t ind2;
-  size_t kind;
+  int64_t ind1;
+  int64_t ind2;
+  int64_t kind;
 
   SIRTKey()=default;
-  SIRTKey(size_t c1, size_t c2, size_t k) : ind1(c1), ind2(c2), kind(k) {}
+  SIRTKey(int64_t c1, int64_t c2, int64_t k) : ind1(c1), ind2(c2), kind(k) {}
 
   friend inline
   bool operator<(const SIRTKey& a, const SIRTKey& b) {
@@ -186,26 +186,26 @@ using SIRGSPN=
 /*! SIR infection on an all-to-all graph of uncolored tokens.
  */
 SIRGSPN
-BuildSystem(size_t individual_cnt)
+BuildSystem(int64_t individual_cnt)
 {
   BuildGraph<SIRGSPN> bg;
   using Edge=BuildGraph<SIRGSPN>::PlaceEdge;
 
   enum { s, i, r };
 
-  for (size_t ind_idx=0; ind_idx<individual_cnt; ind_idx++) {
-    for (size_t place : std::vector<int>{s, i, r}) {
+  for (int64_t ind_idx=0; ind_idx<individual_cnt; ind_idx++) {
+    for (int64_t place : std::vector<int>{s, i, r}) {
       bg.AddPlace({place, ind_idx}, 0);
     }
   }
 
-  for (size_t left_idx=0; left_idx<individual_cnt-1; left_idx++) {
+  for (int64_t left_idx=0; left_idx<individual_cnt-1; left_idx++) {
     bg.AddTransition({left_idx, left_idx, 0},
       {Edge{{i, left_idx}, -1}, Edge{{r, left_idx}, 1}},
       std::unique_ptr<SIRTransition>(new Recover())
       );
 
-    for (size_t right_idx=left_idx+1; right_idx<individual_cnt; right_idx++) {
+    for (int64_t right_idx=left_idx+1; right_idx<individual_cnt; right_idx++) {
       SIRPlace left{i, left_idx};
       SIRPlace rights{s, right_idx};
       SIRPlace righti{i, right_idx};
@@ -235,12 +235,12 @@ BuildSystem(size_t individual_cnt)
  */
 template<typename GSPN>
 void WriteIds(const GSPN& gspn, const std::string& fname,
-    size_t individual_cnt)
+    int64_t individual_cnt)
 {
   std::ofstream out{fname};
 
-  for (size_t individual=0; individual<individual_cnt; ++individual) {
-    for (size_t disease=0; disease<3; disease++) {
+  for (int64_t individual=0; individual<individual_cnt; ++individual) {
+    for (int64_t disease=0; disease<3; disease++) {
       SIRPlace p{disease, individual};
       auto vert=gspn.PlaceVertex(p);
       out << vert << '\t' << p << std::endl;
@@ -256,7 +256,7 @@ int main(int argc, char *argv[])
 {
   namespace po=boost::program_options;
   po::options_description desc("Well-mixed SIR");
-  size_t individual_cnt=10;
+  int64_t individual_cnt=10;
   size_t rand_seed=1;
   double beta=1.0;
   double gamma=1.0;
@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
   desc.add_options()
     ("help", "show help message")
     ("size,s",
-      po::value<size_t>(&individual_cnt)->default_value(10),
+      po::value<int64_t>(&individual_cnt)->default_value(10),
       "size of the population")
     ("seed,r",
       po::value<size_t>(&rand_seed)->default_value(1),
@@ -307,16 +307,16 @@ int main(int argc, char *argv[])
 
 
   // Marking of the net.
-  static_assert(std::is_same<size_t,SIRGSPN::PlaceKey>::value,
-    "The GSPN's internal place type is size_t.");
-  using Mark=Marking<size_t, Uncolored<IndividualToken>>;
+  static_assert(std::is_same<int64_t,SIRGSPN::PlaceKey>::value,
+    "The GSPN's internal place type is int64_t.");
+  using Mark=Marking<int64_t, Uncolored<IndividualToken>>;
   using SIRState=GSPNState<Mark,WithParams>;
 
   SIRState state;
   state.user.params[0]=beta;
   state.user.params[1]=gamma;
 
-  for (size_t individual=0; individual<individual_cnt; ++individual) {
+  for (int64_t individual=0; individual<individual_cnt; ++individual) {
     auto susceptible=gspn.PlaceVertex({0, individual});
     Add<0>(state.marking, susceptible, IndividualToken{});
   }
@@ -326,12 +326,12 @@ int main(int argc, char *argv[])
 
   BOOST_LOG_TRIVIAL(debug) << state.marking;
 
-  size_t step_cnt=0;
+  int64_t step_cnt=0;
   // The initial input string moves a token from susceptible to infected.
-  auto first_case=smv::uniform_index(rng, individual_cnt);
+  auto first_case=static_cast<int64_t>(smv::uniform_index(rng, individual_cnt));
   BOOST_LOG_TRIVIAL(trace)<<"First case is "<<first_case;
-  size_t first_s=gspn.PlaceVertex({0, first_case});
-  size_t first_i=gspn.PlaceVertex({1, first_case});
+  int64_t first_s=gspn.PlaceVertex({0, first_case});
+  int64_t first_i=gspn.PlaceVertex({1, first_case});
   auto input_string=[&first_s, &first_i](SIRState& state)->void {
     Move<0,0>(state.marking, first_s, first_i, 1);
   };

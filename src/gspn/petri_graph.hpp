@@ -43,7 +43,7 @@ namespace smv
   
   struct PetriGraphVertexProperty {
     PetriGraphColor color;
-    size_t token_layer;
+    int token_layer;
   };
 
   struct PetriGraphEdgeProperty {
@@ -97,7 +97,7 @@ namespace smv
 
 
   template<typename Graph>
-  size_t TokenLayer(
+  int TokenLayer(
       const typename boost::graph_traits<Graph>::vertex_descriptor& v,
       const Graph& g)
   {
@@ -106,7 +106,7 @@ namespace smv
 
 
   template<typename Graph>
-  size_t StochiometricCoefficient(
+  int StochiometricCoefficient(
       const typename boost::graph_traits<Graph>::edge_descriptor& e,
       const Graph& g)
   {
@@ -120,10 +120,10 @@ namespace smv
 /*! Find all places in and out of a transition, in order.
 
  */
-std::vector<std::tuple<size_t,size_t,int>>
-NeighborsOfTransition(PetriGraphType& g, size_t trans_id) {
+std::vector<std::tuple<int64_t,int,int>>
+NeighborsOfTransition(PetriGraphType& g, int64_t trans_id) {
   assert(g[trans_id].color==PetriGraphColor::Transition);
-  std::vector<std::tuple<size_t,size_t,int>> place_ids;
+  std::vector<std::tuple<int64_t,int,int>> place_ids;
 
   auto initer=in_edges(trans_id, g);
   for (; initer.first!=initer.second; ++initer.first) {
@@ -153,10 +153,10 @@ NeighborsOfTransition(PetriGraphType& g, size_t trans_id) {
  */
 template<typename F>
 void NeighborsOfPlaces(PetriGraphType& g,
-  const std::set<size_t>& place_id, F func) {
-  auto seen=std::set<size_t>();
+  const std::set<int64_t>& place_id, F func) {
+  auto seen=std::set<int64_t>();
 
-  auto report=[&seen, &func, &g] (size_t id) {
+  auto report=[&seen, &func, &g] (int64_t id) {
     BOOST_LOG_TRIVIAL(trace) << "transition " << id;
     assert(g[id].color==PetriGraphColor::Transition);
     if (seen.find(id)==seen.end()) {

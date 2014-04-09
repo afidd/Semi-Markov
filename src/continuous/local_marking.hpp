@@ -240,14 +240,14 @@ struct CopyTokens
   static void copy_layer(LM& local_mark, RNG& rng)
   {
     using LayerConstant=typename boost::mpl::deref<First>::type;
-    static const size_t I=LayerConstant::value;
+    static const int I=LayerConstant::value;
 
-    std::vector<size_t> ins;
-    std::vector<size_t> outs;
+    std::vector<int> ins;
+    std::vector<int> outs;
 
     typename LM::place_t place;
     size_t idx=0;
-    size_t layer;
+    int layer;
     int weight;
 
     for (auto collect_place : local_mark.place_indexes())
@@ -286,9 +286,9 @@ struct CopyTokens
     auto outiter=outs.begin();
     for ( ; initer!=ins.end() && outiter!=outs.end(); ++initer, ++outiter)
     {
-      static_assert(std::is_same<size_t,
+      static_assert(std::is_same<int,
         typename LayerConstant::value_type>::value,
-        "I is not a size_t");
+        "I is not an int");
       local_mark.template move<I,I>(*initer, *outiter, 1);
     }
 
@@ -320,13 +320,13 @@ struct CopyTokens
 
 // Helps a full Marking find a container.
 // Then it puts a reference to that container into the LocalMarking.
-template<size_t I, typename Maps, typename PlaceKey, typename LM>
+template<int I, typename Maps, typename PlaceKey, typename LM>
 struct initialize_local
 {
-  void operator()(Maps& maps, PlaceKey& place_id, size_t idx,
-    size_t layer, int stochiometric_coefficient, LM& lm)
+  void operator()(Maps& maps, PlaceKey& place_id, int idx,
+    int layer, int stochiometric_coefficient, LM& lm)
   {
-    static constexpr size_t J=I-1ul;
+    static constexpr int J=I-1ul;
     if (layer==J)
     {
       auto& typed_dict=std::get<J>(maps);
@@ -358,16 +358,16 @@ struct initialize_local
 template<typename Maps, typename PlaceKey, typename LM>
 struct initialize_local<0,Maps,PlaceKey,LM>
 {
-  void operator()(Maps& maps, PlaceKey& place_id, size_t idx,
-    size_t layer, int stochiometric_coefficient, LM& lm)
+  void operator()(Maps& maps, PlaceKey& place_id, int idx,
+    int layer, int stochiometric_coefficient, LM& lm)
   {}
 };
 
 
-template<size_t I, typename PTuple>
+template<int I, typename PTuple>
 struct free_layer
 {
-  void operator()(PTuple& tuple_container, size_t layer)
+  void operator()(PTuple& tuple_container, int layer)
   {
     if (I-1ul==layer) {
       delete std::get<I-1ul>(tuple_container);
@@ -383,17 +383,17 @@ struct free_layer
 template<typename PTuple>
 struct free_layer<0,PTuple>
 {
-  void operator()(PTuple& tuple_container, size_t layer)
+  void operator()(PTuple& tuple_container, int layer)
   {}
 };
 
 
 
 
-template<size_t I, typename Maps, typename PlaceKey>
+template<int I, typename Maps, typename PlaceKey>
 struct erase_by_layer
 {
-  void operator()(Maps& maps, PlaceKey& place_id, size_t layer) {
+  void operator()(Maps& maps, PlaceKey& place_id, int layer) {
     if (I-1ul==layer) {
       auto& typed_dict=std::get<I-1ul>(maps);
       auto place_tokens=typed_dict.find(place_id);
@@ -419,7 +419,7 @@ struct erase_by_layer
 template<typename Maps, typename PlaceKey>
 struct erase_by_layer<0,Maps,PlaceKey>
 {
-  void operator()(Maps& maps, PlaceKey& place_id, size_t layer)
+  void operator()(Maps& maps, PlaceKey& place_id, int layer)
   {}
 };
 
@@ -427,11 +427,11 @@ struct erase_by_layer<0,Maps,PlaceKey>
 
 
 
-template<size_t I, typename Maps, typename PlaceKey, typename LM>
+template<int I, typename Maps, typename PlaceKey, typename LM>
 struct add_by_layer
 {
-  void operator()(Maps& maps, PlaceKey& place_id, size_t layer,
-    const LM& lm, size_t edge) {
+  void operator()(Maps& maps, PlaceKey& place_id, int layer,
+    const LM& lm, int edge) {
     if (I-1ul==layer) {
       auto& typed_dict=std::get<I-1ul>(maps);
       auto place_tokens=typed_dict.find(place_id);
@@ -461,8 +461,8 @@ struct add_by_layer
 template<typename Maps, typename PlaceKey, typename LM>
 struct add_by_layer<0,Maps,PlaceKey,LM>
 {
-  void operator()(Maps& maps, PlaceKey& place_id, size_t layer,
-    const LM& lm, size_t edge)
+  void operator()(Maps& maps, PlaceKey& place_id, int layer,
+    const LM& lm, int edge)
   {}
 };
 
@@ -495,11 +495,11 @@ class LocalMarking
   // references to the different kinds of containers of tokens, one
   // kind for each possible token_layer. So it's vector of
   // tuple< tuple<container0&,container1&>, layer, stoch_coeff>.
-  using PlaceVec=std::vector<std::tuple<ptuple,size_t,int>>;
+  using PlaceVec=std::vector<std::tuple<ptuple,int,int>>;
   PlaceVec _m;
-  std::set<size_t> _modified;
-  std::set<size_t> _added;
-  std::set<size_t> _removed;
+  std::set<int> _modified;
+  std::set<int> _added;
+  std::set<int> _removed;
 
 public:
   /*! Constructor. Argument is the number of inputs and outputs.
@@ -532,7 +532,7 @@ public:
   }
 
 
-  std::array<std::set<size_t>,3> Changes() const
+  std::array<std::set<int>,3> Changes() const
   {
     return {_modified, _added, _removed};
   }
@@ -540,8 +540,8 @@ public:
 
   /*! Set pointers to the tokens at each place. Initialization of this object.
    */
-  template<size_t I>
-  void Set(size_t place_idx, typename boost::mpl::at<
+  template<int I>
+  void Set(int place_idx, typename boost::mpl::at<
     typename LocalMarking::container_types,boost::mpl::int_<I>>::type* ptr,
     int stochiometric_coefficient) {
     auto& place_container=_m.at(place_idx);
@@ -556,8 +556,8 @@ public:
 
 
 
-  template<size_t I>
-  void Add(size_t place_idx, const typename boost::mpl::at<
+  template<int I>
+  void Add(int place_idx, const typename boost::mpl::at<
       typename LocalMarking::token_types,boost::mpl::int_<I>>::type& token)
   {
     BOOST_LOG_TRIVIAL(trace)<<"LocalMarking::add";
@@ -582,8 +582,8 @@ public:
 
 
 
-  template<size_t I, typename RNG>
-  void Remove(size_t place_idx, size_t cnt, RNG& rng) {
+  template<int I, typename RNG>
+  void Remove(int place_idx, size_t cnt, RNG& rng) {
     BOOST_LOG_TRIVIAL(trace)<<"LocalMarking::remove";
     typedef typename boost::mpl::at<typename LocalMarking::container_types,
       boost::mpl::int_<I>>::type container_type;
@@ -607,8 +607,8 @@ public:
 
 
 
-  template<size_t I>
-  size_t Length(size_t place_idx) const {
+  template<int I>
+  int Length(int place_idx) const {
     auto& place_container=_m.at(place_idx);
     auto& token_container=std::get<I>(std::get<0>(place_container));
     if (token_container!=nullptr) {
@@ -627,13 +627,13 @@ public:
    *  The template argument is index of the type of token in the Marking.
    *  Runs only against the first token found.
    */
-  template<size_t I, typename UnaryOperator>
+  template<int I, typename UnaryOperator>
   std::pair<
   typename std::result_of<UnaryOperator(
     typename boost::mpl::at<
         typename LocalMarking::container_types,boost::mpl::int_<I>>::type
     )>::type,bool>
-  Get(size_t place_idx, const UnaryOperator& op) const {
+  Get(int place_idx, const UnaryOperator& op) const {
     typedef typename std::result_of<UnaryOperator(
     typename boost::mpl::at<
         typename LocalMarking::container_types,boost::mpl::int_<I>>::type
@@ -658,13 +658,13 @@ public:
    *  The template argument is index of the type of token in the Marking.
    *  Runs only against the first token found.
    */
-  template<size_t I, typename UnaryOperator>
+  template<int I, typename UnaryOperator>
   std::pair<
   typename std::result_of<UnaryOperator(
     typename boost::mpl::at<
         typename LocalMarking::token_types,boost::mpl::int_<I>>::type
     )>::type,bool>
-  GetToken(size_t place_idx, const UnaryOperator& op) const {
+  GetToken(int place_idx, const UnaryOperator& op) const {
     typedef typename std::result_of<UnaryOperator(
     typename boost::mpl::at<
         typename LocalMarking::token_types,boost::mpl::int_<I>>::type
@@ -688,9 +688,9 @@ public:
 
 
 
-  template<size_t I, size_t J, typename Modifier>
+  template<int I, int J, typename Modifier>
   void
-  Move(size_t place_from, size_t place_to, size_t cnt,
+  Move(int place_from, int place_to, size_t cnt,
       const Modifier& modify_token)
   {
     BOOST_LOG_TRIVIAL(trace)<< "Moving "<<cnt<<" tokens from "<<place_from
@@ -747,22 +747,22 @@ public:
 
 
 
-  size_t Layer(size_t place_idx) const {
+  int Layer(int place_idx) const {
     auto& place_container=_m.at(place_idx);
     return std::get<1>(place_container);
   }
 
 
 
-  int stochiometric_coefficient(size_t place_idx) const {
+  int stochiometric_coefficient(int place_idx) const {
     auto& place_container=_m.at(place_idx);
     return std::get<2>(place_container);
   }
 
 
 
-  template<size_t I, size_t J>
-  void Move(size_t place_from, size_t place_to, size_t cnt) {
+  template<int I, int J>
+  void Move(int place_from, int place_to, size_t cnt) {
     using TokenType=typename boost::mpl::at<
         typename LocalMarking::token_types,boost::mpl::int_<I>>::type&;
 
@@ -774,18 +774,18 @@ public:
 
 
 
-  template<size_t I, typename RNG, typename AndModify>
+  template<int I, typename RNG, typename AndModify>
   void TransferByStochiometricCoefficient(RNG& rng, const AndModify& mod) {
     BOOST_LOG_TRIVIAL(trace)<<"TransferByStochiometricCoefficient";
     using TokenType=typename boost::mpl::at<
       typename LocalMarking::token_types,boost::mpl::int_<I>>::type&;
     detail::DoNothing<TokenType> do_nothing;
 
-    std::vector<size_t> ins;
-    std::vector<size_t> outs;
+    std::vector<int> ins;
+    std::vector<int> outs;
 
-    size_t place_idx=0;
-    size_t layer=0;
+    int place_idx=0;
+    int layer=0;
     int weight=0;
 
     for (auto& collect_place : _m) {
@@ -822,7 +822,7 @@ public:
       using TokenType=
         typename boost::mpl::at<
           typename LocalMarking::token_types,
-          boost::mpl::size_t<I>
+          boost::mpl::int_<I>
         >::type;
       boost::value_initialized<TokenType> t;
       this->template Add<I>(*outiter, t.data());
@@ -837,7 +837,7 @@ public:
 
 
 
-  template<size_t I, typename RNG>
+  template<int I, typename RNG>
   void TransferByStochiometricCoefficient(RNG& rng) {
     using TokenType=typename boost::mpl::at<
       typename LocalMarking::token_types,boost::mpl::int_<I>>::type&;
@@ -849,12 +849,12 @@ public:
 
 
 
-  template<size_t I>
+  template<int I>
   bool InputTokensSufficient() const {
     BOOST_LOG_TRIVIAL(trace)<<"input_tokens_sufficient";
 
-    size_t place_idx=0;
-    size_t layer=0;
+    int place_idx=0;
+    int layer=0;
     int weight=0;
 
     for (auto& collect_place : _m) {
@@ -877,10 +877,10 @@ public:
 
 
 
-  template<size_t I>
+  template<int I>
   bool OutputsTokensEmpty() const {
-    size_t place_idx;
-    size_t layer;
+    int place_idx;
+    int layer;
     int weight;
 
     for (auto collect_place : _m.place_indexes()) {

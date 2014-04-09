@@ -47,7 +47,7 @@ namespace smv=afidd::smv;
 
 int main(int argc, char *argv[])
 {
-  size_t iteration_cnt=100;
+  int64_t iteration_cnt=100;
 
   namespace po=boost::program_options;
   po::options_description desc("Two-state Brownion.");
@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
   desc.add_options()
     ("help", "show help message")
     ("size,s",
-      po::value<size_t>(&iteration_cnt)->default_value(100),
+      po::value<int64_t>(&iteration_cnt)->default_value(100),
       "number of steps to take")
     ("seed,r",
       po::value<size_t>(&rand_seed)->default_value(1),
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
   auto nothing=[](BrownionState&)->void {};
 
   auto next=PropagateCompetingProcesses(system, input_string, rng);
-  for (size_t iteration_idx=0; iteration_idx<iteration_cnt; ++iteration_idx)
+  for (int64_t iteration_idx=0; iteration_idx<iteration_cnt; ++iteration_idx)
   {
     BOOST_LOG_TRIVIAL(info) << "trans " << std::get<0>(next) << " time " <<
         std::get<1>(next);

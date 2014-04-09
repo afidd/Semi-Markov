@@ -141,7 +141,7 @@ struct CowT
 // This is the central set of definitions in order to use the
 // ExplicitTransitions representation of the GSPN.
 using Local=smv::LocalMarking<smv::Colored<Cow>,
-    smv::Uncolored<std::map<size_t,double>>>;
+    smv::Uncolored<std::map<int,double>>>;
 using CowTransitions=smv::ExplicitTransitions<
     CowPlace,CowT,Local,CowGen>;
 
@@ -152,10 +152,10 @@ class CowTransition
 : public smv::ExplicitTransition<Local,CowGen>
 {
 public:
-  CowTransition(size_t cow_id) : cow_id(cow_id) {}
+  CowTransition(int64_t cow_id) : cow_id(cow_id) {}
   virtual ~CowTransition() {}
 
-  size_t cow_id;
+  int64_t cow_id;
 };
 
 
@@ -168,7 +168,7 @@ using ExpDist=smv::ExponentialDistribution<CowGen>;
 class InfectNeighbor : public CowTransition
 {
 public:
-  InfectNeighbor(size_t cow_id) : CowTransition(cow_id) {}
+  InfectNeighbor(int64_t cow_id) : CowTransition(cow_id) {}
 
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
   Enabled(const UserState& s, const Local& lm, double te, double t0) const {
@@ -194,7 +194,7 @@ public:
  *  the marking, because transitions are defined on local state.
  */
 CowTransitions
-Herd(size_t initial_cnt, size_t total_cnt)
+Herd(int64_t initial_cnt, int64_t total_cnt)
 {
   BuildGraph<CowTransitions> bg;
   using PlaceEdge=BuildGraph<CowTransitions>::PlaceEdge;
@@ -244,18 +244,18 @@ int main(int argc, char *argv[])
 
   auto gspn=Herd(100, 10);
 
-  using Mark=smv::Marking<size_t,
-      smv::Colored<Cow>,smv::Uncolored<std::map<size_t,double>>>;
+  using Mark=smv::Marking<int64_t,
+      smv::Colored<Cow>,smv::Uncolored<std::map<int,double>>>;
   Mark m;
   using CowState=smv::GSPNState<Mark>;
   CowState state;
 
   enum { lambda, beta, gamma };
-  std::map<size_t,double> params;
+  std::map<int,double> params;
   params[lambda]=1.0;
   params[beta]=1.7;
   params[gamma]=0.5;
-  size_t params_place_id=0;
+  int64_t params_place_id=0;
   Add<1>(m, params_place_id, params);
   assert(Length<1>(m, params_place_id)==1);
   assert(Length<0>(m, 27, 13)==0);
