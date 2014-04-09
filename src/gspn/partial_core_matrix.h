@@ -3,8 +3,8 @@
 
 #include <memory>
 #include <map>
-#include "logging.h"
-#include "distributions.h"
+#include "logging.hpp"
+#include "distributions.hpp"
 
 namespace afidd
 {

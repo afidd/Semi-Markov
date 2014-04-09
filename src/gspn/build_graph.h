@@ -5,8 +5,8 @@
 #include "boost/property_map/property_map.hpp"
 #include "boost/graph/copy.hpp"
 #include "boost/utility/value_init.hpp"
-#include "logging.h"
-#include "petri_graph.h"
+#include "logging.hpp"
+#include "petri_graph.hpp"
 
 
 

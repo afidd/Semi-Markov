@@ -1,12 +1,12 @@
 #ifndef _BROWNION_MODEL_H_
 #define _BROWNION_MODEL_H_ 1
 #include <random>
-#include "gspn.h"
-#include "continuous_state.h"
-#include "marking.h"
-#include "distributions.h"
-#include "smv_algorithm.h"
-#include "local_marking.h"
+#include "gspn.hpp"
+#include "continuous_state.hpp"
+#include "marking.hpp"
+#include "distributions.hpp"
+#include "smv_algorithm.hpp"
+#include "local_marking.hpp"
 
 
 namespace smv=afidd::smv;

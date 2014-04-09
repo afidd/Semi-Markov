@@ -9,9 +9,9 @@
 #include <type_traits>
 #include "boost/mpl/for_each.hpp"
 #include "boost/mpl/next_prior.hpp"
-#include "build_graph.h"
-#include "gspn.h"
-#include "logging.h"
+#include "build_graph.hpp"
+#include "gspn.hpp"
+#include "logging.hpp"
 
 
 namespace afidd

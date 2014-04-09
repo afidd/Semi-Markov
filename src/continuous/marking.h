@@ -19,8 +19,8 @@
 #include "boost/mpl/transform.hpp"
 #include "boost/mpl/size.hpp"
 #include "boost/utility/value_init.hpp"
-#include "gspn_random.h"
-#include "local_marking.h"
+#include "gspn_random.hpp"
+#include "local_marking.hpp"
 
 
 namespace afidd

@@ -2,12 +2,12 @@
 #define _PETRI_GRAPH_H_ 1
 
 #include <vector>
-#include "stochnet.h"
+#include "stochnet.hpp"
 #include "boost/log/core.hpp"
 #include "boost/graph/adjacency_list.hpp"
 #include "boost/property_map/vector_property_map.hpp"
-#include "marking.h"
-#include "logging.h"
+#include "marking.hpp"
+#include "logging.hpp"
 
 
 namespace afidd

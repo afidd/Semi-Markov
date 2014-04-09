@@ -9,9 +9,9 @@
 #include "boost/accumulators/statistics/mean.hpp"
 #include "boost/accumulators/statistics/moment.hpp"
 #include "boost/accumulators/statistics/variance.hpp"
-#include "logging.h"
-#include "stochnet.h"
-#include "gspn_random.h"
+#include "logging.hpp"
+#include "stochnet.hpp"
+#include "gspn_random.hpp"
 
 
 namespace afidd

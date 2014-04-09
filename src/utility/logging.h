@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <map>
-#include "stochnet.h"
+#include "stochnet.hpp"
 #include "boost/log/core.hpp"
 #include "boost/log/expressions.hpp"
 #include "boost/algorithm/string/join.hpp"

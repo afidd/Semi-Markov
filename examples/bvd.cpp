@@ -7,23 +7,23 @@
 #include <random>
 #include <set>
 #include <functional>
-#include "stochnet.h"
+#include "stochnet.hpp"
 #include "boost/random/mersenne_twister.hpp"
 #include "boost/log/core.hpp"
 #include "boost/property_map/property_map.hpp"
 #include "boost/mpl/vector.hpp"
-#include "gspn.h"
-#include "petri_graph.h"
-#include "marking.h"
-#include "distributions.h"
-#include "continuous_state.h"
-#include "explicit_transitions.h"
-#include "partial_core_matrix.h"
-#include "continuous_dynamics.h"
-#include "cow_token.h"
-#include "local_marking.h"
-#include "build_graph.h"
-#include "smv_algorithm.h"
+#include "gspn.hpp"
+#include "petri_graph.hpp"
+#include "marking.hpp"
+#include "distributions.hpp"
+#include "continuous_state.hpp"
+#include "explicit_transitions.hpp"
+#include "partial_core_matrix.hpp"
+#include "continuous_dynamics.hpp"
+#include "cow_token.hpp"
+#include "local_marking.hpp"
+#include "build_graph.hpp"
+#include "smv_algorithm.hpp"
 
 
 namespace smv=afidd::smv;

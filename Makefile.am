@@ -10,18 +10,18 @@ AM_CPPFLAGS = -std=c++11 -Isrc -Isrc/continuous -Isrc/gspn -Isrc/utility $(BOOST
 bin_PROGRAMS = bvd sirmixed brownion disttest
 
 semimarkov_0_1_includedir = $(includedir)/semimarkov-0.1
-semimarkov_0_1_include_HEADERS = src/stochnet.h src/continuous/continuous_dynamics.h src/continuous/continuous_state.h src/continuous/marking.h src/gspn/distributions.h src/gspn/explicit_transitions.h src/gspn/petri_graph.h src/gspn/partial_core_matrix.h src/gspn/gspn.h src/utility/gspn_random.h src/utility/logging.h src/continuous/local_marking.h
+semimarkov_0_1_include_HEADERS = src/stochnet.hpp src/continuous/continuous_dynamics.hpp src/continuous/continuous_state.hpp src/continuous/marking.hpp src/gspn/distributions.hpp src/gspn/explicit_transitions.hpp src/gspn/petri_graph.hpp src/gspn/partial_core_matrix.hpp src/gspn/gspn.hpp src/utility/gspn_random.hpp src/utility/logging.hpp src/continuous/local_marking.hpp
 #semimarkov_0_1_LDFLAGS = -version-info $(SEMIMARKOV_LIBRARY_VERSION)
 
 
-bvd_SOURCES = examples/bvd.cpp examples/cow_token.h src/stochnet.h src/continuous/continuous_dynamics.h src/continuous/continuous_state.h src/continuous/marking.h src/gspn/distributions.h src/gspn/explicit_transitions.h src/gspn/petri_graph.h src/gspn/partial_core_matrix.h src/gspn/gspn.h src/utility/gspn_random.h src/utility/logging.h src/continuous/local_marking.h
+bvd_SOURCES = examples/bvd.cpp examples/cow_token.hpp src/stochnet.hpp src/continuous/continuous_dynamics.hpp src/continuous/continuous_state.hpp src/continuous/marking.hpp src/gspn/distributions.hpp src/gspn/explicit_transitions.hpp src/gspn/petri_graph.hpp src/gspn/partial_core_matrix.hpp src/gspn/gspn.hpp src/utility/gspn_random.hpp src/utility/logging.hpp src/continuous/local_marking.hpp
 
-sirmixed_SOURCES = examples/sir_mixed.cpp src/stochnet.h src/continuous/continuous_dynamics.h src/continuous/continuous_state.h src/continuous/marking.h src/gspn/distributions.h src/gspn/explicit_transitions.h src/gspn/petri_graph.h src/gspn/partial_core_matrix.h src/gspn/gspn.h src/utility/gspn_random.h src/utility/logging.h src/continuous/local_marking.h
-
-
-brownion_SOURCES = examples/brownion.cpp examples/brownion_model.h src/stochnet.h src/continuous/continuous_dynamics.h src/continuous/continuous_state.h src/continuous/marking.h src/gspn/distributions.h src/gspn/explicit_transitions.h src/gspn/partial_core_matrix.h src/gspn/gspn.h src/utility/gspn_random.h src/utility/logging.h src/continuous/local_marking.h
+sirmixed_SOURCES = examples/sir_mixed.cpp src/stochnet.hpp src/continuous/continuous_dynamics.hpp src/continuous/continuous_state.hpp src/continuous/marking.hpp src/gspn/distributions.hpp src/gspn/explicit_transitions.hpp src/gspn/petri_graph.hpp src/gspn/partial_core_matrix.hpp src/gspn/gspn.hpp src/utility/gspn_random.hpp src/utility/logging.hpp src/continuous/local_marking.hpp
 
 
-disttest_SOURCES = tests/distributions_test.cpp src/stochnet.h src/gspn/distributions.h src/utility/gspn_random.h src/utility/logging.h
+brownion_SOURCES = examples/brownion.cpp examples/brownion_model.hpp src/stochnet.hpp src/continuous/continuous_dynamics.hpp src/continuous/continuous_state.hpp src/continuous/marking.hpp src/gspn/distributions.hpp src/gspn/explicit_transitions.hpp src/gspn/partial_core_matrix.hpp src/gspn/gspn.hpp src/utility/gspn_random.hpp src/utility/logging.hpp src/continuous/local_marking.hpp
+
+
+disttest_SOURCES = tests/distributions_test.cpp src/stochnet.hpp src/gspn/distributions.hpp src/utility/gspn_random.hpp src/utility/logging.hpp
 
 dist_noinst_SCRIPTS = autogen.sh

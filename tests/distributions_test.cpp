@@ -7,8 +7,8 @@
 #define BOOST_TEST_DYN_LINK 1
 #define BOOST_TEST_MAIN
 #include <boost/test/unit_test.hpp>
-#include "logging.h"
-#include "distributions.h"
+#include "logging.hpp"
+#include "distributions.hpp"
 
 
 using namespace afidd::smv;

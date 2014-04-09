@@ -1,8 +1,8 @@
 #ifndef _LOCAL_MARKING_H_
 #define _LOCAL_MARKING_H_ 1
 
-#include "marking.h"
-#include "logging.h"
+#include "marking.hpp"
+#include "logging.hpp"
 
 
 

@@ -2,8 +2,8 @@
 #define _CONTINUOUS_STATE_H_ 1
 
 #include <map>
-#include "stochnet.h"
-#include "gspn.h"
+#include "stochnet.hpp"
+#include "gspn.hpp"
 
 
 namespace afidd

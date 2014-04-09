@@ -4,16 +4,16 @@
  *  The lattice is infinite in both directions.
  */
 
-#include "stochnet.h"
+#include "stochnet.hpp"
 #include "boost/random/mersenne_twister.hpp"
 #include "boost/log/core.hpp"
 #include "boost/property_map/property_map.hpp"
 #include "boost/mpl/vector.hpp"
 #include "boost/program_options.hpp"
-#include "partial_core_matrix.h"
-#include "continuous_dynamics.h"
-#include "logging.h"
-#include "brownion_model.h"
+#include "partial_core_matrix.hpp"
+#include "continuous_dynamics.hpp"
+#include "logging.hpp"
+#include "brownion_model.hpp"
 
 
 
