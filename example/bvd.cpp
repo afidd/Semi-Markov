@@ -46,21 +46,17 @@ struct CowPlace
   int subgroup;
 
   CowPlace()=default;
-  CowPlace(int d, int i, int s)
-  : disease(d), individual(i), subgroup(s)
-  {}
+  CowPlace(int d, int i, int s) : disease(d), individual(i), subgroup(s) {}
 
   friend inline
-  bool operator<(const CowPlace& a, const CowPlace& b)
-  {
+  bool operator<(const CowPlace& a, const CowPlace& b) {
     return LazyLess(a.disease, b.disease, a.individual,
       b.individual, a.subgroup, b.subgroup);
   }
 
 
   friend inline
-  bool operator==(const CowPlace& a, const CowPlace& b)
-  {
+  bool operator==(const CowPlace& a, const CowPlace& b) {
     return (a.disease==b.disease)&& (a.individual==b.individual)
       && (a.subgroup==b.subgroup);
   }
@@ -68,8 +64,7 @@ struct CowPlace
 
   friend inline
   std::ostream&
-  operator<<(std::ostream& os, const CowPlace& cp)
-  {
+  operator<<(std::ostream& os, const CowPlace& cp) {
     return os << '(' << cp.disease << ", " << cp.individual
         << ", " << cp.subgroup << ')';
   }
@@ -97,23 +92,19 @@ struct CowT
   {}
 
   friend inline
-  bool operator<(const CowT& a, const CowT& b)
-  {
+  bool operator<(const CowT& a, const CowT& b) {
     return LazyLess(a.cow1, b.cow1, a.cow2, b.cow2,
       a.sg1, b.sg1, a.sg2, b.sg2, a.kind, b.kind);
   }
 
   friend inline
-  bool operator==(const CowT& a, const CowT& b)
-  {
+  bool operator==(const CowT& a, const CowT& b) {
     return (a.cow1==b.cow1) && (a.cow2==b.cow2)
         && (a.sg1==b.sg1) && (a.sg2==b.sg2) && (a.kind==b.kind);
   }
 
   friend inline
-  std::ostream&
-  operator<<(std::ostream& os, const CowT& cp)
-  {
+  std::ostream& operator<<(std::ostream& os, const CowT& cp) {
     return os << '(' << cp.cow1 << "," << cp.cow2 << ","
       << cp.sg1 << ',' << cp.sg2 << ',' << ", " << cp.kind << ')';
   }
@@ -155,20 +146,15 @@ public:
   InfectNeighbor(size_t cow_id) : CowTransition(cow_id) {}
 
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  enabled(const UserState& s, const Local& lm, double te, double t0) const
-  {
-    if (lm.template InputTokensSufficient<0>())
-    {
+  Enabled(const UserState& s, const Local& lm, double te, double t0) const {
+    if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
-    }
-    else
-    {
+    } else {
       return {false, std::unique_ptr<Dist>(nullptr)};
     }
   }
 
-  virtual void fire(UserState& s, Local& lm, CowGen& rng) const
-  {
+  virtual void Fire(UserState& s, Local& lm, CowGen& rng) const {
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
 };
@@ -183,7 +169,7 @@ public:
  *  the marking, because transitions are defined on local state.
  */
 CowTransitions
-herd(size_t initial_cnt, size_t total_cnt)
+Herd(size_t initial_cnt, size_t total_cnt)
 {
   BuildGraph<CowTransitions> bg;
   using PlaceEdge=BuildGraph<CowTransitions>::PlaceEdge;
@@ -192,23 +178,20 @@ herd(size_t initial_cnt, size_t total_cnt)
   // disease states
   enum { dm, ds, dti, dr, dpi};
 
-  for (auto sg : {c, h1, h2, d, death, sale, culling})
-  {
-    for (int who=0; who<total_cnt; ++who)
-    {
-      for (auto disease : std::vector<int>{dm, ds, dti, dr, dpi})
-      {
-        bg.add_place({disease, who, sg}, 0);
+  for (auto sg : {c, h1, h2, d, death, sale, culling}) {
+    for (int who=0; who<total_cnt; ++who) {
+      for (auto disease : std::vector<int>{dm, ds, dti, dr, dpi}) {
+        bg.AddPlace({disease, who, sg}, 0);
       }
       // same group, same cow, kind=0 is becoming susceptible.
-      bg.add_transition({who, who, sg, sg, 0},
+      bg.AddTransition({who, who, sg, sg, 0},
         {PlaceEdge{CowPlace{dm, who, sg}, -1},
          PlaceEdge{CowPlace{ds, who, sg}, 1}},
         std::unique_ptr<CowTransition>(new InfectNeighbor(who))
         );
 
       // same group, same cow, kind=1 is recovering.
-      bg.add_transition({who, who, sg, sg, 1},
+      bg.AddTransition({who, who, sg, sg, 1},
         {PlaceEdge{CowPlace{dti, who, sg}, -1},
          PlaceEdge{CowPlace{dr, who, sg}, 1}},
         std::unique_ptr<CowTransition>(new InfectNeighbor(who))
@@ -216,17 +199,15 @@ herd(size_t initial_cnt, size_t total_cnt)
     }
   }
 
-  for (auto sg : {c, h1, h2, d, death, sale, culling})
-  {
-    for (int who=0; who<total_cnt; ++who)
-    {
+  for (auto sg : {c, h1, h2, d, death, sale, culling}) {
+    for (int who=0; who<total_cnt; ++who) {
       for (auto disease : std::vector<int>{dm, ds, dti, dr, dpi})
       {
       }
     }
   }
   
-  return std::move(bg.build());
+  return std::move(bg.Build());
 }
 
 
@@ -236,7 +217,7 @@ int main(int argc, char *argv[])
 {
   CowGen rng{1};
 
-  auto gspn=herd(100, 10);
+  auto gspn=Herd(100, 10);
 
   using Mark=smv::Marking<size_t,
       smv::Colored<Cow>,smv::Uncolored<std::map<size_t,double>>>;
@@ -258,9 +239,8 @@ int main(int argc, char *argv[])
   PartialCoreMatrix<CowTransitions,CowState,CowGen>
       system(gspn, state);
   auto token=[](CowState&) { };
-  auto next=propagate_competing_processes(system, token, rng);
-  if (std::get<1>(next)<=std::numeric_limits<double>::max())
-  {
+  auto next=PropagateCompetingProcesses(system, token, rng);
+  if (std::get<1>(next)<=std::numeric_limits<double>::max()) {
     std::cout << "We have a value." << std::endl;
   }
   return 0;

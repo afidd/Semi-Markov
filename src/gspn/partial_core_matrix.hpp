@@ -30,24 +30,22 @@ public:
   {}
 
 
-
   template<typename FUNCTOR>
-  void state_machine_token(const FUNCTOR& token)
+  void StateMachineToken(const FUNCTOR& token)
   {
     token(_state);
   }
 
 
-
   template<typename FUNCTOR>
-  void transitions(const FUNCTOR& eval)
+  void Transitions(const FUNCTOR& eval)
   { 
     if (_state.marking.Modified().size()>0)
     {
       // Check all neighbors of a place to see if they were enabled.
       auto lm=_state.marking.GetLocalMarking();
 
-      neighbors_of_places(_gspn, _state.marking.Modified(),
+      NeighborsOfPlaces(_gspn, _state.marking.Modified(),
         [&] (TransitionKey neighbor_id)
         {
           // Was this transition enabled? When?
@@ -65,12 +63,13 @@ public:
 
           // Set up the local marking.
           auto neighboring_places=
-              neighbors_of_transition(_gspn, neighbor_id);
+              NeighborsOfTransition(_gspn, neighbor_id);
           _state.marking.InitLocal(lm, neighboring_places);
 
           bool isEnabled=false;
           std::unique_ptr<TransitionDistribution<RNG>> dist;
-          std::tie(isEnabled, dist)=enabled(_gspn, neighbor_id, _state.user, lm,
+          std::tie(isEnabled, dist)=
+              Enabled(_gspn, neighbor_id, _state.user, lm,
               enabling_time, _state.CurrentTime());
 
           if (isEnabled)
@@ -107,15 +106,15 @@ public:
   }
 
 
-  void trigger(TransitionKey trans_id, double when, RNG& rng)
+  void Trigger(TransitionKey trans_id, double when, RNG& rng)
   {
-    auto neighboring_places=neighbors_of_transition(_gspn, trans_id);
+    auto neighboring_places=NeighborsOfTransition(_gspn, trans_id);
 
     BOOST_LOG_TRIVIAL(trace)<<"Fire "<<trans_id<<" neighbors: "<<
       neighboring_places.size();
     auto lm=_state.marking.GetLocalMarking();
     _state.marking.InitLocal(lm, neighboring_places);
-    fire(_gspn, trans_id, _state.user, lm, rng);
+    Fire(_gspn, trans_id, _state.user, lm, rng);
     _state.marking.ReadLocal(lm, neighboring_places);
 
     BOOST_LOG_TRIVIAL(trace) << "Fire "<<trans_id << " modifies "

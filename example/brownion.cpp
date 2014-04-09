@@ -74,12 +74,12 @@ int main(int argc, char *argv[])
   };
   auto nothing=[](BrownionState&)->void {};
 
-  auto next=propagate_competing_processes(system, input_string, rng);
+  auto next=PropagateCompetingProcesses(system, input_string, rng);
   for (size_t iteration_idx=0; iteration_idx<iteration_cnt; ++iteration_idx)
   {
     BOOST_LOG_TRIVIAL(info) << "trans " << std::get<0>(next) << " time " <<
         std::get<1>(next);
-    next=propagate_competing_processes(system, nothing, rng);
+    next=PropagateCompetingProcesses(system, nothing, rng);
   }
 
   return 0;

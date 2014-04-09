@@ -16,20 +16,16 @@ namespace smv
 {
   enum class PetriGraphColor : int { Unused, Place, Transition };
   
-  struct PetriGraphVertexProperty
-  {
+  struct PetriGraphVertexProperty {
     PetriGraphColor color;
     size_t token_layer;
   };
 
-  struct PetriGraphEdgeProperty
-  {
+  struct PetriGraphEdgeProperty {
     int stochiometric_coefficient;
   };
 
-  struct PetriGraphProperty
-  {
-  };
+  struct PetriGraphProperty {};
 
   typedef boost::adjacency_list<
     boost::listS, // VertexList container
@@ -58,7 +54,7 @@ namespace smv
 
 
   template<typename Graph>
-  bool is_place(
+  bool IsPlace(
       const typename boost::graph_traits<Graph>::vertex_descriptor& v,
       const Graph& g)
   {
@@ -67,7 +63,7 @@ namespace smv
 
 
   template<typename Graph>
-  bool is_transition(
+  bool IsTransition(
       const typename boost::graph_traits<Graph>::vertex_descriptor& v,
       const Graph& g)
   {
@@ -76,7 +72,7 @@ namespace smv
 
 
   template<typename Graph>
-  size_t token_layer(
+  size_t TokenLayer(
       const typename boost::graph_traits<Graph>::vertex_descriptor& v,
       const Graph& g)
   {
@@ -85,7 +81,7 @@ namespace smv
 
 
   template<typename Graph>
-  size_t stochiometric_coefficient(
+  size_t StochiometricCoefficient(
       const typename boost::graph_traits<Graph>::edge_descriptor& e,
       const Graph& g)
   {
@@ -100,14 +96,12 @@ namespace smv
 
  */
 std::vector<std::tuple<size_t,size_t,int>>
-neighbors_of_transition(PetriGraphType& g, size_t trans_id)
-{
+NeighborsOfTransition(PetriGraphType& g, size_t trans_id) {
   assert(g[trans_id].color==PetriGraphColor::Transition);
   std::vector<std::tuple<size_t,size_t,int>> place_ids;
 
   auto initer=in_edges(trans_id, g);
-  for (; initer.first!=initer.second; ++initer.first)
-  {
+  for (; initer.first!=initer.second; ++initer.first) {
     auto sc=g[*initer.first].stochiometric_coefficient;
     auto place_id=source(*initer.first, g);
     assert(g[place_id].color==PetriGraphColor::Place);
@@ -115,8 +109,7 @@ neighbors_of_transition(PetriGraphType& g, size_t trans_id)
     place_ids.push_back(std::make_tuple(place_id, level, sc));
   }
   auto oiter=out_edges(trans_id, g);
-  for (; oiter.first!=oiter.second; ++oiter.first)
-  {
+  for (; oiter.first!=oiter.second; ++oiter.first) {
     auto sc=g[*oiter.first].stochiometric_coefficient;
     auto place_id=target(*oiter.first, g);
     assert(g[place_id].color==PetriGraphColor::Place);
@@ -134,34 +127,28 @@ neighbors_of_transition(PetriGraphType& g, size_t trans_id)
 /*! Find all transitions which depend on the Marking at a set of places.
  */
 template<typename F>
-void neighbors_of_places(PetriGraphType& g,
-  const std::set<size_t>& place_id, F func)
-{
+void NeighborsOfPlaces(PetriGraphType& g,
+  const std::set<size_t>& place_id, F func) {
   auto seen=std::set<size_t>();
 
-  auto report=[&seen, &func, &g] (size_t id)
-  {
+  auto report=[&seen, &func, &g] (size_t id) {
     BOOST_LOG_TRIVIAL(trace) << "transition " << id;
     assert(g[id].color==PetriGraphColor::Transition);
-    if (seen.find(id)==seen.end())
-    {
+    if (seen.find(id)==seen.end()) {
       func(id);
       seen.insert(id);
     }
   };
 
-  for ( auto p : place_id)
-  {
+  for ( auto p : place_id) {
     BOOST_LOG_TRIVIAL(trace) << "neighbors of place " << p;
     assert(g[p].color==PetriGraphColor::Place);
     auto ie=in_edges(p, g);
-    for (; ie.first!=ie.second; ++ie.first)
-    {
+    for (; ie.first!=ie.second; ++ie.first) {
       report(source(*ie.first, g));
     }
     auto oe=out_edges(p, g);
-    for (; oe.first!=oe.second; ++oe.first)
-    {
+    for (; oe.first!=oe.second; ++oe.first) {
       report(target(*oe.first, g));
     }
   }
@@ -171,21 +158,17 @@ void neighbors_of_places(PetriGraphType& g,
 
 
 template<typename Graph>
-bool is_bipartite_petri_graph(const Graph& g)
-{
+bool IsBipartitePetriGraph(const Graph& g) {
   bool pass=true;
   using Vert=typename boost::graph_traits<Graph>::vertex_iterator;
   Vert cur_vert;
   Vert end_vert;
   std::tie(cur_vert, end_vert)=vertices(g);
-  for (; cur_vert!=end_vert; ++cur_vert)
-  {
+  for (; cur_vert!=end_vert; ++cur_vert) {
     auto vert_color=g[*cur_vert].color;
     auto oe=out_edges(*cur_vert, g);
-    for (; oe.first!=oe.second; ++oe.first)
-    {
-      if (vert_color==g[target(*oe.first, g)].color)
-      {
+    for (; oe.first!=oe.second; ++oe.first) {
+      if (vert_color==g[target(*oe.first, g)].color) {
         pass=false;
       }
     }
@@ -202,17 +185,14 @@ bool is_bipartite_petri_graph(const Graph& g)
  *  This is just one check that two graphs are not different.
  */
 template<typename Graph>
-size_t num_stochiometric_coefficients(const Graph& g)
-{
+size_t NumStochiometricCoefficients(const Graph& g) {
   size_t cnt{0};
   using Edge=typename boost::graph_traits<Graph>::edge_iterator;
   Edge cur_edge;
   Edge end_edge;
   std::tie(cur_edge, end_edge)=edges(g);
-  for (; cur_edge!=end_edge; ++cur_edge)
-  {
-    if (g[*cur_edge].stochiometric_coefficient!=0)
-    {
+  for (; cur_edge!=end_edge; ++cur_edge) {
+    if (g[*cur_edge].stochiometric_coefficient!=0) {
       ++cnt;
     }
   }

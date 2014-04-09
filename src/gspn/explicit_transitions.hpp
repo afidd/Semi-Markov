@@ -27,17 +27,13 @@ public:
   typedef ExtraState UserState;
 
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<RNG>>>
-  enabled(const ExtraState& s, const LM& lm,
-          double enabling_time, double current_time) const
-  {
+  Enabled(const ExtraState& s, const LM& lm,
+          double enabling_time, double current_time) const {
     BOOST_LOG_TRIVIAL(debug) << "The base enabled is unlikely correct to call";
     return {false,std::unique_ptr<TransitionDistribution<RNG>>(nullptr)};
   }
 
-
-
-  virtual void fire(ExtraState& s, LM& lm, RNG& rng) const
-  {
+  virtual void Fire(ExtraState& s, LM& lm, RNG& rng) const {
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
 };
@@ -103,27 +99,27 @@ public:
 
   ~ExplicitTransitions() {}
 
-  size_t place_vertex(UserPlaceKey p) const
+  size_t PlaceVertex(UserPlaceKey p) const
   {
-    return get_pvertex(_bimap, p);
+    return GetPvertex(_bimap, p);
   }
 
 
-  UserPlaceKey vertex_place(size_t v) const
+  UserPlaceKey VertexPlace(size_t v) const
   {
-    return get_place(_bimap, v);
+    return GetPlace(_bimap, v);
   }
 
 
-  size_t transition_vertex(UserTransitionKey t) const
+  size_t TransitionVertex(UserTransitionKey t) const
   {
-    return get_tvertex(_bimap, t);
+    return GetTvertex(_bimap, t);
   }
 
 
-  UserTransitionKey vertex_transition(size_t v) const
+  UserTransitionKey VertexTransition(size_t v) const
   {
-    return get_transition(_bimap, v);
+    return GetTransition(_bimap, v);
   }
 
 
@@ -132,14 +128,14 @@ public:
   template<typename State, typename P, typename T, typename L, typename Random>
   friend
   std::vector<std::tuple<size_t,size_t,int>>
-  neighbors_of_transition(
+  NeighborsOfTransition(
     ExplicitTransitions<State,P,T,L,Random>& et,
     typename ExplicitTransitions<State,P,T,L,Random>::TransitionKey trans_id);
 
   template<typename F, typename State, typename P, typename T, typename L,
     typename Random>
   friend
-  void neighbors_of_places(
+  void NeighborsOfPlaces(
     ExplicitTransitions<State,P,T,L,Random>& et,
     const std::set<typename ExplicitTransitions<State,P,T,L,Random>::PlaceKey>&
     place_id, F func);
@@ -147,58 +143,54 @@ public:
   template<typename Transitions, typename... Args>
   friend
   std::pair<bool,std::unique_ptr<TransitionDistribution<typename Transitions::RNG>>>
-  enabled(const Transitions& et, typename Transitions::TransitionKey trans_id,
+  Enabled(const Transitions& et, typename Transitions::TransitionKey trans_id,
     Args&&... args);
 
   template<typename Transitions, typename... Args>
   friend
-  void
-  fire(Transitions& et, typename Transitions::TransitionKey trans_id,
+  void Fire(Transitions& et, typename Transitions::TransitionKey trans_id,
     Args&&... args);
-
 };
 
 
 
 template<typename P, typename T, typename L, typename Random, typename State>
 std::vector<std::tuple<size_t,size_t,int>>
-neighbors_of_transition(
+NeighborsOfTransition(
   ExplicitTransitions<P,T,L,Random,State>& et,
   typename ExplicitTransitions<P,T,L,Random,State>::TransitionKey trans_id)
 {
-  return neighbors_of_transition(et.graph, trans_id);
+  return NeighborsOfTransition(et.graph, trans_id);
 }
 
 
 template<typename F, typename P, typename T, typename L,
   typename Random, typename State>
-void neighbors_of_places(
+void NeighborsOfPlaces(
   ExplicitTransitions<P,T,L,Random,State>& et,
   const std::set<typename ExplicitTransitions<P,T,L,Random,State>::PlaceKey>&
   place_id, F func)
 {
-  return neighbors_of_places(et.graph, place_id, func);
+  return NeighborsOfPlaces(et.graph, place_id, func);
 }
 
 
 template<typename Transitions, typename... Args>
 std::pair<bool,std::unique_ptr<TransitionDistribution<typename Transitions::RNG>>>
-enabled(const Transitions& et, typename Transitions::TransitionKey trans_id,
+Enabled(const Transitions& et, typename Transitions::TransitionKey trans_id,
   Args&&... args)
 {
-  return et.transitions.at(trans_id)->enabled(std::forward<Args>(args)...);
+  return et.transitions.at(trans_id)->Enabled(std::forward<Args>(args)...);
 }
 
 
 
 template<typename Transitions, typename... Args>
-void
-fire(Transitions& et, typename Transitions::TransitionKey trans_id,
+void Fire(Transitions& et, typename Transitions::TransitionKey trans_id,
   Args&&... args)
 {
-  et.transitions.at(trans_id)->fire(std::forward<Args>(args)...);
+  et.transitions.at(trans_id)->Fire(std::forward<Args>(args)...);
 }
-
 
 }
 }

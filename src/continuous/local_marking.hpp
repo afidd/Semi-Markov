@@ -407,8 +407,7 @@ struct add_by_layer
           [&typed_dict,&place_id](const ContainerType& ct)->int {
             typed_dict[place_id]=ct;
             return 0;
-          }
-          );
+          });
       } else {
         BOOST_LOG_TRIVIAL(error)<<"The local marking claims this container "
           "isn't in the marking, but we found it. "<<place_id<<" "<<layer

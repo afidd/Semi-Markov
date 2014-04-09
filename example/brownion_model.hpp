@@ -29,20 +29,17 @@ struct PlaceType
   int state;
 
   friend inline
-  std::ostream& operator<<(std::ostream& os, const PlaceType& id)
-  {
+  std::ostream& operator<<(std::ostream& os, const PlaceType& id) {
     return os << "{" << id.i << "," << id.j << "," << id.state << ")";
   }
 
   friend inline
-  bool operator==(const PlaceType& a, const PlaceType& b)
-  {
+  bool operator==(const PlaceType& a, const PlaceType& b) {
     return (a.i==b.i) && (a.j==b.j) && (a.state==b.state);
   }
 
   friend inline
-  bool operator<(const PlaceType& a, const PlaceType& b)
-  {
+  bool operator<(const PlaceType& a, const PlaceType& b) {
     return LazyLess(a.i, b.i, a.j, b.j, a.state, b.state);
   }
   
@@ -59,20 +56,17 @@ struct TransitionType
   PlaceType from, to;
 
   friend inline
-  std::ostream& operator<<(std::ostream& os, const TransitionType& id)
-  {
+  std::ostream& operator<<(std::ostream& os, const TransitionType& id) {
     return os << "(" << id.from << "," << id.to << ")";
   }
 
   friend inline
-  bool operator<(const TransitionType& a, const TransitionType& b)
-  {
+  bool operator<(const TransitionType& a, const TransitionType& b) {
     return LazyLess(a.from, b.from, a.to, b.to);
   }
 
   friend inline
-  bool operator==(const TransitionType& a, const TransitionType& b)
-  {
+  bool operator==(const TransitionType& a, const TransitionType& b) {
     return (a.from==b.from) && (a.to==b.to);
   }
 };
@@ -105,24 +99,18 @@ public:
 
 
 std::pair<bool,std::unique_ptr<TransitionDistribution<RandGen>>>
-enabled(const BrownionGSPN& et, TransitionType trans_id,
+Enabled(const BrownionGSPN& et, TransitionType trans_id,
   const UserState& s, const Local& lm, double te, double t0)
 {
-  if (lm.template Length<0>(0)>0)
-  {
+  if (lm.template Length<0>(0)>0) {
     // This is where we choose the distributions for the two
     // Brownion states.
-    if (trans_id.from.state==0)
-    {
+    if (trans_id.from.state==0) {
       return {true, std::unique_ptr<Weibull>(new Weibull(1.0,1.0, te))};
-    }
-    else
-    {
+    } else {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     }
-  }
-  else
-  {
+  } else {
     return {false, std::unique_ptr<Dist>(nullptr)};
   }
 }
@@ -132,7 +120,7 @@ enabled(const BrownionGSPN& et, TransitionType trans_id,
 
 template<typename RNG>
 void
-fire(BrownionGSPN& et, TransitionType trans_id,
+Fire(BrownionGSPN& et, TransitionType trans_id,
   UserState& s, Local& lm, RNG& rng)
 {
   lm.template Move<0,0>(0, 1, 1);
@@ -141,7 +129,7 @@ fire(BrownionGSPN& et, TransitionType trans_id,
 
 
 std::vector<std::tuple<PlaceType,size_t,int>>
-neighbors_of_transition(BrownionGSPN& g, TransitionType trans_id)
+NeighborsOfTransition(BrownionGSPN& g, TransitionType trans_id)
 {
   std::vector<std::tuple<PlaceType,size_t,int>> place_ids;
   place_ids.push_back(std::make_tuple(trans_id.from, 0, -1));
@@ -152,11 +140,10 @@ neighbors_of_transition(BrownionGSPN& g, TransitionType trans_id)
 
 
 template<typename F>
-void neighbors_of_places(BrownionGSPN& g,
+void NeighborsOfPlaces(BrownionGSPN& g,
   const std::set<PlaceType>& place_id, const F& func)
 {
-  for (auto p : place_id)
-  {
+  for (auto p : place_id) {
     // Transitions that start at this place.
     func(TransitionType{p, {p.i, p.j-1, p.state}});
     func(TransitionType{p, {p.i, p.j+1, p.state}});

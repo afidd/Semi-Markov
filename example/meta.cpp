@@ -46,13 +46,12 @@ using ContactGraph=boost::adjacency_list<
   >;
 
 
-
 /*! Given a graph, find a list of nodes to whom to connect
  *  using a binomial distribution on the node degree.
  *  Return a list of nodes in random order.
  */
 template<typename RNG>
-std::vector<size_t> available_to_connect(const ContactGraph& g,
+std::vector<size_t> AvailableToConnect(const ContactGraph& g,
     size_t metapopulation_idx, size_t nodes_per_metapopulation,
     double binomial_p, RNG& rng)
 {
@@ -66,8 +65,7 @@ std::vector<size_t> available_to_connect(const ContactGraph& g,
     auto degree=out_degree(node_idx, g);
     boost::random::binomial_distribution<> binomial(degree, binomial_p);
     auto connection_cnt=binomial(rng);
-    for (size_t connect_idx=0; connect_idx<connection_cnt; ++connect_idx)
-    {
+    for (size_t connect_idx=0; connect_idx<connection_cnt; ++connect_idx) {
       connectable.push_back(node_idx);
     }
   }
@@ -82,7 +80,7 @@ std::vector<size_t> available_to_connect(const ContactGraph& g,
  *  with binomial samples on the edge degree of each node.
  */
 template<typename RNG>
-ContactGraph serial_metapopulation(size_t nodes_per_metapopulation,
+ContactGraph SerialMetapopulation(size_t nodes_per_metapopulation,
     size_t metapopulation_cnt, double edge_fraction, double binomial_p,
     RNG& rng)
 {
@@ -91,20 +89,20 @@ ContactGraph serial_metapopulation(size_t nodes_per_metapopulation,
   // Make multiple independent metapopulations, each from its own
   // erdos_renyi distribution.
   using ERGen=boost::erdos_renyi_iterator<RNG, ContactGraph>;
-  for (size_t make_meta_idx=0; make_meta_idx<metapopulation_cnt; ++make_meta_idx)
-  {
+  for (size_t make_meta_idx=0;
+      make_meta_idx<metapopulation_cnt;
+      ++make_meta_idx) {
+
     size_t offset=make_meta_idx*nodes_per_metapopulation;
 
     ERGen erdos_renyi_iter(rng, nodes_per_metapopulation,
         edge_fraction);
     size_t edge_cnt=0;
-    for (; erdos_renyi_iter!=ERGen(); ++erdos_renyi_iter)
-    {
+    for (; erdos_renyi_iter!=ERGen(); ++erdos_renyi_iter) {
       size_t source_vertex, target_vertex;
       std::tie(source_vertex, target_vertex)=*erdos_renyi_iter;
       // remove self-loops here.
-      if (source_vertex!=target_vertex)
-      {
+      if (source_vertex!=target_vertex) {
         add_edge(source_vertex+offset, target_vertex+offset, g);
         ++edge_cnt;
       }
@@ -117,26 +115,22 @@ ContactGraph serial_metapopulation(size_t nodes_per_metapopulation,
   for (size_t left_idx=0; left_idx<metapopulation_cnt-1; ++left_idx)
   {
     std::vector<size_t> left_connectable=
-      available_to_connect(g, left_idx, nodes_per_metapopulation,
+      AvailableToConnect(g, left_idx, nodes_per_metapopulation,
       binomial_p, rng);
     std::vector<size_t> right_connectable=
-      available_to_connect(g, left_idx+1, nodes_per_metapopulation,
+      AvailableToConnect(g, left_idx+1, nodes_per_metapopulation,
       binomial_p, rng);
 
     size_t connection_cnt;
-    if (left_connectable.size() > right_connectable.size())
-    {
+    if (left_connectable.size() > right_connectable.size()){
         std::shuffle(left_connectable.begin(), left_connectable.end(), rng);
         connection_cnt=right_connectable.size();
-    }
-    else
-    {
+    } else {
         std::shuffle(right_connectable.begin(), right_connectable.end(), rng);
         connection_cnt=left_connectable.size();
     }
 
-    for (size_t cidx=0; cidx<connection_cnt; ++cidx)
-    {
+    for (size_t cidx=0; cidx<connection_cnt; ++cidx) {
       add_edge(left_connectable[cidx], right_connectable[cidx], g);
     }
     BOOST_LOG_TRIVIAL(info)<<connection_cnt<<" edges between "<<left_idx
@@ -152,9 +146,8 @@ ContactGraph serial_metapopulation(size_t nodes_per_metapopulation,
 // Build the types for the model.
 struct IndividualToken
 {
-  inline friend std::ostream&
-  operator<<(std::ostream& os, const IndividualToken& it)
-  {
+  inline friend
+  std::ostream& operator<<(std::ostream& os, const IndividualToken& it) {
     return os << 't';
   }
 };
@@ -173,25 +166,21 @@ struct SIRPlace
   {}
 
   friend inline
-  bool operator<(const SIRPlace& a, const SIRPlace& b)
-  {
+  bool operator<(const SIRPlace& a, const SIRPlace& b) {
     return LazyLess(a.disease, b.disease, a.individual,
       b.individual, a.metapop, b.metapop);
   }
 
 
   friend inline
-  bool operator==(const SIRPlace& a, const SIRPlace& b)
-  {
+  bool operator==(const SIRPlace& a, const SIRPlace& b) {
     return (a.disease==b.disease)&& (a.individual==b.individual)
         && (a.metapop==b.metapop);
   }
 
 
   friend inline
-  std::ostream&
-  operator<<(std::ostream& os, const SIRPlace& cp)
-  {
+  std::ostream& operator<<(std::ostream& os, const SIRPlace& cp) {
     return os << '(' << cp.disease << ", " << cp.individual
         << ", "<<cp.metapop << ')';
   }
@@ -217,21 +206,17 @@ struct SIRTKey
   {}
 
   friend inline
-  bool operator<(const SIRTKey& a, const SIRTKey& b)
-  {
+  bool operator<(const SIRTKey& a, const SIRTKey& b) {
     return LazyLess(a.ind1, b.ind1, a.ind2, b.ind2);
   }
 
   friend inline
-  bool operator==(const SIRTKey& a, const SIRTKey& b)
-  {
+  bool operator==(const SIRTKey& a, const SIRTKey& b) {
     return (a.ind1==b.ind1) && (a.ind2==b.ind2);
   }
 
   friend inline
-  std::ostream&
-  operator<<(std::ostream& os, const SIRTKey& cp)
-  {
+  std::ostream& operator<<(std::ostream& os, const SIRTKey& cp) {
     return os << '(' << cp.ind1 << ", " << cp.ind2 << ')';
   }
 };
@@ -261,23 +246,17 @@ using SIRTransition=ExplicitTransition<Local,RNG,WithParams>;
 // Now make specific transitions.
 class InfectNeighbor : public SIRTransition
 {
-  virtual std::pair<bool, std::unique_ptr<Dist>>
-  enabled(const WithParams& s, const Local& lm,
-    double te, double t0) const override
-  {
-    if (lm.template InputTokensSufficient<0>())
-    {
+  virtual std::pair<bool, std::unique_ptr<Dist>> Enabled(
+    const WithParams& s, const Local& lm, double te, double t0) const override {
+    if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
-    }
-    else
-    {
+    } else {
       return {false, std::unique_ptr<Dist>(nullptr)};
     }
   }
 
-  virtual void fire(WithParams& s, Local& lm,
-      RNG& rng) const override
-  {
+  virtual void Fire(WithParams& s, Local& lm,
+      RNG& rng) const override {
     BOOST_LOG_TRIVIAL(debug) << "Fire infection " << lm;
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
@@ -291,23 +270,17 @@ class InfectNeighbor : public SIRTransition
 // Now make specific transitions.
 class Recover : public SIRTransition
 {
-  virtual std::pair<bool, std::unique_ptr<Dist>>
-  enabled(const WithParams& s, const Local& lm,
-      double te, double t0) const override
-  {
-    if (lm.template InputTokensSufficient<0>())
-    {
+  virtual std::pair<bool, std::unique_ptr<Dist>> Enabled(
+      const WithParams& s, const Local& lm,
+      double te, double t0) const override {
+    if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
-    }
-    else
-    {
+    } else {
       return {false, std::unique_ptr<Dist>(nullptr)};
     }
   }
 
-  virtual void fire(WithParams& s, Local& lm,
-      RNG& rng) const override
-  {
+  virtual void Fire(WithParams& s, Local& lm, RNG& rng) const override {
     BOOST_LOG_TRIVIAL(debug) << "Fire recovery "<< lm;
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
@@ -316,8 +289,7 @@ class Recover : public SIRTransition
 
 
 
-SIRGSPN
-build_system(size_t nodes_per_metapopulation,
+SIRGSPN BuildSystem(size_t nodes_per_metapopulation,
     size_t metapopulation_cnt, double edge_fraction, double binomial_p,
     RNG& rng)
 {
@@ -329,33 +301,29 @@ build_system(size_t nodes_per_metapopulation,
 
   enum { s, i, r };
 
-  for (size_t meta_idx=0; meta_idx<metapopulation_cnt; ++meta_idx)
-  {
-    for (size_t ind_idx=0; ind_idx<nodes_per_metapopulation; ++ind_idx)
-    {
+  for (size_t meta_idx=0; meta_idx<metapopulation_cnt; ++meta_idx) {
+    for (size_t ind_idx=0; ind_idx<nodes_per_metapopulation; ++ind_idx) {
       auto sp=SIRPlace{s, ind_idx, meta_idx};
-      bg.add_place(sp);
+      bg.AddPlace(sp);
       auto ip=SIRPlace{i, ind_idx, meta_idx};
-      bg.add_place(ip);
+      bg.AddPlace(ip);
       auto rp=SIRPlace{r, ind_idx, meta_idx};
-      bg.add_place(rp);
+      bg.AddPlace(rp);
 
-      bg.add_transition({ip, rp},
+      bg.AddTransition({ip, rp},
         {Edge{ip, -1}, Edge{rp, -1}},
         std::unique_ptr<SIRTransition>(new Recover()));
     }
   }
 
-  auto index_to_place=[&](size_t index)->SIRPlace
-  {
+  auto index_to_place=[&](size_t index)->SIRPlace {
     size_t mpop=index / nodes_per_metapopulation;
     size_t individual=index % nodes_per_metapopulation;
     return SIRPlace(s, individual, mpop);
   };
 
   std::set<std::array<size_t,2>> seen;
-  for (auto ce=edges(contact_graph); ce.first!=ce.second; ++ce.first)
-  {
+  for (auto ce=edges(contact_graph); ce.first!=ce.second; ++ce.first) {
     auto left_index=source(*ce.first, contact_graph);
     auto lefts=index_to_place(left_index);
     auto right_index=target(*ce.first, contact_graph);
@@ -363,16 +331,15 @@ build_system(size_t nodes_per_metapopulation,
 
     std::array<size_t,2> new_transition{
       std::min(left_index, right_index), std::max(left_index, right_index)};
-    if (seen.find(new_transition)==seen.end())
-    {
+    if (seen.find(new_transition)==seen.end()) {
       SIRPlace lefti{i, lefts.individual, lefts.metapop};
       SIRPlace righti{i, rights.individual, rights.metapop};
 
-      bg.add_transition({lefti, rights},
+      bg.AddTransition({lefti, rights},
         {Edge{lefti, -1}, Edge{rights, -1}, Edge{lefti, 1}, Edge{righti, 1}},
         std::unique_ptr<SIRTransition>(new InfectNeighbor()));
 
-      bg.add_transition({righti, lefts},
+      bg.AddTransition({righti, lefts},
         {Edge{righti, -1}, Edge{lefts, -1}, Edge{righti, 1}, Edge{lefti, 1}},
         std::unique_ptr<SIRTransition>(new InfectNeighbor()));
 
@@ -380,7 +347,7 @@ build_system(size_t nodes_per_metapopulation,
     }
   }
 
-  return std::move(bg.build());
+  return std::move(bg.Build());
 }
 
 
@@ -408,26 +375,19 @@ public:
     _threshold(threshold_for_passage),
     _first_passage_time(population_cnt, 0), _passed(population_cnt, false),
     _infected_per_pop(population_cnt, 0)
-  {
-
-  }
+  {}
 
 
 
-  result_type operator()(const GSPN& gspn, const SIRState& state)
-  {
+  result_type operator()(const GSPN& gspn, const SIRState& state) {
     auto& modified=state.marking.Modified();
-    for (auto place_idx : modified)
-    {
-      SIRPlace p=gspn.vertex_place(place_idx);
-      if (p.disease==1)
-      {
+    for (auto place_idx : modified) {
+      SIRPlace p=gspn.VertexPlace(place_idx);
+      if (p.disease==1) {
         bool filled=(Length<0>(state.marking, place_idx)>0);
-        if (filled)
-        {
+        if (filled) {
           _infected_per_pop[p.metapop]+=1;
-          if (_infected_per_pop[p.metapop]==_threshold)
-          {
+          if (_infected_per_pop[p.metapop]==_threshold) {
             _first_passage_time[p.metapop]=state.CurrentTime();
             _passed[p.metapop]=true;
             BOOST_LOG_TRIVIAL(info)<<"Population "<<p.metapop
@@ -489,7 +449,7 @@ int main(int argc, char* argv[])
   RNG rng(rand_seed);
 
 
-  auto gspn=build_system(individuals_per_metapopulation, metapopulation_cnt,
+  auto gspn=BuildSystem(individuals_per_metapopulation, metapopulation_cnt,
     poisson_constant/individuals_per_metapopulation, binomial_to_neighbors, rng);
 
   size_t individual_cnt=metapopulation_cnt*individuals_per_metapopulation;
@@ -497,11 +457,9 @@ int main(int argc, char* argv[])
       "as susceptible.";
 
   SIRState state;
-  for (size_t meta_idx=0; meta_idx<metapopulation_cnt; ++meta_idx)
-  {
-    for (size_t ind_idx=0; ind_idx<individuals_per_metapopulation; ++ind_idx)
-    {
-      auto vert=gspn.place_vertex(SIRPlace{0, ind_idx, meta_idx});
+  for (size_t meta_idx=0; meta_idx<metapopulation_cnt; ++meta_idx) {
+    for (size_t ind_idx=0; ind_idx<individuals_per_metapopulation; ++ind_idx) {
+      auto vert=gspn.PlaceVertex(SIRPlace{0, ind_idx, meta_idx});
       add<0>(state.marking, vert, IndividualToken{});
     }
   }
@@ -515,13 +473,13 @@ int main(int argc, char* argv[])
 
   // The initial input string moves a token from susceptible to infected.
   auto first_case=afidd::smv::uniform_index(rng, individuals_per_metapopulation);
-  auto susceptible=gspn.place_vertex(SIRPlace{0, first_case, 0});
-  auto infected=gspn.place_vertex(SIRPlace{1, first_case, 0});
+  auto susceptible=gspn.PlaceVertex(SIRPlace{0, first_case, 0});
+  auto infected=gspn.PlaceVertex(SIRPlace{1, first_case, 0});
 
   auto input_string=[&susceptible, &infected](SIRState& state)->void {
-    move<0,0>(state.marking, susceptible, infected, 1);
+    Move<0,0>(state.marking, susceptible, infected, 1);
   };
-  auto next=propagate_competing_processes(system, input_string, rng);
+  auto next=PropagateCompetingProcesses(system, input_string, rng);
 
   output(gspn, state);
 
@@ -529,7 +487,7 @@ int main(int argc, char* argv[])
   auto nothing=[](SIRState&)->void {};
   for ( ;
     std::get<1>(next)<std::numeric_limits<double>::max();
-    next=propagate_competing_processes(system, nothing, rng))
+    next=PropagateCompetingProcesses(system, nothing, rng))
   {
     BOOST_LOG_TRIVIAL(debug) << "trans " << std::get<0>(next) << " time " <<
         std::get<1>(next);
