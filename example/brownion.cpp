@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
     return 0;
   }
 
-  afidd::log_init(log_level);
+  afidd::LogInit(log_level);
 
   RandGen rng(rand_seed);
   BrownionGSPN gspn;
@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
   Markov system(gspn, state);
 
   auto input_string=[](BrownionState& state)->void {
-    add<0>(state.marking, PlaceType{0,0,0}, IndividualToken());
+    Add<0>(state.marking, PlaceType{0,0,0}, IndividualToken());
   };
   auto nothing=[](BrownionState&)->void {};
 

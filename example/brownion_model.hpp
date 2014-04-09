@@ -43,7 +43,7 @@ struct PlaceType
   friend inline
   bool operator<(const PlaceType& a, const PlaceType& b)
   {
-    return lazy_less(a.i, b.i, a.j, b.j, a.state, b.state);
+    return LazyLess(a.i, b.i, a.j, b.j, a.state, b.state);
   }
   
 };
@@ -67,7 +67,7 @@ struct TransitionType
   friend inline
   bool operator<(const TransitionType& a, const TransitionType& b)
   {
-    return lazy_less(a.from, b.from, a.to, b.to);
+    return LazyLess(a.from, b.from, a.to, b.to);
   }
 
   friend inline
@@ -108,7 +108,7 @@ std::pair<bool,std::unique_ptr<TransitionDistribution<RandGen>>>
 enabled(const BrownionGSPN& et, TransitionType trans_id,
   const UserState& s, const Local& lm, double te, double t0)
 {
-  if (lm.template length<0>(0)>0)
+  if (lm.template Length<0>(0)>0)
   {
     // This is where we choose the distributions for the two
     // Brownion states.
@@ -135,7 +135,7 @@ void
 fire(BrownionGSPN& et, TransitionType trans_id,
   UserState& s, Local& lm, RNG& rng)
 {
-  lm.template move<0,0>(0, 1, 1);
+  lm.template Move<0,0>(0, 1, 1);
 }
 
 

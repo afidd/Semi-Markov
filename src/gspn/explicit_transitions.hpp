@@ -38,7 +38,7 @@ public:
 
   virtual void fire(ExtraState& s, LM& lm, RNG& rng) const
   {
-    lm.template transfer_by_stochiometric_coefficient<0>(rng);
+    lm.template TransferByStochiometricCoefficient<0>(rng);
   }
 };
 

@@ -12,7 +12,7 @@
 namespace afidd
 {
 
-void log_init(std::string level)
+void LogInit(std::string level)
 {
   namespace logging=boost::log;
 
@@ -28,17 +28,13 @@ void log_init(std::string level)
 
   logging::trivial::severity_level assign_level=logging::trivial::info;
   auto logiter=severities.find(level);
-  if (logiter!=severities.end())
-  {
+  if (logiter!=severities.end()) {
     assign_level=logiter->second;
-  }
-  else
-  {
+  } else {
     std::cout << "Could not set the logging level from " << level
         << ". Choices are: ";
     std::vector<std::string> names;
-    for (auto& kv : severities)
-    {
+    for (auto& kv : severities) {
       names.push_back(kv.first);
     }
     std::cout << boost::algorithm::join(names, ", ")

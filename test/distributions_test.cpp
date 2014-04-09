@@ -20,17 +20,15 @@ BOOST_AUTO_TEST_SUITE( distributions )
 
 BOOST_AUTO_TEST_CASE( exponential )
 {
-  afidd::log_init("debug");
+  afidd::LogInit("debug");
   RandGen rng(1);
-  for (auto lambda : std::vector<double>{1.0, 20.0, 0.01})
-  {
+  for (auto lambda : std::vector<double>{1.0, 20.0, 0.01}) {
     ExponentialDistribution<RandGen> dist1(lambda, 0.0);
     std::vector<double> vals(100000);
-    for (auto it=vals.begin(); it!=vals.end(); ++it)
-    {
-      *it=dist1.sample(0.0, rng);
+    for (auto it=vals.begin(); it!=vals.end(); ++it) {
+      *it=dist1.Sample(0.0, rng);
     }
-    BOOST_CHECK(dist1.check_samples(vals, 0.0));
+    BOOST_CHECK(dist1.CheckSamples(vals, 0.0));
   }
 
 }
@@ -39,15 +37,13 @@ BOOST_AUTO_TEST_CASE( exponential )
 
 BOOST_AUTO_TEST_CASE( weibull )
 {
-  afidd::log_init("debug");
+  afidd::LogInit("debug");
   RandGen rng(1);
-  for (auto lambda : std::vector<double>{1.0, 20.0, 0.01})
-  {
+  for (auto lambda : std::vector<double>{1.0, 20.0, 0.01}) {
     WeibullDistribution<RandGen> dist1(lambda, 1.0, 0.0);
     std::vector<double> vals(100000);
-    for (auto it=vals.begin(); it!=vals.end(); ++it)
-    {
-      *it=dist1.sample(0.0, rng);
+    for (auto it=vals.begin(); it!=vals.end(); ++it) {
+      *it=dist1.Sample(0.0, rng);
     }
 
     std::sort(vals.begin(), vals.end());
@@ -57,12 +53,11 @@ BOOST_AUTO_TEST_CASE( weibull )
     std::ofstream output(name.str());
     size_t cnt=0;
     output<<0.0<<" "<<0.0<<std::endl;
-    for (auto v : vals)
-    {
+    for (auto v : vals) {
       ++cnt;
       output<<v<<" "<<cnt/((double)vals.size())<<std::endl;
     }
-    BOOST_CHECK(dist1.check_samples(vals, 0.0));
+    BOOST_CHECK(dist1.CheckSamples(vals, 0.0));
   }
 }
 
@@ -70,15 +65,13 @@ BOOST_AUTO_TEST_CASE( weibull )
 
 BOOST_AUTO_TEST_CASE( gamma )
 {
-  afidd::log_init("debug");
+  afidd::LogInit("debug");
   RandGen rng(1);
-  for (auto lambda : std::vector<double>{1.0, 2.0, 10.0})
-  {
+  for (auto lambda : std::vector<double>{1.0, 2.0, 10.0}) {
     GammaDistribution<RandGen> dist1(lambda, 0.5, 0.0);
     std::vector<double> vals(100000);
-    for (auto it=vals.begin(); it!=vals.end(); ++it)
-    {
-      *it=dist1.sample(0.0, rng);
+    for (auto it=vals.begin(); it!=vals.end(); ++it) {
+      *it=dist1.Sample(0.0, rng);
     }
 
     std::sort(vals.begin(), vals.end());
@@ -88,12 +81,11 @@ BOOST_AUTO_TEST_CASE( gamma )
     std::ofstream output(name.str());
     size_t cnt=0;
     output<<0.0<<" "<<0.0<<std::endl;
-    for (auto v : vals)
-    {
+    for (auto v : vals) {
       ++cnt;
       output<<v<<" "<<cnt/((double)vals.size())<<std::endl;
     }
-    BOOST_CHECK(dist1.check_samples(vals, 0.0));
+    BOOST_CHECK(dist1.CheckSamples(vals, 0.0));
   }
 }
 
@@ -103,8 +95,7 @@ void tofile(const std::vector<double>& vals, const std::string& name)
   std::ofstream output(name);
   size_t cnt=0;
   output<<0.0<<" "<<0.0<<std::endl;
-  for (auto v : vals)
-  {
+  for (auto v : vals) {
     ++cnt;
     output<<v<<" "<<cnt/((double)vals.size())<<std::endl;
   }
@@ -115,7 +106,7 @@ void tofile(const std::vector<double>& vals, const std::string& name)
 
 BOOST_AUTO_TEST_CASE( piecewiselinear )
 {
-  afidd::log_init("debug");
+  afidd::LogInit("debug");
   RandGen rng(1);
   std::vector<double> b={0,   1,   2, 3, 3.2, 5};
   std::vector<double> w={0.2, 1, 0.5, 0,   0, 1};
@@ -123,22 +114,19 @@ BOOST_AUTO_TEST_CASE( piecewiselinear )
   double cutoff=2;
   PiecewiseLinearDistribution<RandGen> dist1(b, w, 0.0);
   std::vector<double> vals(10000);
-  for (auto it=vals.begin(); it!=vals.end(); ++it)
-  {
-    *it=dist1.sample(cutoff, rng);
+  for (auto it=vals.begin(); it!=vals.end(); ++it) {
+    *it=dist1.Sample(cutoff, rng);
   }
 
   std::sort(vals.begin(), vals.end());
   tofile(vals, "piecewise.txt");
-  BOOST_CHECK(dist1.check_samples(vals, 0.0));
+  BOOST_CHECK(dist1.CheckSamples(vals, 0.0));
 
   std::piecewise_linear_distribution<double> pld(b.begin(), b.end(), w.begin());
-  for (auto pt=vals.begin(); pt!=vals.end(); ++pt)
-  {
+  for (auto pt=vals.begin(); pt!=vals.end(); ++pt) {
     double possible;
     for (possible=pld(rng); possible<cutoff; possible=pld(rng))
-    {
-    }
+    {}
     *pt=possible;
   }
   std::sort(vals.begin(), vals.end());

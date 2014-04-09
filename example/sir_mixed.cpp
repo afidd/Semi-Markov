@@ -59,7 +59,7 @@ struct SIRPlace
   friend inline
   bool operator<(const SIRPlace& a, const SIRPlace& b)
   {
-    return lazy_less(a.disease, b.disease, a.individual,
+    return LazyLess(a.disease, b.disease, a.individual,
       b.individual);
   }
 
@@ -95,7 +95,7 @@ struct SIRTKey
   friend inline
   bool operator<(const SIRTKey& a, const SIRTKey& b)
   {
-    return lazy_less(a.ind1, b.ind1, a.ind2, b.ind2,
+    return LazyLess(a.ind1, b.ind1, a.ind2, b.ind2,
       a.kind, b.kind);
   }
 
@@ -142,7 +142,7 @@ class InfectNeighbor : public SIRTransition
   enabled(const UserState& s, const Local& lm,
     double te, double t0) const override
   {
-    bool go=lm.template input_tokens_sufficient<0>();
+    bool go=lm.template InputTokensSufficient<0>();
     if (go)
     {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(s.params.at(0), te))};
@@ -156,7 +156,7 @@ class InfectNeighbor : public SIRTransition
   virtual void fire(UserState& s, Local& lm, RandGen& rng) const override
   {
     BOOST_LOG_TRIVIAL(trace) << "Fire infection " << lm;
-    lm.template transfer_by_stochiometric_coefficient<0>(rng);
+    lm.template TransferByStochiometricCoefficient<0>(rng);
   }
 
 };
@@ -172,7 +172,7 @@ class Recover : public SIRTransition
   enabled(const UserState& s, const Local& lm,
     double te, double t0) const override
   {
-    bool go=lm.template input_tokens_sufficient<0>();
+    bool go=lm.template InputTokensSufficient<0>();
     if (go)
     {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(s.params.at(1), te))};
@@ -186,7 +186,7 @@ class Recover : public SIRTransition
   virtual void fire(UserState& s, Local& lm, RandGen& rng) const override
   {
     BOOST_LOG_TRIVIAL(trace) << "Fire recovery "<< lm;
-    lm.template transfer_by_stochiometric_coefficient<0>(rng);
+    lm.template TransferByStochiometricCoefficient<0>(rng);
   }
 
 };
@@ -316,7 +316,7 @@ int main(int argc, char *argv[])
     return 0;
   }
 
-  afidd::log_init(log_level);
+  afidd::LogInit(log_level);
   RandGen rng(rand_seed);
 
   auto gspn=build_system(individual_cnt);
@@ -340,7 +340,7 @@ int main(int argc, char *argv[])
   for (size_t individual=0; individual<individual_cnt; ++individual)
   {
     auto susceptible=gspn.place_vertex({0, individual});
-    add<0>(state.marking, susceptible, IndividualToken{});
+    Add<0>(state.marking, susceptible, IndividualToken{});
   }
 
   using Markov=PartialCoreMatrix<SIRGSPN, SIRState, RandGen>;
@@ -355,7 +355,7 @@ int main(int argc, char *argv[])
   size_t first_s=gspn.place_vertex({0, first_case});
   size_t first_i=gspn.place_vertex({1, first_case});
   auto input_string=[&first_s, &first_i](SIRState& state)->void {
-    move<0,0>(state.marking, first_s, first_i, 1);
+    Move<0,0>(state.marking, first_s, first_i, 1);
   };
   auto next=propagate_competing_processes(system, input_string, rng);
   ++step_cnt;

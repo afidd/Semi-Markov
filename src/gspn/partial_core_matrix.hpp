@@ -42,12 +42,12 @@ public:
   template<typename FUNCTOR>
   void transitions(const FUNCTOR& eval)
   { 
-    if (_state.marking.modified().size()>0)
+    if (_state.marking.Modified().size()>0)
     {
       // Check all neighbors of a place to see if they were enabled.
-      auto lm=_state.marking.local_marking();
+      auto lm=_state.marking.GetLocalMarking();
 
-      neighbors_of_places(_gspn, _state.marking.modified(),
+      neighbors_of_places(_gspn, _state.marking.Modified(),
         [&] (TransitionKey neighbor_id)
         {
           // Was this transition enabled? When?
@@ -56,22 +56,22 @@ public:
           bool previously_enabled=previous_distribution!=_distributions.end();
           if (previously_enabled)
           {
-            enabling_time=previous_distribution->second->enabling_time();
+            enabling_time=previous_distribution->second->EnablingTime();
           }
           else
           {
-            enabling_time=_state.current_time();
+            enabling_time=_state.CurrentTime();
           }
 
           // Set up the local marking.
           auto neighboring_places=
               neighbors_of_transition(_gspn, neighbor_id);
-          _state.marking.init_local(lm, neighboring_places);
+          _state.marking.InitLocal(lm, neighboring_places);
 
           bool isEnabled=false;
           std::unique_ptr<TransitionDistribution<RNG>> dist;
           std::tie(isEnabled, dist)=enabled(_gspn, neighbor_id, _state.user, lm,
-              enabling_time, _state.current_time());
+              enabling_time, _state.CurrentTime());
 
           if (isEnabled)
           {
@@ -93,16 +93,16 @@ public:
           }
         });
       BOOST_LOG_TRIVIAL(trace) << "Marking modified cnt: "<<
-          _state.marking.modified().size() << " enabled " <<
+          _state.marking.Modified().size() << " enabled " <<
           _distributions.size();
-      _state.marking.clear();
+      _state.marking.Clear();
     }
 
     auto begin=_distributions.begin();
     for (; begin!=_distributions.end(); ++begin)
     {
       TransitionKey trans_id=begin->first;
-      eval(begin->second, trans_id, _state.current_time());
+      eval(begin->second, trans_id, _state.CurrentTime());
     }
   }
 
@@ -113,15 +113,15 @@ public:
 
     BOOST_LOG_TRIVIAL(trace)<<"Fire "<<trans_id<<" neighbors: "<<
       neighboring_places.size();
-    auto lm=_state.marking.local_marking();
-    _state.marking.init_local(lm, neighboring_places);
+    auto lm=_state.marking.GetLocalMarking();
+    _state.marking.InitLocal(lm, neighboring_places);
     fire(_gspn, trans_id, _state.user, lm, rng);
-    _state.marking.read_local(lm, neighboring_places);
+    _state.marking.ReadLocal(lm, neighboring_places);
 
     BOOST_LOG_TRIVIAL(trace) << "Fire "<<trans_id << " modifies "
-      << _state.marking.modified().size() << " places.";
+      << _state.marking.Modified().size() << " places.";
 
-    auto current_time=_state.add_time(when);
+    auto current_time=_state.AddTime(when);
     _distributions.erase(trans_id);
   }
 };

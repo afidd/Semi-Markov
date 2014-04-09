@@ -53,7 +53,7 @@ struct CowPlace
   friend inline
   bool operator<(const CowPlace& a, const CowPlace& b)
   {
-    return lazy_less(a.disease, b.disease, a.individual,
+    return LazyLess(a.disease, b.disease, a.individual,
       b.individual, a.subgroup, b.subgroup);
   }
 
@@ -99,7 +99,7 @@ struct CowT
   friend inline
   bool operator<(const CowT& a, const CowT& b)
   {
-    return lazy_less(a.cow1, b.cow1, a.cow2, b.cow2,
+    return LazyLess(a.cow1, b.cow1, a.cow2, b.cow2,
       a.sg1, b.sg1, a.sg2, b.sg2, a.kind, b.kind);
   }
 
@@ -157,7 +157,7 @@ public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
   enabled(const UserState& s, const Local& lm, double te, double t0) const
   {
-    if (lm.template input_tokens_sufficient<0>())
+    if (lm.template InputTokensSufficient<0>())
     {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     }
@@ -169,7 +169,7 @@ public:
 
   virtual void fire(UserState& s, Local& lm, CowGen& rng) const
   {
-    lm.template transfer_by_stochiometric_coefficient<0>(rng);
+    lm.template TransferByStochiometricCoefficient<0>(rng);
   }
 };
 
@@ -250,9 +250,9 @@ int main(int argc, char *argv[])
   params[beta]=1.7;
   params[gamma]=0.5;
   size_t params_place_id=0;
-  add<1>(m, params_place_id, params);
-  assert(length<1>(m, params_place_id)==1);
-  assert(length<0>(m, 27, 13)==0);
+  Add<1>(m, params_place_id, params);
+  assert(Length<1>(m, params_place_id)==1);
+  assert(Length<0>(m, 27, 13)==0);
 
 
   PartialCoreMatrix<CowTransitions,CowState,CowGen>

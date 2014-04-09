@@ -21,9 +21,8 @@ class SimpleTime
 public:
   SimpleTime() {}
   SimpleTime(double start_time) : _absolute_time(start_time) {}
-  double current_time() const { return _absolute_time; }
-  double add_time(double interval)
-  {
+  double CurrentTime() const { return _absolute_time; }
+  double AddTime(double interval) {
     _absolute_time+=interval;
     return _absolute_time;
   }
@@ -44,9 +43,8 @@ class KahanTime
 public:
   KahanTime() : _sum(0), _compensation(0) {}
   KahanTime(double init) : _sum(init), _compensation(0) {}
-  double current_time() const { return _sum; }
-  double add_time(double interval)
-  {
+  double CurrentTime() const { return _sum; }
+  double AddTime(double interval) {
     auto adjusted_interval=interval - _compensation;
     auto next_sum=_sum + adjusted_interval;
     _compensation=(next_sum - _sum) - adjusted_interval;

@@ -175,7 +175,7 @@ struct SIRPlace
   friend inline
   bool operator<(const SIRPlace& a, const SIRPlace& b)
   {
-    return lazy_less(a.disease, b.disease, a.individual,
+    return LazyLess(a.disease, b.disease, a.individual,
       b.individual, a.metapop, b.metapop);
   }
 
@@ -219,7 +219,7 @@ struct SIRTKey
   friend inline
   bool operator<(const SIRTKey& a, const SIRTKey& b)
   {
-    return lazy_less(a.ind1, b.ind1, a.ind2, b.ind2);
+    return LazyLess(a.ind1, b.ind1, a.ind2, b.ind2);
   }
 
   friend inline
@@ -265,7 +265,7 @@ class InfectNeighbor : public SIRTransition
   enabled(const WithParams& s, const Local& lm,
     double te, double t0) const override
   {
-    if (lm.template input_tokens_sufficient<0>())
+    if (lm.template InputTokensSufficient<0>())
     {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     }
@@ -279,7 +279,7 @@ class InfectNeighbor : public SIRTransition
       RNG& rng) const override
   {
     BOOST_LOG_TRIVIAL(debug) << "Fire infection " << lm;
-    lm.template transfer_by_stochiometric_coefficient<0>(rng);
+    lm.template TransferByStochiometricCoefficient<0>(rng);
   }
 
 };
@@ -295,7 +295,7 @@ class Recover : public SIRTransition
   enabled(const WithParams& s, const Local& lm,
       double te, double t0) const override
   {
-    if (lm.template input_tokens_sufficient<0>())
+    if (lm.template InputTokensSufficient<0>())
     {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     }
@@ -309,7 +309,7 @@ class Recover : public SIRTransition
       RNG& rng) const override
   {
     BOOST_LOG_TRIVIAL(debug) << "Fire recovery "<< lm;
-    lm.template transfer_by_stochiometric_coefficient<0>(rng);
+    lm.template TransferByStochiometricCoefficient<0>(rng);
   }
 };
 
@@ -416,22 +416,22 @@ public:
 
   result_type operator()(const GSPN& gspn, const SIRState& state)
   {
-    auto& modified=state.marking.modified();
+    auto& modified=state.marking.Modified();
     for (auto place_idx : modified)
     {
       SIRPlace p=gspn.vertex_place(place_idx);
       if (p.disease==1)
       {
-        bool filled=(length<0>(state.marking, place_idx)>0);
+        bool filled=(Length<0>(state.marking, place_idx)>0);
         if (filled)
         {
           _infected_per_pop[p.metapop]+=1;
           if (_infected_per_pop[p.metapop]==_threshold)
           {
-            _first_passage_time[p.metapop]=state.current_time();
+            _first_passage_time[p.metapop]=state.CurrentTime();
             _passed[p.metapop]=true;
             BOOST_LOG_TRIVIAL(info)<<"Population "<<p.metapop
-              <<" at time "<<state.current_time();
+              <<" at time "<<state.CurrentTime();
           }
         }
       }
@@ -485,7 +485,7 @@ int main(int argc, char* argv[])
     return 0;
   }
 
-  afidd::log_init(log_level);
+  afidd::LogInit(log_level);
   RNG rng(rand_seed);
 
 

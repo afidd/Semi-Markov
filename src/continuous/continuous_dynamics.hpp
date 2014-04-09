@@ -19,7 +19,7 @@ propagate_competing_processes(PartialCore& system, T& token, RNG& rng)
   system.transitions(
     [&least, &rng] (std::unique_ptr<TransitionDistribution<RNG>>& distribution,
           Transition trans_id, double now) {
-      auto trial_time=distribution->sample(now, rng);
+      auto trial_time=distribution->Sample(now, rng);
       if (trial_time < std::get<1>(least))
       {
         std::get<0>(least)=trans_id;
