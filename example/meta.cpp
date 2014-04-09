@@ -249,13 +249,9 @@ class WithParams
 };
 
 using SIRState=GSPNState<Mark,WithParams>;
-
 using SIRGSPN=ExplicitTransitions<SIRPlace, SIRTKey, Local, RNG, WithParams>;
-
-
 using Dist=TransitionDistribution<RNG>;
 using ExpDist=ExponentialDistribution<RNG>;
-
 using SIRTransition=ExplicitTransition<Local,RNG,WithParams>;
 
 

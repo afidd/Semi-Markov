@@ -69,15 +69,15 @@ public:
   using Maps=typename detail::MapContainers<Place,Ts...>::result;
   static constexpr int _layer_cnt=boost::mpl::size<container_types>::value;
 //private:
-  std::set<Place> _modified;
-  Maps _maps;
+  std::set<Place> modified_;
+  Maps maps_;
 
 public:
   typedef LocalMarking<Ts...> LocalTyped;
 
   Marking() {}
-  const std::set<place_t>& Modified() const { return _modified; }
-  void Clear() { _modified.clear(); }
+  const std::set<place_t>& Modified() const { return modified_; }
+  void Clear() { modified_.clear(); }
 
 
   LocalTyped GetLocalMarking()
@@ -99,7 +99,7 @@ public:
 
       BOOST_LOG_TRIVIAL(trace)<<"Marking::init_local<"<<layer<<">("
         <<place_id<<", "<<idx<<", "<<stochiometric_coefficient<<")";
-      il(_maps, place_id, idx, layer, stochiometric_coefficient, lm);
+      il(maps_, place_id, idx, layer, stochiometric_coefficient, lm);
 
       ++idx;
     }
@@ -114,7 +114,7 @@ public:
 
     // Modified places just need to be put on the modified list.
     for (int midx : changes[0]) {
-      _modified.insert(std::get<0>(neighbor_places.at(midx)));
+      modified_.insert(std::get<0>(neighbor_places.at(midx)));
     }
 
     // Added places need to be copied here.
@@ -124,8 +124,8 @@ public:
       auto& place_id=std::get<0>(neighbor_line);
       auto layer=std::get<1>(neighbor_line);
 
-      abl(_maps, place_id, layer, lm, aidx);
-      _modified.insert(place_id);
+      abl(maps_, place_id, layer, lm, aidx);
+      modified_.insert(place_id);
     }
 
     // Removed places need to be deleted.
@@ -135,8 +135,8 @@ public:
       auto& place_id=std::get<0>(neighbor_line);
       auto layer=std::get<1>(neighbor_line);
 
-      eraser(_maps, place_id, layer);
-      _modified.insert(place_id);
+      eraser(maps_, place_id, layer);
+      modified_.insert(place_id);
     }
   }
 
@@ -144,7 +144,7 @@ public:
 
   inline friend
   std::ostream& operator<<(std::ostream& os, const Marking& m) {
-    const auto& mmap=std::get<0>(m._maps);
+    const auto& mmap=std::get<0>(m.maps_);
     for (auto& kv : mmap) {
       os << "("<< kv.first<<","<<kv.second.size() <<") ";
     }
@@ -163,7 +163,7 @@ void Add(Marking& m, typename Marking::place_t place_id,
   typedef typename boost::mpl::at<typename Marking::container_types,
     boost::mpl::int_<I>>::type container_type;
 
-  auto& typed_dict=std::get<I>(m._maps);
+  auto& typed_dict=std::get<I>(m.maps_);
   auto place_tokens=typed_dict.find(place_id);
   int added=0;
   if (place_tokens!=typed_dict.end()) {
@@ -174,7 +174,7 @@ void Add(Marking& m, typename Marking::place_t place_id,
     typed_dict.emplace(place_id, c);
   }
 
-  m._modified.insert(place_id);
+  m.modified_.insert(place_id);
 }
 
 
@@ -185,7 +185,7 @@ void Remove(Marking& m, typename Marking::place_t place_id,
   typedef typename boost::mpl::at<typename Marking::container_types,
     boost::mpl::int_<I>>::type container_type;
 
-  auto& typed_dict=std::get<I>(m._maps);
+  auto& typed_dict=std::get<I>(m.maps_);
   auto place_tokens=typed_dict.find(place_id);
   int added=0;
   if (place_tokens!=typed_dict.end()) {
@@ -198,7 +198,7 @@ void Remove(Marking& m, typename Marking::place_t place_id,
     assert(place_tokens!=typed_dict.end());
   }
 
-  m._modified.insert(place_id);
+  m.modified_.insert(place_id);
 }
 
 
@@ -208,7 +208,7 @@ void Remove(Marking& m, typename Marking::place_t place_id,
 template<int I, typename Marking>
 int Length(const Marking& m, typename Marking::place_t place_id)
 {
-  const auto& typed_dict=std::get<I>(m._maps);
+  const auto& typed_dict=std::get<I>(m.maps_);
   auto place_tokens=typed_dict.find(place_id);
   if (place_tokens!=typed_dict.end()) {
     return place_tokens->second.size();
@@ -224,7 +224,7 @@ template<int I, typename Marking>
 size_t Length(const Marking& m, typename Marking::place_t place_id,
   typename color_type<typename boost::mpl::at<
       typename Marking::token_types,boost::mpl::int_<I>>::type>::type color) {
-  const auto& typed_dict=std::get<I>(m._maps);
+  const auto& typed_dict=std::get<I>(m.maps_);
   auto place_tokens=typed_dict.find(place_id);
   if (place_tokens!=typed_dict.end()) {
     const auto& colored=place_tokens->second;
@@ -254,7 +254,7 @@ Get(const Marking& m, typename Marking::place_t place_id,
       typename Marking::token_types,boost::mpl::int_<I>>::type
   )>::type return_type;
 
-  const auto& typed_dict=std::get<I>(m._maps);
+  const auto& typed_dict=std::get<I>(m.maps_);
   auto place_tokens=typed_dict.find(place_id);
   if (place_tokens!=typed_dict.end()) {
     auto begin=place_tokens->second.begin();
@@ -286,7 +286,7 @@ void Move(Marking& m, typename Marking::place_t place_from,
   typedef typename boost::mpl::at<typename Marking::container_types,
     boost::mpl::int_<J>>::type container_type;
     
-  auto& typed_dict=std::get<J>(m._maps);
+  auto& typed_dict=std::get<J>(m.maps_);
   auto place_tokens=typed_dict.find(place_from);
   auto dest_tokens=typed_dict.find(place_to);
   if (place_tokens!=typed_dict.end()) {
@@ -318,8 +318,8 @@ void Move(Marking& m, typename Marking::place_t place_from,
     typed_dict.erase(place_tokens);
   }
 
-  m._modified.insert(place_from);
-  m._modified.insert(place_to);
+  m.modified_.insert(place_from);
+  m.modified_.insert(place_to);
   BOOST_LOG_TRIVIAL(trace)<<"move(Marking) modified "<<place_from<<","<<place_to;
   return;
 }

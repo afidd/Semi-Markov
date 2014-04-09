@@ -39,11 +39,11 @@ namespace smv
 template<typename GSPN, typename State, typename RNG>
 class PartialCoreMatrix
 {
-  GSPN& _gspn;
+  GSPN& gspn_;
   using Marking=typename State::Marking;
-  State& _state;
+  State& state_;
   using Dist=TransitionDistribution<RNG>;
-  std::map<typename GSPN::TransitionKey,std::unique_ptr<Dist>> _distributions;
+  std::map<typename GSPN::TransitionKey,std::unique_ptr<Dist>> distributions_;
 
 public:
   typedef GSPN PetriNet;
@@ -51,51 +51,51 @@ public:
   typedef typename GSPN::TransitionKey TransitionKey;
 
   PartialCoreMatrix(GSPN& gspn, State& s)
-  : _gspn(gspn), _state(s)
+  : gspn_(gspn), state_(s)
   {}
 
 
   template<typename FUNCTOR>
   void StateMachineToken(const FUNCTOR& token)
   {
-    token(_state);
+    token(state_);
   }
 
 
   template<typename FUNCTOR>
   void Transitions(const FUNCTOR& eval)
   { 
-    if (_state.marking.Modified().size()>0)
+    if (state_.marking.Modified().size()>0)
     {
       // Check all neighbors of a place to see if they were enabled.
-      auto lm=_state.marking.GetLocalMarking();
+      auto lm=state_.marking.GetLocalMarking();
 
-      NeighborsOfPlaces(_gspn, _state.marking.Modified(),
+      NeighborsOfPlaces(gspn_, state_.marking.Modified(),
         [&] (TransitionKey neighbor_id)
         {
           // Was this transition enabled? When?
-          auto previous_distribution=_distributions.find(neighbor_id);
+          auto previous_distribution=distributions_.find(neighbor_id);
           double enabling_time;
-          bool previously_enabled=previous_distribution!=_distributions.end();
+          bool previously_enabled=previous_distribution!=distributions_.end();
           if (previously_enabled)
           {
             enabling_time=previous_distribution->second->EnablingTime();
           }
           else
           {
-            enabling_time=_state.CurrentTime();
+            enabling_time=state_.CurrentTime();
           }
 
           // Set up the local marking.
           auto neighboring_places=
-              NeighborsOfTransition(_gspn, neighbor_id);
-          _state.marking.InitLocal(lm, neighboring_places);
+              NeighborsOfTransition(gspn_, neighbor_id);
+          state_.marking.InitLocal(lm, neighboring_places);
 
           bool isEnabled=false;
           std::unique_ptr<TransitionDistribution<RNG>> dist;
           std::tie(isEnabled, dist)=
-              Enabled(_gspn, neighbor_id, _state.user, lm,
-              enabling_time, _state.CurrentTime());
+              Enabled(gspn_, neighbor_id, state_.user, lm,
+              enabling_time, state_.CurrentTime());
 
           if (isEnabled)
           {
@@ -103,13 +103,13 @@ public:
             // in case it has changed.
             if (dist!=nullptr)
             {
-              _distributions.emplace(neighbor_id, std::move(dist));
+              distributions_.emplace(neighbor_id, std::move(dist));
             }
             // else it's OK if they return nullptr. Use old distribution.
           }
           else if (!isEnabled && previously_enabled)
           {
-            _distributions.erase(neighbor_id);
+            distributions_.erase(neighbor_id);
           }
           else
           {
@@ -117,36 +117,36 @@ public:
           }
         });
       BOOST_LOG_TRIVIAL(trace) << "Marking modified cnt: "<<
-          _state.marking.Modified().size() << " enabled " <<
-          _distributions.size();
-      _state.marking.Clear();
+          state_.marking.Modified().size() << " enabled " <<
+          distributions_.size();
+      state_.marking.Clear();
     }
 
-    auto begin=_distributions.begin();
-    for (; begin!=_distributions.end(); ++begin)
+    auto begin=distributions_.begin();
+    for (; begin!=distributions_.end(); ++begin)
     {
       TransitionKey trans_id=begin->first;
-      eval(begin->second, trans_id, _state.CurrentTime());
+      eval(begin->second, trans_id, state_.CurrentTime());
     }
   }
 
 
   void Trigger(TransitionKey trans_id, double when, RNG& rng)
   {
-    auto neighboring_places=NeighborsOfTransition(_gspn, trans_id);
+    auto neighboring_places=NeighborsOfTransition(gspn_, trans_id);
 
     BOOST_LOG_TRIVIAL(trace)<<"Fire "<<trans_id<<" neighbors: "<<
       neighboring_places.size();
-    auto lm=_state.marking.GetLocalMarking();
-    _state.marking.InitLocal(lm, neighboring_places);
-    Fire(_gspn, trans_id, _state.user, lm, rng);
-    _state.marking.ReadLocal(lm, neighboring_places);
+    auto lm=state_.marking.GetLocalMarking();
+    state_.marking.InitLocal(lm, neighboring_places);
+    Fire(gspn_, trans_id, state_.user, lm, rng);
+    state_.marking.ReadLocal(lm, neighboring_places);
 
     BOOST_LOG_TRIVIAL(trace) << "Fire "<<trans_id << " modifies "
-      << _state.marking.Modified().size() << " places.";
+      << state_.marking.Modified().size() << " places.";
 
-    auto current_time=_state.AddTime(when);
-    _distributions.erase(trans_id);
+    auto current_time=state_.AddTime(when);
+    distributions_.erase(trans_id);
   }
 };
 

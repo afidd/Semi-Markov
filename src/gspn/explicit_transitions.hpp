@@ -91,7 +91,7 @@ public:
 
 private:
   // The GSPN gets the marking type from the State.
-  BiMap _bimap;
+  BiMap bimap_;
   std::map<TransitionKey,std::unique_ptr<Transition>> transitions;
   PetriGraph graph;
 
@@ -108,7 +108,7 @@ public:
   {
     transitions=std::move(other.transitions);
     graph=std::move(other.graph);
-    _bimap=std::move(other._bimap);
+    bimap_=std::move(other.bimap_);
   }
 
 
@@ -118,7 +118,7 @@ public:
     {
       transitions=std::move(other.transitions);
       graph=std::move(other.graph);
-      _bimap=std::move(other._bimap);
+      bimap_=std::move(other.bimap_);
     }
   }
 
@@ -126,25 +126,25 @@ public:
 
   int64_t PlaceVertex(UserPlaceKey p) const
   {
-    return GetPvertex(_bimap, p);
+    return GetPvertex(bimap_, p);
   }
 
 
   UserPlaceKey VertexPlace(int64_t v) const
   {
-    return GetPlace(_bimap, v);
+    return GetPlace(bimap_, v);
   }
 
 
   int64_t TransitionVertex(UserTransitionKey t) const
   {
-    return GetTvertex(_bimap, t);
+    return GetTvertex(bimap_, t);
   }
 
 
   UserTransitionKey VertexTransition(int64_t v) const
   {
-    return GetTransition(_bimap, v);
+    return GetTransition(bimap_, v);
   }
 
 

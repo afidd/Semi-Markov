@@ -170,12 +170,12 @@ class BuildGraph
   using BGTransition=typename ET::UserTransitionKey;
   using Transition=typename ET::Transition;
 
-  PetriBuildGraphType _g;
+  PetriBuildGraphType g_;
   using vert=boost::graph_traits<PetriBuildGraphType>::vertex_descriptor;
   using edge_t=boost::graph_traits<PetriBuildGraphType>::edge_descriptor;
 
-  BiGraphCorrespondence<BGPlace,BGTransition,vert> _bimap;
-  std::map<BGTransition,std::unique_ptr<Transition>> _transitions;
+  BiGraphCorrespondence<BGPlace,BGTransition,vert> bimap_;
+  std::map<BGTransition,std::unique_ptr<Transition>> transitions_;
 
   // This is the translation map for the compiled graph,
   // not for the one we use internally.
@@ -189,16 +189,16 @@ public:
 
 
   bool AddPlace(BGPlace p, int token_layer=0) {
-    auto v=add_vertex({PetriGraphColor::Place, token_layer}, _g);
-    return PutPlace(_bimap, v, p);
+    auto v=add_vertex({PetriGraphColor::Place, token_layer}, g_);
+    return PutPlace(bimap_, v, p);
   }
 
 
 
   bool AddTransition(BGTransition t, std::vector<PlaceEdge> e,
     std::unique_ptr<Transition> transition) {
-    auto tv=add_vertex({PetriGraphColor::Transition, 0}, _g);
-    bool added=PutTransition(_bimap, tv, t);
+    auto tv=add_vertex({PetriGraphColor::Transition, 0}, g_);
+    bool added=PutTransition(bimap_, tv, t);
 
     for (auto edge : e) {
       BGPlace p=std::get<0>(edge);
@@ -208,7 +208,7 @@ public:
       }
     }
 
-    _transitions.emplace(t, std::move(transition));
+    transitions_.emplace(t, std::move(transition));
 
     return added;
   }
@@ -217,15 +217,15 @@ public:
 
   bool AddEdge(BGTransition t, BGPlace p, int weight)
   {
-    auto tv=GetTvertex(_bimap, t);
-    assert(_g[tv].color==PetriGraphColor::Transition);
-    auto pv=GetPvertex(_bimap, p);
-    assert(_g[pv].color==PetriGraphColor::Place);
+    auto tv=GetTvertex(bimap_, t);
+    assert(g_[tv].color==PetriGraphColor::Transition);
+    auto pv=GetPvertex(bimap_, p);
+    assert(g_[pv].color==PetriGraphColor::Place);
 
     if (weight<0) {
       edge_t new_edge;
       bool success;
-      std::tie(new_edge, success)=boost::add_edge(pv, tv, {weight}, _g);
+      std::tie(new_edge, success)=boost::add_edge(pv, tv, {weight}, g_);
       if (!success) {
         BOOST_LOG_TRIVIAL(error) << "Could not add edge";
         return false;
@@ -233,7 +233,7 @@ public:
     } else {
       edge_t new_edge;
       bool success;
-      std::tie(new_edge, success)=boost::add_edge(tv, pv, {weight}, _g);
+      std::tie(new_edge, success)=boost::add_edge(tv, pv, {weight}, g_);
       if (!success) {
         BOOST_LOG_TRIVIAL(error) << "Could not add edge";
         return false;
@@ -252,14 +252,14 @@ public:
   ET Build()
   {
     // Check the current graph before we continue.
-    size_t stoch_start=NumStochiometricCoefficients(_g);
+    size_t stoch_start=NumStochiometricCoefficients(g_);
     BOOST_LOG_TRIVIAL(debug)<< stoch_start
         << " stochiometric coefficients start";
-    auto bipartite=IsBipartitePetriGraph(_g);
+    auto bipartite=IsBipartitePetriGraph(g_);
     BOOST_LOG_TRIVIAL(debug)<< " is bipartite "<<bipartite;
     assert(bipartite);
 
-    ET et(num_vertices(_g));
+    ET et(num_vertices(g_));
     PetriGraphType& g=et.graph;
     using vert_n=boost::graph_traits<PetriGraphType>::vertex_descriptor;
 
@@ -272,7 +272,7 @@ public:
     using viter=boost::graph_traits<PetriBuildGraphType>::vertex_iterator;
     viter ind_begin;
     viter ind_end;
-    std::tie(ind_begin, ind_end)=vertices(_g);
+    std::tie(ind_begin, ind_end)=vertices(g_);
     for (int64_t idx=0; ind_begin!=ind_end; ++ind_begin, ++idx) {
       vertex_index.emplace(*ind_begin, idx);
     }
@@ -291,10 +291,10 @@ public:
     using TransPMap=boost::associative_property_map<TransMap>;
     TransPMap translate_pmap(translate);
 
-    copy_graph(_g, g, boost::vertex_index_map(vertex_index_map).
+    copy_graph(g_, g, boost::vertex_index_map(vertex_index_map).
       orig_to_copy(translate_pmap));
 
-    typename ET::BiMap& b=et._bimap;
+    typename ET::BiMap& b=et.bimap_;
 
     for (auto trans_iter=translate.begin();
         trans_iter!=translate.end();
@@ -303,26 +303,26 @@ public:
       auto old_vertex=trans_iter->first;
       auto new_vertex=trans_iter->second;
       // Is the old vertex a place or a transition?
-      auto place_iter=_bimap.vp.find(old_vertex);
-      auto transition_iter=_bimap.vt.find(old_vertex);
-      if (place_iter!=_bimap.vp.end()) {
-        if (transition_iter!=_bimap.vt.end()) {
+      auto place_iter=bimap_.vp.find(old_vertex);
+      auto transition_iter=bimap_.vt.find(old_vertex);
+      if (place_iter!=bimap_.vp.end()) {
+        if (transition_iter!=bimap_.vt.end()) {
           BOOST_LOG_TRIVIAL(error)<<"The same vertex points both to a place "
             "and a transition.";
-          assert(transition_iter==_bimap.vt.end());
+          assert(transition_iter==bimap_.vt.end());
         }
         PutPlace(b, static_cast<int64_t>(new_vertex), place_iter->second);
-      } else if (transition_iter!=_bimap.vt.end()) {
+      } else if (transition_iter!=bimap_.vt.end()) {
         PutTransition(b, static_cast<int64_t>(new_vertex),
             transition_iter->second);
 
-        auto trans_obj_iter=_transitions.find(transition_iter->second);
-        if (trans_obj_iter!=_transitions.end()) {
+        auto trans_obj_iter=transitions_.find(transition_iter->second);
+        if (trans_obj_iter!=transitions_.end()) {
           et.transitions.emplace(new_vertex, std::move(trans_obj_iter->second));
         } else {
           BOOST_LOG_TRIVIAL(error) << "Every transition must have a transition"
             " object.";
-          assert(trans_obj_iter!=_transitions.end());
+          assert(trans_obj_iter!=transitions_.end());
         }
       } else {
         BOOST_LOG_TRIVIAL(error) << "A vertex wasn't translated during the "

@@ -23,8 +23,8 @@
 //   Please cite the author in any work or product based on this material.
 //
 //   =========================================================================
-#ifndef _LOCAL_MARKING_H_
-#define _LOCAL_MARKING_H_ 1
+#ifndef _LOCALm_ARKING_H_
+#define _LOCALm_ARKING_H_ 1
 
 #include "boost/mpl/vector.hpp"
 #include "boost/mpl/apply.hpp"
@@ -237,7 +237,7 @@ struct DoNothing
 template<typename First, typename Last, typename LM, typename RNG>
 struct CopyTokens
 {
-  static void copy_layer(LM& local_mark, RNG& rng)
+  static void copy_layer(LM& localm_ark, RNG& rng)
   {
     using LayerConstant=typename boost::mpl::deref<First>::type;
     static const int I=LayerConstant::value;
@@ -250,7 +250,7 @@ struct CopyTokens
     int layer;
     int weight;
 
-    for (auto collect_place : local_mark.place_indexes())
+    for (auto collect_place : localm_ark.place_indexes())
     {
       std::tie(place, layer, weight)=collect_place;
       if (layer==I)
@@ -289,7 +289,7 @@ struct CopyTokens
       static_assert(std::is_same<int,
         typename LayerConstant::value_type>::value,
         "I is not an int");
-      local_mark.template move<I,I>(*initer, *outiter, 1);
+      localm_ark.template move<I,I>(*initer, *outiter, 1);
     }
 
     // If out needs extra tokens, create them.
@@ -297,13 +297,13 @@ struct CopyTokens
     {
       using TokenType=typename mpl::at<typename LM::Marking::token_types,LayerConstant>::type;
       boost::value_initialized<TokenType> t;
-      local_mark.template add<I>(*outiter, t.data());
+      localm_ark.template add<I>(*outiter, t.data());
     }
 
      // If in has extra tokens, destroy them.
     for ( ; initer!=ins.end(); ++initer)
     {
-      local_mark.template remove<I,RNG>(*initer, 1, rng);
+      localm_ark.template remove<I,RNG>(*initer, 1, rng);
     }
 
     typedef typename std::conditional
@@ -312,7 +312,7 @@ struct CopyTokens
         NoCopy<LM,RNG>,
         CopyTokens<typename boost::mpl::next<First>::type, Last, LM, RNG>
       >::type SubCopy;
-    SubCopy::copy_layer(local_mark, rng);
+    SubCopy::copy_layer(localm_ark, rng);
   }
 };
 
@@ -496,20 +496,20 @@ class LocalMarking
   // kind for each possible token_layer. So it's vector of
   // tuple< tuple<container0&,container1&>, layer, stoch_coeff>.
   using PlaceVec=std::vector<std::tuple<ptuple,int,int>>;
-  PlaceVec _m;
-  std::set<int> _modified;
-  std::set<int> _added;
-  std::set<int> _removed;
+  PlaceVec m_;
+  std::set<int> modified_;
+  std::set<int> added_;
+  std::set<int> removed_;
 
 public:
   /*! Constructor. Argument is the number of inputs and outputs.
    */ 
-  LocalMarking() : _m{}
+  LocalMarking() : m_{}
   {}
 
   ~LocalMarking() {
-    for (auto ridx : _added) {
-      auto& place_container=_m.at(ridx);
+    for (auto ridx : added_) {
+      auto& place_container=m_.at(ridx);
       auto& token_container=std::get<0>(place_container);
       auto layer=std::get<1>(place_container);
 
@@ -522,19 +522,19 @@ public:
   void Reserve(size_t cnt)
   {
     BOOST_LOG_TRIVIAL(trace)<<"LocalMarking::reserve "<<cnt;
-    _m.reserve(cnt);
+    m_.reserve(cnt);
   }
 
 
   void Resize(size_t cnt)
   {
-    _m.resize(cnt);
+    m_.resize(cnt);
   }
 
 
   std::array<std::set<int>,3> Changes() const
   {
-    return {_modified, _added, _removed};
+    return {modified_, added_, removed_};
   }
 
 
@@ -544,7 +544,7 @@ public:
   void Set(int place_idx, typename boost::mpl::at<
     typename LocalMarking::container_types,boost::mpl::int_<I>>::type* ptr,
     int stochiometric_coefficient) {
-    auto& place_container=_m.at(place_idx);
+    auto& place_container=m_.at(place_idx);
 
     auto& token_container=std::get<0>(place_container);
     std::get<I>(token_container)=ptr;
@@ -564,7 +564,7 @@ public:
     typedef typename boost::mpl::at<typename LocalMarking::container_types,
       boost::mpl::int_<I>>::type container_type;
 
-    auto& place_container=_m.at(place_idx);
+    auto& place_container=m_.at(place_idx);
     auto& token_containers=std::get<0>(place_container);
     auto& token_container=std::get<I>(token_containers);
 
@@ -572,11 +572,11 @@ public:
       detail::add_to_container(*token_container, token);
     } else {
       token_container=new container_type{};
-      _added.insert(place_idx);
+      added_.insert(place_idx);
       detail::add_to_container(*token_container, token);
     }
 
-    _modified.insert(place_idx);
+    modified_.insert(place_idx);
   }
 
 
@@ -588,7 +588,7 @@ public:
     typedef typename boost::mpl::at<typename LocalMarking::container_types,
       boost::mpl::int_<I>>::type container_type;
 
-    auto& place_container=_m.at(place_idx);
+    auto& place_container=m_.at(place_idx);
     auto& token_containers=std::get<0>(place_container);
     auto& token_container=std::get<I>(token_containers);
     if (token_container!=nullptr) {
@@ -598,9 +598,9 @@ public:
         "nonexistent container "<<place_idx<<" "<<I<<" "<<cnt;
     }
     if (token_container->size()==0) {
-      _removed.insert(place_idx);
+      removed_.insert(place_idx);
     } else {
-      _modified.insert(place_idx);
+      modified_.insert(place_idx);
     }
   }
 
@@ -609,7 +609,7 @@ public:
 
   template<int I>
   int Length(int place_idx) const {
-    auto& place_container=_m.at(place_idx);
+    auto& place_container=m_.at(place_idx);
     auto& token_container=std::get<I>(std::get<0>(place_container));
     if (token_container!=nullptr) {
       return token_container->size();
@@ -639,7 +639,7 @@ public:
         typename LocalMarking::container_types,boost::mpl::int_<I>>::type
     )>::type return_type;
 
-    auto& place_container=_m.at(place_idx);
+    auto& place_container=m_.at(place_idx);
     auto& token_containers=std::get<0>(place_container);
     auto& token_container=std::get<I>(token_containers);
 
@@ -670,7 +670,7 @@ public:
         typename LocalMarking::token_types,boost::mpl::int_<I>>::type
     )>::type return_type;
 
-    auto& place_container=_m.at(place_idx);
+    auto& place_container=m_.at(place_idx);
     auto& token_containers=std::get<0>(place_container);
     auto& token_container=std::get<I>(token_containers);
 
@@ -697,19 +697,19 @@ public:
       <<" to "<<place_to;
     if (0==cnt) return;
 
-    auto& place_from_container=_m.at(place_from);
+    auto& place_from_container=m_.at(place_from);
     auto& from_container=std::get<I>(std::get<0>(place_from_container));
 
     if (from_container!=nullptr) {
       if (from_container->size()>=cnt) {
         typedef typename boost::mpl::at<typename LocalMarking::container_types,
           boost::mpl::int_<J>>::type to_container_type;
-        auto& place_to_container=_m.at(place_to);
+        auto& place_to_container=m_.at(place_to);
         auto& to_container=std::get<J>(std::get<0>(place_to_container));
         if (to_container==nullptr) {
           BOOST_LOG_TRIVIAL(trace)<< "Moving to_container null";
           to_container=new to_container_type{};
-          _added.insert(place_to);
+          added_.insert(place_to);
         } else {
           BOOST_LOG_TRIVIAL(trace)<< "Moving to_container exists";
         }
@@ -732,7 +732,7 @@ public:
         }
         if (from_container->size()==0) {
           BOOST_LOG_TRIVIAL(trace)<<"Moving mark "<<place_from<<" to erase.";
-          _removed.insert(place_from);
+          removed_.insert(place_from);
         }
       } else {
         BOOST_LOG_TRIVIAL(error)<<"Not enough tokens to move "
@@ -748,14 +748,14 @@ public:
 
 
   int Layer(int place_idx) const {
-    auto& place_container=_m.at(place_idx);
+    auto& place_container=m_.at(place_idx);
     return std::get<1>(place_container);
   }
 
 
 
   int stochiometric_coefficient(int place_idx) const {
-    auto& place_container=_m.at(place_idx);
+    auto& place_container=m_.at(place_idx);
     return std::get<2>(place_container);
   }
 
@@ -788,7 +788,7 @@ public:
     int layer=0;
     int weight=0;
 
-    for (auto& collect_place : _m) {
+    for (auto& collect_place : m_) {
       layer=std::get<1>(collect_place);
       weight=std::get<2>(collect_place);
 
@@ -857,7 +857,7 @@ public:
     int layer=0;
     int weight=0;
 
-    for (auto& collect_place : _m) {
+    for (auto& collect_place : m_) {
       layer=std::get<1>(collect_place);
       weight=std::get<2>(collect_place);
       if (layer==I) {
@@ -883,7 +883,7 @@ public:
     int layer;
     int weight;
 
-    for (auto collect_place : _m.place_indexes()) {
+    for (auto collect_place : m_.place_indexes()) {
       std::tie(place_idx, layer, weight)=collect_place;
       if (layer==I) {
         if (weight>0) {
@@ -902,7 +902,7 @@ public:
 
   inline friend
   std::ostream& operator<<(std::ostream& os, const LocalMarking& lm) {
-    return os << "Local marking "<<lm._m.size();
+    return os << "Local marking "<<lm.m_.size();
   }
 
 };
@@ -915,4 +915,4 @@ public:
 }
 }
 
-#endif // _LOCAL_MARKING_H_
+#endif // _LOCALm_ARKING_H_
