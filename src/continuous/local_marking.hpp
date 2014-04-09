@@ -1,7 +1,16 @@
 #ifndef _LOCAL_MARKING_H_
 #define _LOCAL_MARKING_H_ 1
 
-#include "marking.hpp"
+#include "boost/mpl/vector.hpp"
+#include "boost/mpl/apply.hpp"
+#include "boost/mpl/at.hpp"
+#include "boost/mpl/if.hpp"
+#include "boost/mpl/fold.hpp"
+#include "boost/mpl/range_c.hpp"
+#include "boost/mpl/transform.hpp"
+#include "boost/mpl/size.hpp"
+#include "boost/utility/value_init.hpp"
+#include "gspn_random.hpp"
 #include "logging.hpp"
 
 

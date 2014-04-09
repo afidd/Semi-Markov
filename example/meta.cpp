@@ -17,16 +17,7 @@
 #include "boost/random/binomial_distribution.hpp"
 #include "boost/graph/erdos_renyi_generator.hpp"
 #include "logging.hpp"
-#include "petri_graph.hpp"
-#include "gspn.hpp"
-#include "continuous_state.hpp"
-#include "marking.hpp"
-#include "distributions.hpp"
-#include "explicit_transitions.hpp"
-#include "partial_core_matrix.hpp"
-#include "continuous_dynamics.hpp"
-#include "smv_algorithm.hpp"
-#include "local_marking.hpp"
+#include "smv.hpp"
 
 
 using namespace afidd::smv;
@@ -293,7 +284,7 @@ SIRGSPN BuildSystem(size_t nodes_per_metapopulation,
     size_t metapopulation_cnt, double edge_fraction, double binomial_p,
     RNG& rng)
 {
-  auto contact_graph=serial_metapopulation(nodes_per_metapopulation,
+  auto contact_graph=SerialMetapopulation(nodes_per_metapopulation,
     metapopulation_cnt, edge_fraction, binomial_p, rng);
 
   BuildGraph<SIRGSPN> bg;
@@ -460,7 +451,7 @@ int main(int argc, char* argv[])
   for (size_t meta_idx=0; meta_idx<metapopulation_cnt; ++meta_idx) {
     for (size_t ind_idx=0; ind_idx<individuals_per_metapopulation; ++ind_idx) {
       auto vert=gspn.PlaceVertex(SIRPlace{0, ind_idx, meta_idx});
-      add<0>(state.marking, vert, IndividualToken{});
+      Add<0>(state.marking, vert, IndividualToken{});
     }
   }
 

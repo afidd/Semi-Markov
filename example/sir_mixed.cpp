@@ -16,18 +16,7 @@
 #include "boost/property_map/property_map.hpp"
 #include "boost/mpl/vector.hpp"
 #include "boost/program_options.hpp"
-#include "gspn.hpp"
-#include "petri_graph.hpp"
-#include "marking.hpp"
-#include "distributions.hpp"
-#include "continuous_state.hpp"
-#include "explicit_transitions.hpp"
-#include "partial_core_matrix.hpp"
-#include "continuous_dynamics.hpp"
-#include "build_graph.hpp"
-#include "smv_algorithm.hpp"
-#include "local_marking.hpp"
-#include "logging.hpp"
+#include "smv.hpp"
 
 namespace smv=afidd::smv;
 using namespace smv;

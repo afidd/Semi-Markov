@@ -10,6 +10,7 @@
 #include "boost/mpl/for_each.hpp"
 #include "boost/mpl/next_prior.hpp"
 #include "build_graph.hpp"
+#include "distributions.hpp"
 #include "gspn.hpp"
 #include "logging.hpp"
 

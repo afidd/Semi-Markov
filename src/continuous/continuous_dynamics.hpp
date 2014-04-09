@@ -1,6 +1,12 @@
 #ifndef _CONTINUOUS_DYNAMICS_H_
 #define _CONTINUOUS_DYNAMICS_H_ 1
 
+#include <tuple>
+#include <limits>
+#include <memory>
+#include "distributions.hpp"
+
+
 namespace afidd
 {
 namespace smv
@@ -12,7 +18,8 @@ PropagateCompetingProcesses(PartialCore& system, T& token, RNG& rng)
   system.StateMachineToken(token);
   using Transition=typename PartialCore::TransitionKey;
 
-  auto least=std::make_tuple(Transition{}, std::numeric_limits<double>::infinity());
+  auto least=std::make_tuple(Transition{},
+      std::numeric_limits<double>::infinity());
 
   using DistPtr=std::unique_ptr<TransitionDistribution<RNG>>;
 
