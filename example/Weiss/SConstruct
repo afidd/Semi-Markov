@@ -1,0 +1,66 @@
+#!/opt/local/bin/python2.7
+
+from os import environ
+import os.path
+
+env = DefaultEnvironment(
+    CC='/opt/local/bin/clang',
+    CCFLAGS='-arch x86_64 -fPIC -O',
+    CXX='/opt/local/bin/clang++',
+    CXXFLAGS='-arch x86_64 -fPIC -O -std=c++11',
+    LATEX='/opt/local/bin/pdflatex',
+    TEXMFHOME=['/opt/local/share/texmf-texlive', '/opt/local/share/texmf-local'],
+    LIBPATH=['/opt/local/lib', '/pkg/lib'],
+    ENV = environ
+)
+
+env['TANGLE']    = '/opt/local/bin/notangle'
+env['WEAVE']     = '/opt/local/bin/noweave'
+env['ASYMPTOTE'] = '/opt/local/bin/asy'
+
+######################################################################
+# Builders
+######################################################################
+
+#Create tex from noweb
+env.Append(BUILDERS = {'NWtoTeX' : Builder(action='$WEAVE -filter \'sed "/^@use /s/_/\\\\_/g;/^@defn /s/_/\\\\_/g"\' -n -delay $SOURCE > $TARGET', src_suffix='.nw', suffix='.tex')})
+
+# Extract files from noweb source
+env.Append(BUILDERS = {'NWtoCpp' : Builder(action='$TANGLE -R${TARGET.file} $SOURCE > $TARGET', src_suffix='.nw', suffix='.cpp')})
+env.Append(BUILDERS = {'NWtoHpp' : Builder(action='$TANGLE -R${TARGET.file} $SOURCE > $TARGET', src_suffix='.nw', suffix='.hpp')})
+env.Append(BUILDERS = {'NWtoPy' : Builder(action='$TANGLE -R${TARGET.file} $SOURCE > $TARGET', src_suffix='.nw', suffix='.py')})
+
+
+######################################################################
+# Documentation
+######################################################################
+
+tex = env.NWtoTeX('weiss')
+tex = env.Depends(tex, 'weiss.nw')
+env.Default(tex)
+
+pdf = env.PDF(tex)
+pdf = env.Depends(pdf, tex)
+
+######################################################################
+# Python files
+######################################################################
+
+include = env.NWtoHpp(source='weiss.nw', target='weiss.hpp')
+source = env.NWtoCpp(source='weiss.nw', target='weiss.cpp')
+sim = env.Program(source, 
+                  CPPPATH = ['.', '/opt/local/include', '../../src', '../../src/gspn', '../../src/utility', '../../src/continuous'], 
+                  LIBPATH = ['/opt/local/lib'],
+                  LIBS    = ['boost_program_options-mt', 'boost_log-mt'])
+sim = env.Depends(sim, include)
+env.Default([pdf, sim, include])
+
+
+
+
+
+
+			    
+		
+
+
