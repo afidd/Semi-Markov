@@ -30,6 +30,7 @@
 #include <map>
 #include "logging.hpp"
 #include "distributions.hpp"
+#include "continuous_dynamics.hpp"
 
 namespace afidd
 {
@@ -39,115 +40,121 @@ namespace smv
 template<typename GSPN, typename State, typename RNG>
 class PartialCoreMatrix
 {
-  GSPN& gspn_;
-  using Marking=typename State::Marking;
-  State& state_;
-  using Dist=TransitionDistribution<RNG>;
-  std::map<typename GSPN::TransitionKey,std::unique_ptr<Dist>> distributions_;
-
-public:
-  typedef GSPN PetriNet;
+ public:
   // Re-advertise the transition key.
   typedef typename GSPN::TransitionKey TransitionKey;
+  typedef ContinuousPropagator<TransitionKey,RNG> Propagator;
+  using PropagatorVector=std::vector<Propagator*>;
+  typedef GSPN PetriNet;
 
-  PartialCoreMatrix(GSPN& gspn, State& s)
-  : gspn_(gspn), state_(s)
-  {}
+  PartialCoreMatrix(GSPN& gspn, State& s, PropagatorVector pv)
+  : gspn_(gspn), state_(s), propagator_{pv} {}
 
+  void MakeCurrent() { 
+    if (state_.marking.Modified().size()==0) return;
+    // Check all neighbors of a place to see if they were enabled.
+    auto lm=state_.marking.GetLocalMarking();
 
-  template<typename FUNCTOR>
-  void StateMachineToken(const FUNCTOR& token)
-  {
-    token(state_);
-  }
-
-
-  template<typename FUNCTOR>
-  void Transitions(const FUNCTOR& eval)
-  { 
-    if (state_.marking.Modified().size()>0)
-    {
-      // Check all neighbors of a place to see if they were enabled.
-      auto lm=state_.marking.GetLocalMarking();
-
-      NeighborsOfPlaces(gspn_, state_.marking.Modified(),
-        [&] (TransitionKey neighbor_id)
-        {
-          // Was this transition enabled? When?
-          auto previous_distribution=distributions_.find(neighbor_id);
-          double enabling_time;
-          bool previously_enabled=previous_distribution!=distributions_.end();
-          if (previously_enabled)
-          {
-            enabling_time=previous_distribution->second->EnablingTime();
+    NeighborsOfPlaces(gspn_, state_.marking.Modified(),
+      [&] (TransitionKey neighbor_id) {
+        // Was this transition enabled? When?
+        double enabling_time=0.0;
+        Propagator* previous_propagator=nullptr;
+        for (const auto& enable_prop : propagator_) {
+          double previously_enabled=false;
+          std::tie(previously_enabled, enabling_time)
+              =enable_prop->Enabled(neighbor_id);
+          if (previously_enabled) {
+            previous_propagator=enable_prop;
+            break;
           }
-          else
-          {
-            enabling_time=state_.CurrentTime();
-          }
+        }
+        if (previous_propagator==nullptr) enabling_time=state_.CurrentTime();
 
-          // Set up the local marking.
-          auto neighboring_places=
-              NeighborsOfTransition(gspn_, neighbor_id);
-          state_.marking.InitLocal(lm, neighboring_places);
+        // Set up the local marking.
+        auto neighboring_places=
+            NeighborsOfTransition(gspn_, neighbor_id);
+        state_.marking.InitLocal(lm, neighboring_places);
 
-          bool isEnabled=false;
-          std::unique_ptr<TransitionDistribution<RNG>> dist;
-          std::tie(isEnabled, dist)=
-              Enabled(gspn_, neighbor_id, state_.user, lm,
-              enabling_time, state_.CurrentTime());
+        bool isEnabled=false;
+        std::unique_ptr<TransitionDistribution<RNG>> dist;
+        std::tie(isEnabled, dist)=
+            Enabled(gspn_, neighbor_id, state_.user, lm,
+            enabling_time, state_.CurrentTime());
 
-          if (isEnabled)
-          {
-            // Even if it was already enabled, take the new distribution
-            // in case it has changed.
-            if (dist!=nullptr)
-            {
-              distributions_.emplace(neighbor_id, std::move(dist));
+        if (isEnabled) {
+          Propagator* appropriate=nullptr;
+          for (const auto& prop_ptr : propagator_) {
+            if (prop_ptr->Include(*dist)) {
+              appropriate=prop_ptr;
             }
-            // else it's OK if they return nullptr. Use old distribution.
           }
-          else if (!isEnabled && previously_enabled)
-          {
-            distributions_.erase(neighbor_id);
-          }
-          else
-          {
-            ; // not enabled, not becoming enabled.
-          }
-        });
-      BOOST_LOG_TRIVIAL(trace) << "Marking modified cnt: "<<
-          state_.marking.Modified().size() << " enabled " <<
-          distributions_.size();
-      state_.marking.Clear();
-    }
+          BOOST_ASSERT_MSG(appropriate!=nullptr, "No propagator willing to "
+              "accept this distribution");
 
-    auto begin=distributions_.begin();
-    for (; begin!=distributions_.end(); ++begin)
-    {
-      TransitionKey trans_id=begin->first;
-      eval(begin->second, trans_id, state_.CurrentTime());
-    }
+          // Even if it was already enabled, take the new distribution
+          // in case it has changed.
+          if (dist!=nullptr) {
+            bool was_enabled=previous_propagator!=nullptr;
+            if (was_enabled) {
+              if (previous_propagator==appropriate) {
+                appropriate->Enable(neighbor_id, dist, was_enabled);
+              } else {
+                previous_propagator->Disable(neighbor_id);
+                appropriate->Enable(neighbor_id, dist, was_enabled);
+              }
+            } else {
+              appropriate->Enable(neighbor_id, dist, was_enabled);
+            }
+
+          } else {
+            BOOST_ASSERT_MSG(previous_propagator!=nullptr, "Transition didn't "
+                "return a distribution, so it thinks it was enabled, but it "
+                "isn't listed as enabled in any propagator");
+          }
+
+        } else if (!isEnabled && previous_propagator!=nullptr) {
+          previous_propagator->Disable(neighbor_id);
+
+        } else {
+          ; // not enabled, not becoming enabled.
+        }
+      });
+    BOOST_LOG_TRIVIAL(trace) << "Marking modified cnt: "<<
+        state_.marking.Modified().size();
+    state_.marking.Clear();
   }
 
 
-  void Trigger(TransitionKey trans_id, double when, RNG& rng)
-  {
+  void Trigger(TransitionKey trans_id, double when, RNG& rng) {
     auto neighboring_places=NeighborsOfTransition(gspn_, trans_id);
 
-    BOOST_LOG_TRIVIAL(trace)<<"Fire "<<trans_id<<" neighbors: "<<
-      neighboring_places.size();
     auto lm=state_.marking.GetLocalMarking();
     state_.marking.InitLocal(lm, neighboring_places);
     Fire(gspn_, trans_id, state_.user, lm, rng);
     state_.marking.ReadLocal(lm, neighboring_places);
 
-    BOOST_LOG_TRIVIAL(trace) << "Fire "<<trans_id << " modifies "
-      << state_.marking.Modified().size() << " places.";
+    BOOST_LOG_TRIVIAL(trace) << "Fire "<<trans_id <<" neighbors: "<<
+        neighboring_places.size() << " modifies "
+        << state_.marking.Modified().size() << " places.";
 
     auto current_time=state_.AddTime(when);
-    distributions_.erase(trans_id);
+
+    bool enabled=false;
+    double previous_when;
+    for (auto& prop_ptr : propagator_) {
+      std::tie(enabled, previous_when)=prop_ptr->Enabled(trans_id);
+      if (enabled) {
+        prop_ptr->Disable(trans_id);
+        break;
+      }
+    }
+    BOOST_ASSERT_MSG(enabled, "The transition that fired wasn't enabled?");
   }
+ private:
+  GSPN& gspn_;
+  State& state_;
+  PropagatorVector propagator_;
 };
 
 } // smv

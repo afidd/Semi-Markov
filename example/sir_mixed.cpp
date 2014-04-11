@@ -321,31 +321,38 @@ int main(int argc, char *argv[])
     Add<0>(state.marking, susceptible, IndividualToken{});
   }
 
+  using Propagator=PropagateCompetingProcesses<int64_t,RandGen>;
   using Markov=PartialCoreMatrix<SIRGSPN, SIRState, RandGen>;
-  Markov system(gspn, state);
+  Propagator competing;
+  Markov system(gspn, state, {&competing});
 
   BOOST_LOG_TRIVIAL(debug) << state.marking;
 
   int64_t step_cnt=0;
   // The initial input string moves a token from susceptible to infected.
-  auto first_case=static_cast<int64_t>(smv::uniform_index(rng, individual_cnt));
+  auto first_case=static_cast<int64_t>(
+      smv::uniform_index(rng, individual_cnt));
   BOOST_LOG_TRIVIAL(trace)<<"First case is "<<first_case;
   int64_t first_s=gspn.PlaceVertex({0, first_case});
   int64_t first_i=gspn.PlaceVertex({1, first_case});
   auto input_string=[&first_s, &first_i](SIRState& state)->void {
     Move<0,0>(state.marking, first_s, first_i, 1);
   };
-  auto next=PropagateCompetingProcesses(system, input_string, rng);
+
+  input_string(state);
+  system.MakeCurrent();
+  auto next=competing.Next(state.CurrentTime(), rng);
   ++step_cnt;
 
   auto nothing=[](SIRState&)->void {};
-  for ( ;
-    std::get<1>(next)<std::numeric_limits<double>::max();
-    next=PropagateCompetingProcesses(system, nothing, rng))
-  {
+  while (std::get<1>(next)<std::numeric_limits<double>::max()) {
+    system.Trigger(std::get<0>(next), std::get<1>(next), rng);
+
     BOOST_LOG_TRIVIAL(debug) << "trans " << std::get<0>(next) << " time " <<
         std::get<1>(next);
     BOOST_LOG_TRIVIAL(trace) << state.marking;
+    system.MakeCurrent();
+    next=competing.Next(state.CurrentTime(), rng);
     ++step_cnt;
   }
   BOOST_LOG_TRIVIAL(info)<<"Took "<<step_cnt<<" transitions";
