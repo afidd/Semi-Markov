@@ -310,8 +310,16 @@ class NonHomogeneousPoissonProcesses
       double when,
       bool previously_enabled,
       RNG& rng) override {
-    typename decltype(distributions_)::iterator trans_loc;
-    if (!previously_enabled) {
+    auto trans_loc=distributions_.find(tkey);
+    bool clock_started=(trans_loc!=distributions_.end());
+    if (clock_started) {
+      TransitionEntry& entry=trans_loc->second;
+      queue_.update(entry.queue_iter,
+          {tkey, distribution->ImplicitHazardIntegral(
+          entry.remaining_exponential_interval, when)});
+      entry.dist=std::move(distribution);
+      entry.last_modification_time=when;
+    } else {
       // Make a new timer for a new transition.
       double interval=unit_exponential_(rng);
       double firing_time=distribution->ImplicitHazardIntegral(interval, when);
@@ -321,17 +329,6 @@ class NonHomogeneousPoissonProcesses
           interval, when});
       auto entry_handle=queue_.push({tkey, firing_time});
       trans_loc->second.queue_iter=entry_handle;
-    } else {
-      // Change the predicted time for a transition.
-      trans_loc=distributions_.find(tkey);
-      BOOST_ASSERT_MSG(trans_loc!=distributions_.end(), "A transition was "
-          "enabled but cannot be found.");
-      TransitionEntry& entry=trans_loc->second;
-      queue_.update(entry.queue_iter,
-          {tkey, distribution->ImplicitHazardIntegral(
-          entry.remaining_exponential_interval, when)});
-      entry.dist=std::move(distribution);
-      entry.last_modification_time=when;
     }
   }
 
@@ -355,11 +352,10 @@ class NonHomogeneousPoissonProcesses
         "key doesn't match the top key in the queue.");
     TransitionEntry &trans=distributions_.at(tkey);
     trans.remaining_exponential_interval=unit_exponential_(rng);
-    double firing_time=trans.dist->ImplicitHazardIntegral(
-      trans.remaining_exponential_interval, when);
-    queue_.update(trans.queue_iter, {tkey, firing_time});
     trans.last_modification_time=when;
     trans.dist.reset(nullptr);
+    queue_.update(trans.queue_iter,
+        {tkey, (std::numeric_limits<double>::max)()});
   }
 
  private:

@@ -91,7 +91,6 @@ class PartialCoreMatrix
           }
           BOOST_ASSERT_MSG(appropriate!=nullptr, "No propagator willing to "
               "accept this distribution");
-
           // Even if it was already enabled, take the new distribution
           // in case it has changed.
           if (dist!=nullptr) {
@@ -109,13 +108,11 @@ class PartialCoreMatrix
               appropriate->Enable(neighbor_id, dist, state_.CurrentTime(),
                   was_enabled, rng);
             }
-
           } else {
             BOOST_ASSERT_MSG(previous_propagator!=nullptr, "Transition didn't "
                 "return a distribution, so it thinks it was enabled, but it "
                 "isn't listed as enabled in any propagator");
           }
-
         } else if (!isEnabled && previous_propagator!=nullptr) {
           previous_propagator->Disable(neighbor_id, state_.CurrentTime());
 
