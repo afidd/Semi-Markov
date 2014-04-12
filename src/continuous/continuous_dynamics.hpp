@@ -39,25 +39,8 @@ namespace afidd
 namespace smv
 {
 
-
-template<typename RNG>
-struct IncludeDistributions
+namespace detail
 {
-  virtual bool Include(const TransitionDistribution<RNG>& distribution) const {
-    return true;
-  }
-};
-
-
-template<typename RNG>
-struct BoundedHazardDistributions : public IncludeDistributions<RNG>
-{
-  virtual bool Include(const TransitionDistribution<RNG>& distribution) const {
-    return distribution.BoundedHazard();
-  }
-};
-
-
 /*! Store a map of every enabled transition.
  *  The interface is meant for the PartialCoreMatrix.
  */
@@ -102,6 +85,90 @@ class TransitionsStoreEnabled : boost::noncopyable
   using Dist=TransitionDistribution<RNG>;
   std::map<TransitionKey,std::unique_ptr<Dist>> distributions_;
 };
+
+
+/*! For every transition, record its cumulative internal firing time.
+ *  DistributionType is the unique_ptr to a distribution.
+ *  QueueHandle is a handle to an entry in a mutable queue.
+ */
+template<typename DistributionType,typename QueueHandle>
+struct TransitionTimes
+{
+  DistributionType dist; // nullptr for disabled transitions.
+  double remaining_exponential_interval; // internal clock for transition.
+  double last_modification_time; // absolute system time.
+  QueueHandle queue_iter; // Points to entry in mutable priority queue.
+
+  TransitionTimes() : dist{nullptr}, remaining_exponential_interval{0.0},
+      last_modification_time(0.0), queue_iter(nullptr) {}
+  TransitionTimes(DistributionType& d, double remaining, double last_mod)
+      : dist(std::move(d)), remaining_exponential_interval(remaining),
+      last_modification_time(last_mod), queue_iter(nullptr)
+  {}
+
+  ~TransitionTimes() {}
+  // We add these because it is The Right Thing To Do
+  // and because the class cannot hold a unique_ptr unless it
+  // explicitly handles move operations. dist is a unique_ptr.
+  TransitionTimes(TransitionTimes&& o) : dist{std::move(o.dist)},
+    remaining_exponential_interval{o.remaining_exponential_interval},
+    last_modification_time{o.last_modification_time},
+    queue_iter{o.queue_iter} {
+  }
+
+  TransitionTimes& operator=(TransitionTimes&& o) {
+    if (*this!=o) {
+      dist=std::move(o);
+      remaining_exponential_interval=o.remaining_exponential_interval;
+      last_modification_time=o.last_modification_time;
+      queue_iter=o.queue_iter;
+    }
+  }
+
+  TransitionTimes(const TransitionTimes&) = delete;
+  TransitionTimes& operator=(const TransitionTimes&) = delete;
+};
+
+
+/*! An absolute time firing time, to put into the priority_queue.
+ */
+template<typename TransitionKey>
+struct TransitionFiringTime
+{
+  TransitionKey key;
+  double time;
+};
+
+
+/*! The priority queue has to order entries in reverse time sort.
+ */
+template<typename TransitionKey>
+struct CompareFiringTimes
+{
+  bool operator()(const TransitionFiringTime<TransitionKey>& a,
+      const TransitionFiringTime<TransitionKey>& b) const {
+    return a.time > b.time;
+  }
+};
+} // end namespace detail
+
+template<typename RNG>
+struct IncludeDistributions
+{
+  virtual bool Include(const TransitionDistribution<RNG>& distribution) const {
+    return true;
+  }
+};
+
+
+template<typename RNG>
+struct BoundedHazardDistributions : public IncludeDistributions<RNG>
+{
+  virtual bool Include(const TransitionDistribution<RNG>& distribution) const {
+    return distribution.BoundedHazard();
+  }
+};
+
 
 
 template<typename TransitionKey,typename RNG>
@@ -175,74 +242,11 @@ class PropagateCompetingProcesses
   }
 
  private:
-  TransitionsStoreEnabled<TransitionKey,RNG> transitions_;
+  detail::TransitionsStoreEnabled<TransitionKey,RNG> transitions_;
   std::unique_ptr<IncludeDistributions<RNG>> include_;
 };
 
 
-/*! For every transition, record its cumulative internal firing time.
- *  DistributionType is the unique_ptr to a distribution.
- *  QueueHandle is a handle to an entry in a mutable queue.
- */
-template<typename DistributionType,typename QueueHandle>
-struct TransitionTimes
-{
-  DistributionType dist; // nullptr for disabled transitions.
-  double remaining_exponential_interval; // internal clock for transition.
-  double last_modification_time; // absolute system time.
-  QueueHandle queue_iter; // Points to entry in mutable priority queue.
-
-  TransitionTimes() : dist{nullptr}, remaining_exponential_interval{0.0},
-      last_modification_time(0.0), queue_iter(nullptr) {}
-  TransitionTimes(DistributionType& d, double remaining, double last_mod)
-      : dist(std::move(d)), remaining_exponential_interval(remaining),
-      last_modification_time(last_mod), queue_iter(nullptr)
-  {}
-
-  ~TransitionTimes() {}
-  // We add these because it is The Right Thing To Do
-  // and because the class cannot hold a unique_ptr unless it
-  // explicitly handles move operations. dist is a unique_ptr.
-  TransitionTimes(TransitionTimes&& o) : dist{std::move(o.dist)},
-    remaining_exponential_interval{o.remaining_exponential_interval},
-    last_modification_time{o.last_modification_time},
-    queue_iter{o.queue_iter} {
-  }
-
-  TransitionTimes& operator=(TransitionTimes&& o) {
-    if (*this!=o) {
-      dist=std::move(o);
-      remaining_exponential_interval=o.remaining_exponential_interval;
-      last_modification_time=o.last_modification_time;
-      queue_iter=o.queue_iter;
-    }
-  }
-
-  TransitionTimes(const TransitionTimes&) = delete;
-  TransitionTimes& operator=(const TransitionTimes&) = delete;
-};
-
-
-/*! An absolute time firing time, to put into the priority_queue.
- */
-template<typename TransitionKey>
-struct TransitionFiringTime
-{
-  TransitionKey key;
-  double time;
-};
-
-
-/*! The priority queue has to order entries in reverse time sort.
- */
-template<typename TransitionKey>
-struct CompareFiringTimes
-{
-  bool operator()(const TransitionFiringTime<TransitionKey>& a,
-      const TransitionFiringTime<TransitionKey>& b) const {
-    return a.time > b.time;
-  }
-};
 
 
 /*! Anderson's method for Next Reaction of Competing Processes.
@@ -251,12 +255,12 @@ template<typename TransitionKey,typename RNG>
 class NonHomogeneousPoissonProcesses
 : public ContinuousPropagator<TransitionKey,RNG>
 {
-  using FiringEntry=TransitionFiringTime<TransitionKey>;
-  using Comparator=CompareFiringTimes<TransitionKey>;
+  using FiringEntry=detail::TransitionFiringTime<TransitionKey>;
+  using Comparator=detail::CompareFiringTimes<TransitionKey>;
   using Queue=boost::heap::fibonacci_heap<FiringEntry,
       boost::heap::compare<Comparator>>;
   using QueueHandle=typename Queue::handle_type;
-  using TransitionEntry=TransitionTimes<
+  using TransitionEntry=detail::TransitionTimes<
       std::unique_ptr<TransitionDistribution<RNG>>,QueueHandle>;
   using TransitionMap=std::map<TransitionKey,TransitionEntry>;
  public:
@@ -343,7 +347,7 @@ class NonHomogeneousPoissonProcesses
     trans.last_modification_time=when;
     trans.dist.reset(nullptr);
     queue_.update(trans.queue_iter,
-        {tkey, (std::numeric_limits<double>::max)()});
+        {tkey, (std::numeric_limits<double>::infinity)()});
   }
 
 
@@ -355,7 +359,7 @@ class NonHomogeneousPoissonProcesses
     trans.last_modification_time=when;
     trans.dist.reset(nullptr);
     queue_.update(trans.queue_iter,
-        {tkey, (std::numeric_limits<double>::max)()});
+        {tkey, (std::numeric_limits<double>::infinity)()});
   }
 
  private:

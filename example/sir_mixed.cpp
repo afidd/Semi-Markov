@@ -309,8 +309,8 @@ int main(int argc, char *argv[])
   // Marking of the net.
   static_assert(std::is_same<int64_t,SIRGSPN::PlaceKey>::value,
     "The GSPN's internal place type is int64_t.");
-  using Mark=Marking<int64_t, Uncolored<IndividualToken>>;
-  using SIRState=GSPNState<Mark,WithParams>;
+  using Mark=Marking<SIRGSPN::PlaceKey, Uncolored<IndividualToken>>;
+  using SIRState=GSPNState<Mark,SIRGSPN::TransitionKey,WithParams>;
 
   SIRState state;
   state.user.params[0]=beta;

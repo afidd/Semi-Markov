@@ -138,7 +138,7 @@ class PartialCoreMatrix
         neighboring_places.size() << " modifies "
         << state_.marking.Modified().size() << " places.";
 
-    auto current_time=state_.AddTime(when);
+    auto current_time=state_.SetTime(when);
 
     bool enabled=false;
     double previous_when;
@@ -151,6 +151,9 @@ class PartialCoreMatrix
     }
     BOOST_ASSERT_MSG(enabled, "The transition that fired wasn't enabled?");
   }
+
+  PropagatorVector& Propagators() { return propagator_; }
+
  private:
   GSPN& gspn_;
   State& state_;
