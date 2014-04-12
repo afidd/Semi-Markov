@@ -1,8 +1,8 @@
 // ===========================================================================
 //
-//                            PUBLIC DOMAIN NOTICE 
-//                       Agricultural Research Service 
-//                  United States Department of Agriculture 
+//                            PUBLIC DOMAIN NOTICE
+//                       Agricultural Research Service
+//                  United States Department of Agriculture
 //
 //   This software/database is a "United States Government Work" under the
 //   terms of the United States Copyright Act.  It was written as part of
@@ -69,6 +69,12 @@ class TransitionDistribution
 public:
   virtual double Sample(double current_time, RNG& rng) const=0;
   virtual double EnablingTime() const=0;
+  // Whether the hazard is always bounded below infinity.
+  virtual bool BoundedHazard() const=0;
+  // Integral of hazard from absolute time t0 to t1.
+  virtual double HazardIntegral(double t0, double t1) const=0;
+  // xa = int_t0^t hazard(s, te) ds.  Solve for t.
+  virtual double ImplicitHazardIntegral(double xa, double t0) const=0;
 };
 
 
@@ -79,7 +85,12 @@ class NoDistribution : public TransitionDistribution<RNG>
 public:
   virtual double Sample(double current_time, RNG& rng) const {
     return std::numeric_limits<double>::infinity(); };
-  virtual double EnablingTime() const { return 0; }
+  virtual double EnablingTime() const { return 0.0; }
+  virtual bool BoundedHazard() const { return false; }
+  virtual double HazardIntegral(double t0, double t1) const { return 0.0; }
+  virtual double ImplicitHazardIntegral(double xa, double t0) const {
+    return 0.0;
+  }
 };
 
 
@@ -95,8 +106,6 @@ public:
     double normal=1.0) : params_(lambda, enabling_time, normal)
   {}
 
-
-
   virtual double Sample(double current_time, RNG& rng) const {
     auto U=uniform(rng)/std::get<2>(params_);
     if (U>=1) {
@@ -105,6 +114,15 @@ public:
     return -std::log(U)/std::get<0>(params_);
   }
 
+  virtual bool BoundedHazard() const { return true; }
+
+  virtual double HazardIntegral(double t0, double t1) const {
+    return std::get<0>(params_)*(t1-t0);
+  }
+
+  virtual double ImplicitHazardIntegral(double xa, double t0) const {
+    return t0+xa/std::get<0>(params_);
+  }
 
   virtual double EnablingTime() const {
     return std::get<1>(params_);
@@ -176,6 +194,15 @@ public:
     }
   }
 
+  virtual bool BoundedHazard() const { return true; }
+
+  virtual double ImplicitHazardIntegral(double xa, double t0) const {
+    double lambda=std::get<0>(params_);
+    double enabling_time=std::get<1>(params_);
+    double shift=std::get<2>(params_);
+    double start=(std::max)(t0, shift+enabling_time);
+    return start+xa/lambda;
+  }
 
   virtual double EnablingTime() const {
     return std::get<1>(params_);
@@ -251,6 +278,23 @@ public:
   }
 
 
+  virtual bool BoundedHazard() const { return true; }
+
+  virtual double HazardIntegral(double t0, double t1) const {
+    double l=std::get<0>(params_);
+    double k=std::get<1>(params_);
+    double te=std::get<2>(params_); // enabling_time
+    double shift=std::get<3>(params_);
+    return std::pow((t1-te)/l, k)-std::pow((t0-te)/l, k);
+  }
+
+  virtual double ImplicitHazardIntegral(double xa, double t0) const {
+    double l=std::get<0>(params_);
+    double k=std::get<1>(params_);
+    double enabling_time=std::get<2>(params_);
+    double shift=std::get<3>(params_);
+    return enabling_time+l*std::pow(xa+std::pow((t0-enabling_time)/l,k),1.0/k);
+  }
 
   virtual double EnablingTime() const {
     return std::get<2>(params_);
@@ -364,6 +408,13 @@ public:
   }
 
 
+  virtual bool BoundedHazard() const { return false; }
+
+  
+  virtual double HazardIntegral(double t0, double t1) const { return 0.0; }
+  virtual double ImplicitHazardIntegral(double xa, double t0) const {
+    return 0.0;
+  }
 
   virtual double EnablingTime() const {
     return std::get<2>(params_);
@@ -445,7 +496,15 @@ public:
     _partial_sum[b.size()-1]=total;
   }
 
+  virtual bool BoundedHazard() const { return false; }
 
+  virtual double HazardIntegral(double t0, double t1) const {
+    return 0.0;
+  }
+  
+  virtual double ImplicitHazardIntegral(double xa, double t0) const {
+    return 0.0;
+  }
 
   virtual double EnablingTime() const {
     return std::get<2>(params_);

@@ -50,7 +50,7 @@ class PartialCoreMatrix
   PartialCoreMatrix(GSPN& gspn, State& s, PropagatorVector pv)
   : gspn_(gspn), state_(s), propagator_{pv} {}
 
-  void MakeCurrent() { 
+  void MakeCurrent(RNG& rng) { 
     if (state_.marking.Modified().size()==0) return;
     // Check all neighbors of a place to see if they were enabled.
     auto lm=state_.marking.GetLocalMarking();
@@ -98,13 +98,16 @@ class PartialCoreMatrix
             bool was_enabled=previous_propagator!=nullptr;
             if (was_enabled) {
               if (previous_propagator==appropriate) {
-                appropriate->Enable(neighbor_id, dist, was_enabled);
+                appropriate->Enable(neighbor_id, dist, state_.CurrentTime(),
+                    was_enabled, rng);
               } else {
-                previous_propagator->Disable(neighbor_id);
-                appropriate->Enable(neighbor_id, dist, was_enabled);
+                previous_propagator->Disable(neighbor_id, state_.CurrentTime());
+                appropriate->Enable(neighbor_id, dist, state_.CurrentTime(),
+                    was_enabled, rng);
               }
             } else {
-              appropriate->Enable(neighbor_id, dist, was_enabled);
+              appropriate->Enable(neighbor_id, dist, state_.CurrentTime(),
+                  was_enabled, rng);
             }
 
           } else {
@@ -114,7 +117,7 @@ class PartialCoreMatrix
           }
 
         } else if (!isEnabled && previous_propagator!=nullptr) {
-          previous_propagator->Disable(neighbor_id);
+          previous_propagator->Disable(neighbor_id, state_.CurrentTime());
 
         } else {
           ; // not enabled, not becoming enabled.
@@ -145,7 +148,7 @@ class PartialCoreMatrix
     for (auto& prop_ptr : propagator_) {
       std::tie(enabled, previous_when)=prop_ptr->Enabled(trans_id);
       if (enabled) {
-        prop_ptr->Disable(trans_id);
+        prop_ptr->Fire(trans_id, state_.CurrentTime(), rng);
         break;
       }
     }

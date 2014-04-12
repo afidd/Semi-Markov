@@ -321,7 +321,7 @@ int main(int argc, char *argv[])
     Add<0>(state.marking, susceptible, IndividualToken{});
   }
 
-  using Propagator=PropagateCompetingProcesses<int64_t,RandGen>;
+  using Propagator=NonHomogeneousPoissonProcesses<int64_t,RandGen>;
   using Markov=PartialCoreMatrix<SIRGSPN, SIRState, RandGen>;
   Propagator competing;
   Markov system(gspn, state, {&competing});
@@ -340,7 +340,7 @@ int main(int argc, char *argv[])
   };
 
   input_string(state);
-  system.MakeCurrent();
+  system.MakeCurrent(rng);
   auto next=competing.Next(state.CurrentTime(), rng);
   ++step_cnt;
 
@@ -351,7 +351,7 @@ int main(int argc, char *argv[])
     BOOST_LOG_TRIVIAL(debug) << "trans " << std::get<0>(next) << " time " <<
         std::get<1>(next);
     BOOST_LOG_TRIVIAL(trace) << state.marking;
-    system.MakeCurrent();
+    system.MakeCurrent(rng);
     next=competing.Next(state.CurrentTime(), rng);
     ++step_cnt;
   }
