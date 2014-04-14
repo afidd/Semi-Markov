@@ -248,8 +248,8 @@ class WithParams
   std::map<int,double> params;
 };
 
-using SIRState=GSPNState<Mark,WithParams>;
 using SIRGSPN=ExplicitTransitions<SIRPlace, SIRTKey, Local, RNG, WithParams>;
+using SIRState=GSPNState<Mark,SIRGSPN::TransitionKey,WithParams>;
 using Dist=TransitionDistribution<RNG>;
 using ExpDist=ExponentialDistribution<RNG>;
 using SIRTransition=ExplicitTransition<Local,RNG,WithParams>;
@@ -477,7 +477,12 @@ int main(int argc, char* argv[])
   }
 
   using Markov=PartialCoreMatrix<SIRGSPN, SIRState, RNG>;
-  Markov system(gspn, state);
+  using Propagator=NonHomogeneousPoissonProcesses<decltype(gspn)::TransitionKey,
+    RNG>;
+  using Dynamics=StochasticDynamics<Markov,SIRState,RNG>;
+  Propagator competing;
+  Markov system(gspn, state, {&competing});
+  Dynamics dynamics(system);
 
   SIROutputFunction<SIRGSPN> output(
     metapopulation_cnt, individuals_per_metapopulation,
@@ -492,20 +497,16 @@ int main(int argc, char* argv[])
   auto input_string=[&susceptible, &infected](SIRState& state)->void {
     Move<0,0>(state.marking, susceptible, infected, 1);
   };
-  auto next=PropagateCompetingProcesses(system, input_string, rng);
+  input_string(state);
 
-  output(gspn, state);
+  dynamics.Initialize(state, &rng);
 
   int64_t transition_cnt=0;
-  auto nothing=[](SIRState&)->void {};
-  for ( ;
-    std::get<1>(next)<std::numeric_limits<double>::max();
-    next=PropagateCompetingProcesses(system, nothing, rng))
-  {
-    BOOST_LOG_TRIVIAL(debug) << "trans " << std::get<0>(next) << " time " <<
-        std::get<1>(next);
-    ++transition_cnt;
+  bool running=true;
+  while (running) {
     output(gspn, state);
+    running=dynamics(state);
+    ++transition_cnt;
   }
   BOOST_LOG_TRIVIAL(info)<< transition_cnt << " transitions";
   return 0;

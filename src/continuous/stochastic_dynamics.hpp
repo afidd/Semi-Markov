@@ -36,7 +36,8 @@ class StochasticDynamics
  public:
   // Re-advertise the state.
   using State=DynState;
-  StochasticDynamics(CoreMatrix& core_matrix) : core_matrix_(core_matrix) {}
+  explicit StochasticDynamics(CoreMatrix& core_matrix)
+  : core_matrix_(core_matrix) {}
 
   void Initialize(State& state, RandGen *rng) {
     rng_=rng;

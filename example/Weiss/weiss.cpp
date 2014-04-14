@@ -138,8 +138,12 @@ int main(int argc, char* argv[])
   RandGen rng(vm["seed"].as<boost::uint32_t>());
 
 
-  using BrownionState = afidd::smv::GSPNState<Mark,UserState>;
-  using SemiMarkovKernel = afidd::smv::PartialCoreMatrix<BrownionGSPN, BrownionState, RandGen>;
+  using BrownionState = afidd::smv::GSPNState<Mark,TransitionKey,UserState>;
+  using SemiMarkovKernel = afidd::smv::PartialCoreMatrix<BrownionGSPN,
+      BrownionState, RandGen>;
+  using Propagator=afidd::smv::PropagateCompetingProcesses<TransitionKey,RandGen>;
+  using Dynamics=afidd::smv::StochasticDynamics<SemiMarkovKernel,
+      BrownionState,RandGen>;
 
   auto initialize_walkers=[](BrownionState& s)->void {
     afidd::smv::Add<0>(s.marking, PlaceKey{0,0,Mobility::immobile}, Walker());
@@ -156,17 +160,23 @@ int main(int argc, char* argv[])
 
     BrownionGSPN gspn;
     BrownionState state;
-    SemiMarkovKernel Q(gspn, state);
-    auto next = afidd::smv::PropagateCompetingProcesses(Q,
-        initialize_walkers, rng);
+    Propagator competing;
+    SemiMarkovKernel Q(gspn, state, {&competing});
+    Dynamics dynamics(Q);
+
+    initialize_walkers(state);
+    dynamics.Initialize(state, &rng);
 
     real_type elapsed_time = 0.0;
-
+    real_type previous_time = state.CurrentTime();
+    real_type residence_time = 0.0;
     for (counter_type tcount=0; tcount<vm["transitions"].as<counter_type>();
         tcount++) {
-      auto tk = std::get<0>(next);
-      auto residence_time = std::get<1>(next);
-      elapsed_time += residence_time;
+      dynamics(state);
+      auto tk = state.last_transition;
+      elapsed_time = state.CurrentTime();
+      residence_time = elapsed_time-previous_time;
+      previous_time = elapsed_time;
       
       BOOST_LOG_TRIVIAL(info) << "replicate: " << repl
                               << ", transition: " << tcount
@@ -178,8 +188,6 @@ int main(int argc, char* argv[])
          << residence_time << ", " << elapsed_time << ", "
          << tk.from.x << ", " << tk.from.y << ", \"" << tk.from.mobility  << "\"" 
          <<  std::endl;
-    
-      next = afidd::smv::PropagateCompetingProcesses(Q, reporter, rng);
     }
   }
 
