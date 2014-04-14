@@ -1,8 +1,8 @@
 // ===========================================================================
 //
-//                            PUBLIC DOMAIN NOTICE 
-//                       Agricultural Research Service 
-//                  United States Department of Agriculture 
+//                            PUBLIC DOMAIN NOTICE
+//                       Agricultural Research Service
+//                  United States Department of Agriculture
 //
 //   This software/database is a "United States Government Work" under the
 //   terms of the United States Copyright Act.  It was written as part of

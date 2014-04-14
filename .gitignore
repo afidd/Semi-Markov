@@ -11,3 +11,21 @@
 *.lai
 *.la
 *.a
+
+# Automake cruft
+Makefile
+Makefile.in
+config.h.in
+config.log
+config.status
+depcomp
+
+# And the executables
+brownion
+bvd
+depcomp
+disttest
+meta
+sirmixed
+missing
+z.*

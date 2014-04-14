@@ -1,8 +1,8 @@
 // ===========================================================================
 //
-//                            PUBLIC DOMAIN NOTICE 
-//                       Agricultural Research Service 
-//                  United States Department of Agriculture 
+//                            PUBLIC DOMAIN NOTICE
+//                       Agricultural Research Service
+//                  United States Department of Agriculture
 //
 //   This software/database is a "United States Government Work" under the
 //   terms of the United States Copyright Act.  It was written as part of
@@ -50,7 +50,7 @@ class PartialCoreMatrix
   PartialCoreMatrix(GSPN& gspn, State& s, PropagatorVector pv)
   : gspn_(gspn), state_(s), propagator_{pv} {}
 
-  void MakeCurrent(RNG& rng) { 
+  void MakeCurrent(RNG& rng) {
     if (state_.marking.Modified().size()==0) return;
     // Check all neighbors of a place to see if they were enabled.
     auto lm=state_.marking.GetLocalMarking();

@@ -1,0 +1,9 @@
+# Don't mark these files.
+*.dblite
+*.aux
+*.bbl
+*.blg
+*.fls
+*.log
+*.out
+

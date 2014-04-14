@@ -1,8 +1,8 @@
 // ===========================================================================
 //
-//                            PUBLIC DOMAIN NOTICE 
-//                       Agricultural Research Service 
-//                  United States Department of Agriculture 
+//                            PUBLIC DOMAIN NOTICE
+//                       Agricultural Research Service
+//                  United States Department of Agriculture
 //
 //   This software/database is a "United States Government Work" under the
 //   terms of the United States Copyright Act.  It was written as part of
@@ -40,7 +40,7 @@ namespace afidd
 namespace smv
 {
   enum class PetriGraphColor : int { Unused, Place, Transition };
-  
+
   struct PetriGraphVertexProperty {
     PetriGraphColor color;
     int token_layer;
