@@ -33,5 +33,7 @@
 #include "marking.hpp"
 #include "smv_algorithm.hpp"
 #include "continuous_state.hpp"
+#include "stochastic_dynamics.hpp"
+#include "finite_state_machine.hpp"
 
 #endif // _SMV_H_

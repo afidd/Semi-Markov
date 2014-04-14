@@ -249,6 +249,22 @@ void WriteIds(const GSPN& gspn, const std::string& fname,
 }
 
 
+template<typename SIRState>
+struct SIROutput
+{
+  int64_t step_cnt{0};
+
+  void operator()(const SIRState& state) {
+    ++step_cnt;
+    BOOST_LOG_TRIVIAL(debug) << "trans " << state.last_transition
+        << " time " << state.CurrentTime() << " step " << step_cnt;
+    BOOST_LOG_TRIVIAL(trace) << state.marking;
+  }
+
+  void final(const SIRState& state) {
+    BOOST_LOG_TRIVIAL(info) << "Took "<< step_cnt << " transitions.";
+  }
+};
 
 
 
@@ -328,7 +344,6 @@ int main(int argc, char *argv[])
 
   BOOST_LOG_TRIVIAL(debug) << state.marking;
 
-  int64_t step_cnt=0;
   // The initial input string moves a token from susceptible to infected.
   auto first_case=static_cast<int64_t>(
       smv::uniform_index(rng, individual_cnt));
@@ -340,22 +355,19 @@ int main(int argc, char *argv[])
   };
 
   input_string(state);
-  system.MakeCurrent(rng);
-  auto next=competing.Next(state.CurrentTime(), rng);
-  ++step_cnt;
 
+  StochasticDynamics<Markov,SIRState,RandGen> dynamics(system);
+  SIROutput<SIRState> output_function;
+
+  dynamics.Initialize(state, &rng);
+
+  bool running=true;
   auto nothing=[](SIRState&)->void {};
-  while (std::get<1>(next)<std::numeric_limits<double>::max()) {
-    system.Trigger(std::get<0>(next), std::get<1>(next), rng);
-
-    BOOST_LOG_TRIVIAL(debug) << "trans " << std::get<0>(next) << " time " <<
-        std::get<1>(next);
-    BOOST_LOG_TRIVIAL(trace) << state.marking;
-    system.MakeCurrent(rng);
-    next=competing.Next(state.CurrentTime(), rng);
-    ++step_cnt;
+  while (running) {
+    running=dynamics(state);
+    output_function(state);
   }
-  BOOST_LOG_TRIVIAL(info)<<"Took "<<step_cnt<<" transitions";
+  output_function.final(state);
   return 0;
 }
 
