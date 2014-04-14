@@ -14,8 +14,6 @@
 
 # Automake cruft
 Makefile
-Makefile.in
-config.h.in
 config.log
 config.status
 depcomp
