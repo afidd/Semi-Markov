@@ -16,12 +16,10 @@
 Makefile
 config.log
 config.status
-depcomp
 
 # And the executables
 brownion
 bvd
-depcomp
 disttest
 meta
 sirmixed
