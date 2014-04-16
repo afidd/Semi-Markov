@@ -44,7 +44,7 @@ public:
   Marking marking;
   double absolute_time;
   double CurrentTime() const { return absolute_time; }
-  double SetTime(double timeprime) { absolute_time=timeprime; }
+  void SetTime(double timeprime) { absolute_time=timeprime; }
   UserState user;
   TransitionKey last_transition;
 };

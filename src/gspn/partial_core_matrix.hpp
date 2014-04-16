@@ -142,7 +142,7 @@ class PartialCoreMatrix
         neighboring_places.size() << " modifies "
         << state_->marking.Modified().size() << " places.";
 
-    auto current_time=state_->SetTime(when);
+    state_->SetTime(when);
 
     bool enabled=false;
     double previous_when;
