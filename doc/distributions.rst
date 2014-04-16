@@ -40,14 +40,44 @@ Given any distributions from Boost::Random or std::random, this
 formula calculates the shifted quantile from the original quantile
 and cumulative distribution.
 
-Transitions for this library implement the following interface.::
+Transitions for this library implement the following interface.
 
-   template<typename RandomGenerator>
-   class TransitionDistribution
-   {
-   public:
-       virtual double sample(double current_time, RandomGenerator& rng);
-   };
+.. cpp:class:: afidd::smv::TransitionDistribution<RandomGenerator>
+
+   This is the pure virtual base class for distributions.
+
+.. cpp:function:: double Sample(double current_time, RandomGenerator& rng) const
+
+   Return a sample from the random variable in absolute time
+   after the given current time.
+
+.. cpp:function:: double EnablingTime() const
+
+   Each distribution remembers its enabling time in absolute time
+   since the start of the simulation.
+ 
+.. cpp:function:: bool BoundedHazard() const
+
+   Some distributions have a hazard function, defined as the ratio
+   of the probability density to the survival, which is bounded for
+   finite times. These functions will have a well-defined hazard
+   integral. This method tells the caller whether the hazard integral
+   is a reasonable approach to sample the distribution.
+
+.. cpp:function:: double HazardIntegral(double t0, double t1) const
+
+   This returns the integral of the hazard between absolute time
+   :math:`t_0` and :math:`t_1`.
+
+.. cpp:function:: double ImplicitHazardIntegral(double xa, double t0) const
+
+   This implicitly solves for a quantile by integrating the hazard.
+   For certain distributions, this is analytic. The function returns
+   :math:`t` in
+
+.. math::
+   
+   x_a=\int_{t_0}^{t} \lambda(s) ds.
 
 The template argument RandomGenerator fulfills the concept of the Boost
 random number generator concept and the std::random random number

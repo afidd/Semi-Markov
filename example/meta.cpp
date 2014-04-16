@@ -476,13 +476,11 @@ int main(int argc, char* argv[])
     }
   }
 
-  using Markov=PartialCoreMatrix<SIRGSPN, SIRState, RNG>;
   using Propagator=NonHomogeneousPoissonProcesses<decltype(gspn)::TransitionKey,
     RNG>;
-  using Dynamics=StochasticDynamics<Markov,SIRState,RNG>;
+  using Dynamics=StochasticDynamics<SIRGSPN,SIRState,RNG>;
   Propagator competing;
-  Markov system(gspn, state, {&competing});
-  Dynamics dynamics(system);
+  Dynamics dynamics(gspn, {&competing});
 
   SIROutputFunction<SIRGSPN> output(
     metapopulation_cnt, individuals_per_metapopulation,
@@ -499,7 +497,7 @@ int main(int argc, char* argv[])
   };
   input_string(state);
 
-  dynamics.Initialize(state, &rng);
+  dynamics.Initialize(&state, &rng);
 
   int64_t transition_cnt=0;
   bool running=true;

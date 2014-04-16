@@ -31,8 +31,9 @@ enormous stochastic, continuous-time simulations.
 
 This library was created the Analytical Framework for Infectious Disease
 Dynamics (AFIDD) group at Cornell University in conjunction with
-the USDA. The code is in the Public Domain and is offered without
-copyright.
+the USDA. The work was funded by the Department of Homeland
+Security, under the terms of which contract it is placed into the Public
+Domain.
 
 What is a GSPN?
 -----------------

@@ -251,11 +251,10 @@ int main(int argc, char *argv[])
   assert(Length<0>(m, 27, 13)==0);
 
   using Propagator=PropagateCompetingProcesses<int64_t,CowGen>;
-  using CoreMatrix=PartialCoreMatrix<CowTransitions,CowState,CowGen>;
+  using Dynamics=StochasticDynamics<CowTransitions,CowState,CowGen>;
   Propagator competing;
-  CoreMatrix system(gspn, state, {&competing});
-  StochasticDynamics<CoreMatrix,CowState,CowGen> dynamics(system);
-  dynamics.Initialize(state, &rng);
+  Dynamics dynamics(gspn, {&competing});
+  dynamics.Initialize(&state, &rng);
   bool running=dynamics(state);
   return 0;
 }

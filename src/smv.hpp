@@ -28,7 +28,6 @@
 #define _SMV_H_
 
 #include "explicit_transitions.hpp"
-#include "partial_core_matrix.hpp"
 #include "continuous_dynamics.hpp"
 #include "marking.hpp"
 #include "smv_algorithm.hpp"

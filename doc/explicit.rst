@@ -39,6 +39,16 @@ The author of the code supplies building blocks to this class:
   generator for everything. This class supports the C++
   ``random`` requirements.
 
+Because the library offers choices in how to define the pieces,
+it will be necessary to build the GSPN and the its dynamics
+in steps. There are natural dependencies among the pieces,
+defined by what each entity is
+
+.. image:: images/type_dependency.svg
+   :scale: 40%
+   :align: center
+   :alt: First define PlaceKey, TransitionKey, and the Token. Last to define is the StochasticDynamics.
+
 An example of a ``PlaceKey`` from an SIR model shows that defining
 such a struct is verbose but painless::
    
@@ -106,7 +116,7 @@ tokens::
     class InfectNeighbor : public Transition
     {
       virtual std::pair<bool, std::unique_ptr<Dist>>
-      enabled(const UserState& s, const Local& local_marking,
+      Enabled(const UserState& s, const Local& local_marking,
               double te, double t0) const override
       {
         if (local_marking.template input_tokens_sufficient<0>())
@@ -120,14 +130,14 @@ tokens::
         }
       }
 
-      virtual void fire(UserState& s, Local& local_marking,
+      virtual void Fire(UserState& s, Local& local_marking,
                         RandGen& rng) const override
       {
         local_marking.template transfer_by_stochiometric_coefficient<0>(rng);
       }
     };
 
-The ``enabled()`` method's parameters are
+The ``Enabled()`` method's parameters are
 
 * **UserState** - This is the same as specified above. It could
   include parameters or a pointer to inhomogeneous drivers of the system.
@@ -163,11 +173,11 @@ have, as inputs and outputs, places which exist. It ensures
 every PlaceKey and TransitionKey is unique. The signatures
 of its methods::
 
-   void BuildGraph::add_place(const PlaceKey&, size_t token_layer);
+   void BuildGraph::AddPlace(const PlaceKey&, size_t token_layer);
 
    typedef std::tuple<PlaceKey,int> BuildGraph::PlaceEdge;
 
-   void BuildGraph::add_transition(const TransitionKey&,
+   void BuildGraph::AddTransition(const TransitionKey&,
        const std::vector<BuildGraph::PlaceEdge>&,
        std::unique_ptr<ExplicitTransition<<Local,RandGen,WithParams>);
 
@@ -190,13 +200,13 @@ to construct a GSPN succinctly::
       {
         for (size_t place : std::vector<int>{s, i, r})
         {
-          bg.add_place({place, ind_idx}, 0);
+          bg.AddPlace({place, ind_idx}, 0);
         }
       }
 
       for (size_t left_idx=0; left_idx<individual_cnt-1; left_idx++)
       {
-        bg.add_transition({left_idx, left_idx, 0},
+        bg.AddTransition({left_idx, left_idx, 0},
           {Edge{{i, left_idx}, -1}, Edge{{r, left_idx}, 1}},
           std::unique_ptr<SIRTransition>(new Recover())
           );
@@ -207,7 +217,7 @@ to construct a GSPN succinctly::
           SIRPlace rights{s, right_idx};
           SIRPlace righti{i, right_idx};
 
-          bg.add_transition({left_idx, right_idx, 0},
+          bg.AddTransition({left_idx, right_idx, 0},
             {Edge{left, -1}, Edge{rights, -1}, Edge{left, 1}, Edge{righti, 1}},
             std::unique_ptr<SIRTransition>(new InfectNeighbor()));
 
@@ -215,7 +225,7 @@ to construct a GSPN succinctly::
           SIRPlace lefti{i, left_idx};
           SIRPlace right{i, right_idx};
 
-          bg.add_transition({right_idx, left_idx, 0},
+          bg.AddTransition({right_idx, left_idx, 0},
             {Edge{right, -1}, Edge{lefts, -1}, Edge{right, 1}, Edge{lefti, 1}},
             std::unique_ptr<SIRTransition>(new InfectNeighbor()));
         }
@@ -235,7 +245,7 @@ chosen by the Boost Graph Library implementation. Both are
 just type `size_t`. The marking and state are therefore::
 
   using Mark=Marking<size_t, Uncolored<IndividualToken>>;
-  using State=GSPNState<Mark,UserState>;
+  using State=GSPNState<Mark,TransitionKey,UserState>;
 
   State state;
 
@@ -246,7 +256,7 @@ How do we initialize the marking? Unfortunately, the marking doesn't
 use our `PlaceKey`, so we have to add a translation step from
 the `PlaceKey` we know to the `size_t` we don't::
 
-  size_t susceptible=gspn.place_vertex(
+  size_t susceptible=gspn.PlaceVertex(
       PlaceKey{Disease::Susceptible, individual_idx});
   add<0>(state.marking, susceptible, IndividualToken{});
 

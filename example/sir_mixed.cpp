@@ -338,9 +338,9 @@ int main(int argc, char *argv[])
   }
 
   using Propagator=NonHomogeneousPoissonProcesses<int64_t,RandGen>;
-  using Markov=PartialCoreMatrix<SIRGSPN, SIRState, RandGen>;
   Propagator competing;
-  Markov system(gspn, state, {&competing});
+  using Dynamics=StochasticDynamics<SIRGSPN,SIRState,RandGen>;
+  Dynamics dynamics(gspn, {&competing});
 
   BOOST_LOG_TRIVIAL(debug) << state.marking;
 
@@ -356,10 +356,9 @@ int main(int argc, char *argv[])
 
   input_string(state);
 
-  StochasticDynamics<Markov,SIRState,RandGen> dynamics(system);
   SIROutput<SIRState> output_function;
 
-  dynamics.Initialize(state, &rng);
+  dynamics.Initialize(&state, &rng);
 
   bool running=true;
   auto nothing=[](SIRState&)->void {};

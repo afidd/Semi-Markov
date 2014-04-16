@@ -26,26 +26,33 @@
 #ifndef _STOCHASTIC_DYNAMICS_H_
 #define _STOCHASTIC_DYNAMICS_H_ 1
 
+#include <tuple>
+#include <limits>
+#include "partial_core_matrix.hpp"
+
 namespace afidd
 {
 namespace smv
 {
-template<typename CoreMatrix,typename DynState,typename RandGen>
+template<typename GSPN,typename DynState,typename RandGen>
 class StochasticDynamics
 {
+  using Kernel=PartialCoreMatrix<GSPN,DynState,RandGen>;
+  using PropagatorVector=typename Kernel::PropagatorVector;
  public:
   // Re-advertise the state.
   using State=DynState;
-  explicit StochasticDynamics(CoreMatrix& core_matrix)
-  : core_matrix_(core_matrix) {}
+  StochasticDynamics(GSPN& gspn, PropagatorVector pv)
+  : core_matrix_(gspn, pv) {}
 
-  void Initialize(State& state, RandGen *rng) {
+  void Initialize(State* state, RandGen *rng) {
+    core_matrix_.set_state(state);
     rng_=rng;
   }
 
-  bool operator()(State& state) const {
+  bool operator()(State& state) {
     core_matrix_.MakeCurrent(*rng_);
-    using TransitionKey=typename CoreMatrix::TransitionKey;
+    using TransitionKey=typename Kernel::TransitionKey;
     std::tuple<TransitionKey,double> least{TransitionKey{},
         std::numeric_limits<double>::infinity()};
     for (auto& propagator : core_matrix_.Propagators()) {
@@ -64,7 +71,7 @@ class StochasticDynamics
     return running;
   }
  private:
-  CoreMatrix &core_matrix_;
+  Kernel core_matrix_;
   RandGen *rng_;
 };
 

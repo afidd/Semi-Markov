@@ -12,13 +12,6 @@ We simulate a trajectory by looking at only the transitions which
 are enabled for the current state. This is the *partial core matrix.*
 Given this partial core matrix, a propagator selects the next state.
 
-The PartialCoreMatrix class type is constructed from the
-GSPN type, the definition of the state, and our chosen
-random number generator.::
-
-  template<typename GSPN, typename State, typename Rand>
-  class PartialCoreMatrix;
-
 The partial core matrix has two responsibilities. For the
 underlying GSPN, it enforces the rule, central to this kind
 of semi-Markov model, that distributions of transitions are
@@ -35,33 +28,32 @@ distributions in time of the currently-enabled competing processes.
 The propagator is a function which samples these distributions to
 return the next transition to fire.::
 
-  auto next=propagate_competing_processes(partial_core, input_string, rng);
+  using HazardPropagator=NonHomogeneousPoissonProcesses<TransitionKey,RandGen>;
+  HazardPropagator competing_hazards;
+  using GeneralPropagator=PropagateCompetingProcesses<TransitionKey,RandGen>;
+  GeneralPropagator other_processes;
+  using Dynamics=StochasticDynamics<SIRGSPN,SIRState,RandGen>;
+  Dynamics dynamics(gspn, {&competing_hazards, &other_processes});
 
-We run this repeatedly in our main loop. The input_string is a
-functor passed into the propagator which can change the state of
-the system, or do nothing at all. It can be used to set initial
-system state, change parameters of the system, or anything else.
-When this functor changes the state of the marking, in particular,
-the PartialCoreMatrix object is able to track which parts of the
+It is the StochasticDynamics class that coordinates, inside, with
+the partial core matrix. It will take
+enabled transitions from the GSPN and give their distributions
+to the appropriate propagator, depending on whether that propagator
+can calculate the firing time of that distribution.
+When a transition changes the marking,
+the StochasticDynamics object is able to track which parts of the
 marking changed and enable or disable transitions appropriately.
 
-As a whole, sampling the trajectory of a GSPN might look like this::
+Finally, the main loop becomes short::
 
-  PartialCoreMatrix<GSPN,State,Rand> core(gspn, state);
-  auto initial_case=[&from_place, &to_place](State& state)->void {
-    // Moves a token from one place to another.
-    move<0,0>(state.marking, from_place, to_place, 1);
-  }
-  auto next=propagate_competing_processes(core, input_string, rng);
+    dynamics.Initialize(&state, &rng);
+    bool running=true;
+    auto nothing=[](SIRState&)->void {};
+    while (running) {
+      running=dynamics(state);
+      output_function(state);
+    }
+    output_function.final(state);
 
-  auto nothing=[](State& state)->void {};
-
-  for ( ;
-      std::get<1>(next)<std::numeric_limits<double>::max();
-      next=propagate_competing_processes(core, nothing, rng)
-      )
-  {
-  	std::cout << "transition " << std::get<0>(next) << " at time "
-  	  << std::get<1>(next) << std::endl;
-  }
-
+Here, ``output_function`` is an object which acts on the state
+and gathers results.

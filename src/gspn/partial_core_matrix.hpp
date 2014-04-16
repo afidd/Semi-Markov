@@ -47,15 +47,19 @@ class PartialCoreMatrix
   using PropagatorVector=std::vector<Propagator*>;
   typedef GSPN PetriNet;
 
-  PartialCoreMatrix(GSPN& gspn, State& s, PropagatorVector pv)
-  : gspn_(gspn), state_(s), propagator_{pv} {}
+  PartialCoreMatrix(GSPN& gspn, PropagatorVector pv)
+  : gspn_(gspn), propagator_{pv} {}
+
+  void set_state(State* s) {
+    state_=s;
+  }
 
   void MakeCurrent(RNG& rng) {
-    if (state_.marking.Modified().size()==0) return;
+    if (state_->marking.Modified().size()==0) return;
     // Check all neighbors of a place to see if they were enabled.
-    auto lm=state_.marking.GetLocalMarking();
+    auto lm=state_->marking.GetLocalMarking();
 
-    NeighborsOfPlaces(gspn_, state_.marking.Modified(),
+    NeighborsOfPlaces(gspn_, state_->marking.Modified(),
       [&] (TransitionKey neighbor_id) {
         // Was this transition enabled? When?
         double enabling_time=0.0;
@@ -69,18 +73,18 @@ class PartialCoreMatrix
             break;
           }
         }
-        if (previous_propagator==nullptr) enabling_time=state_.CurrentTime();
+        if (previous_propagator==nullptr) enabling_time=state_->CurrentTime();
 
         // Set up the local marking.
         auto neighboring_places=
             NeighborsOfTransition(gspn_, neighbor_id);
-        state_.marking.InitLocal(lm, neighboring_places);
+        state_->marking.InitLocal(lm, neighboring_places);
 
         bool isEnabled=false;
         std::unique_ptr<TransitionDistribution<RNG>> dist;
         std::tie(isEnabled, dist)=
-            Enabled(gspn_, neighbor_id, state_.user, lm,
-            enabling_time, state_.CurrentTime());
+            Enabled(gspn_, neighbor_id, state_->user, lm,
+            enabling_time, state_->CurrentTime());
 
         if (isEnabled) {
           Propagator* appropriate=nullptr;
@@ -97,15 +101,15 @@ class PartialCoreMatrix
             bool was_enabled=previous_propagator!=nullptr;
             if (was_enabled) {
               if (previous_propagator==appropriate) {
-                appropriate->Enable(neighbor_id, dist, state_.CurrentTime(),
+                appropriate->Enable(neighbor_id, dist, state_->CurrentTime(),
                     was_enabled, rng);
               } else {
-                previous_propagator->Disable(neighbor_id, state_.CurrentTime());
-                appropriate->Enable(neighbor_id, dist, state_.CurrentTime(),
+                previous_propagator->Disable(neighbor_id, state_->CurrentTime());
+                appropriate->Enable(neighbor_id, dist, state_->CurrentTime(),
                     was_enabled, rng);
               }
             } else {
-              appropriate->Enable(neighbor_id, dist, state_.CurrentTime(),
+              appropriate->Enable(neighbor_id, dist, state_->CurrentTime(),
                   was_enabled, rng);
             }
           } else {
@@ -114,38 +118,38 @@ class PartialCoreMatrix
                 "isn't listed as enabled in any propagator");
           }
         } else if (!isEnabled && previous_propagator!=nullptr) {
-          previous_propagator->Disable(neighbor_id, state_.CurrentTime());
+          previous_propagator->Disable(neighbor_id, state_->CurrentTime());
 
         } else {
           ; // not enabled, not becoming enabled.
         }
       });
     BOOST_LOG_TRIVIAL(trace) << "Marking modified cnt: "<<
-        state_.marking.Modified().size();
-    state_.marking.Clear();
+        state_->marking.Modified().size();
+    state_->marking.Clear();
   }
 
 
   void Trigger(TransitionKey trans_id, double when, RNG& rng) {
     auto neighboring_places=NeighborsOfTransition(gspn_, trans_id);
 
-    auto lm=state_.marking.GetLocalMarking();
-    state_.marking.InitLocal(lm, neighboring_places);
-    Fire(gspn_, trans_id, state_.user, lm, rng);
-    state_.marking.ReadLocal(lm, neighboring_places);
+    auto lm=state_->marking.GetLocalMarking();
+    state_->marking.InitLocal(lm, neighboring_places);
+    Fire(gspn_, trans_id, state_->user, lm, rng);
+    state_->marking.ReadLocal(lm, neighboring_places);
 
     BOOST_LOG_TRIVIAL(trace) << "Fire "<<trans_id <<" neighbors: "<<
         neighboring_places.size() << " modifies "
-        << state_.marking.Modified().size() << " places.";
+        << state_->marking.Modified().size() << " places.";
 
-    auto current_time=state_.SetTime(when);
+    auto current_time=state_->SetTime(when);
 
     bool enabled=false;
     double previous_when;
     for (auto& prop_ptr : propagator_) {
       std::tie(enabled, previous_when)=prop_ptr->Enabled(trans_id);
       if (enabled) {
-        prop_ptr->Fire(trans_id, state_.CurrentTime(), rng);
+        prop_ptr->Fire(trans_id, state_->CurrentTime(), rng);
         break;
       }
     }
@@ -156,7 +160,7 @@ class PartialCoreMatrix
 
  private:
   GSPN& gspn_;
-  State& state_;
+  State* state_;
   PropagatorVector propagator_;
 };
 

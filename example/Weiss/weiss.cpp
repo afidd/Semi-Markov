@@ -139,10 +139,8 @@ int main(int argc, char* argv[])
 
 
   using BrownionState = afidd::smv::GSPNState<Mark,TransitionKey,UserState>;
-  using SemiMarkovKernel = afidd::smv::PartialCoreMatrix<BrownionGSPN,
-      BrownionState, RandGen>;
   using Propagator=afidd::smv::PropagateCompetingProcesses<TransitionKey,RandGen>;
-  using Dynamics=afidd::smv::StochasticDynamics<SemiMarkovKernel,
+  using Dynamics=afidd::smv::StochasticDynamics<BrownionGSPN,
       BrownionState,RandGen>;
 
   auto initialize_walkers=[](BrownionState& s)->void {
@@ -161,11 +159,10 @@ int main(int argc, char* argv[])
     BrownionGSPN gspn;
     BrownionState state;
     Propagator competing;
-    SemiMarkovKernel Q(gspn, state, {&competing});
-    Dynamics dynamics(Q);
+    Dynamics dynamics(gspn, {&competing});
 
     initialize_walkers(state);
-    dynamics.Initialize(state, &rng);
+    dynamics.Initialize(&state, &rng);
 
     real_type elapsed_time = 0.0;
     real_type previous_time = state.CurrentTime();

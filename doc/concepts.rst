@@ -11,17 +11,8 @@ among places and transitions which define a semi-Markov system.
 The C++ concept of a GSPN first identifies the type of the
 identifiers for places and for transitions.::
 
-  template<typename GSPN>
-  struct petri_place
-  {
-    typedef void type;
-  };
-
-  template<typename GSPN>
-  struct petri_transition
-  {
-    typedef void type;
-  };
+  typedef undefined PlaceKey;
+  typedef undefined TransitionKey;
 
 
 Then there are two functions that express which transitions depend on
@@ -32,14 +23,14 @@ token expected at each place. The second function calls a unary function
 on each transition which relates to any of a given set of places.::
 
   template<typename GSPN>
-  std::vector<std::tuple<place_t<GSPN>,int,size_t>>
-  neighbors_of_transition(const GSPN& g, trans_t<GSPN> transition_id);
+  std::vector<std::tuple<PlaceKey,int,int>>
+  NeighborsOfTransition(const GSPN& g, TransitionKey transition_id);
 
 
   auto func=[] (trans_t<GSPN> neighbor_id)->void;
 
   template<typename GSPN, typename Functor>
-  void neighbors_of_places(const GSPN& g, const std::set<place_t<GSPN>>& place_id,
+  void NeighborsOfPlaces(const GSPN& g, const std::set<PlaceKey>& place_id,
   		Functor func);
 
 
@@ -57,14 +48,15 @@ checks the local marking to see whether a transition is enabled and,
 if so, returns the distribution associated with that transition. The
 Distribution object doesn't depend on the local marking.::
 
-  template<typename GSPN, typename State, typename LocalMarking>
+  template<typename GSPN, typename UserState, typename LocalMarking>
   std::tuple<bool,Distribution>
-  enabled(const GSPN&, const State&, const LocalMarking&);
+  Enabled(const GSPN&, const UserState&, const LocalMarking&,
+      double enabling_time, double current_time);
 
 The firing of a transition is the last part of the GSPN concept.::
 
   template<typename GSPN, typename State, typename LocalMarking, typename RNG>
-  void fire(const GSPN&, State&, LocalMarking&, RNG&);
+  void Fire(const GSPN&, UserState&, LocalMarking&, RNG&);
 
 The random number generator is necessary because firing may select
 a random token from the marking at a place.
@@ -97,25 +89,25 @@ accessed in a type-safe way by specifying the token layer to retrieve.::
   };
 
   template<typename LAYER>
-  void add(Marking&, place_t<GSPN>, token_t<Marking,LAYER>);
+  void Add(Marking&, place_t<GSPN>, token_t<Marking,LAYER>);
 
   template<typename LAYER>
-  void length(const Marking&, place_t<GSPN>);
+  void Length(const Marking&, place_t<GSPN>);
 
   template<typename LAYER>
-  void length(const Marking&, place_t<GSPN>, color_t<Marking,LAYER>);
+  void Length(const Marking&, place_t<GSPN>, color_t<Marking,LAYER>);
 
   template<typename LAYER, typename UnaryOperator>
   std::tuple<std::resultof<UnaryOperator>,bool>
-  get(const Marking&, place_t<Marking>, UnaryOperator& functor);
+  Get(const Marking&, place_t<Marking>, UnaryOperator& functor);
 
   template<typename LayerFrom, typename LayerTo>
   void
-  move(const Marking&, place_t<Marking,LayerFrom>, place_t<Marking,LayerTo>, size_t);
+  Move(const Marking&, place_t<Marking,LayerFrom>, place_t<Marking,LayerTo>, size_t);
 
   template<typename LayerFrom, typename LayerTo, typename UnaryOperator>
   void
-  move_modify(const Marking&, place_t<Marking,LayerFrom>, place_t<Marking,LayerTo>,
+  MoveModify(const Marking&, place_t<Marking,LayerFrom>, place_t<Marking,LayerTo>,
   size_t, UnaryOperator& functor);
 
 
@@ -124,13 +116,13 @@ A ``TokenContainer`` holds the tokens. There are two types, ``Colored``
 and ``Uncolored``. The color of a token comes from a traits class::
 
   template<typename Token>
-  token_color
+  TokenColor
   {
     typedef void type;
   }
 
   template<typename Token>
-  unique_color
+  UniqueColor
   {
     static const bool value=true;
   };
@@ -158,20 +150,17 @@ at all places, the enabling time of every enabled transition, and
 the current time of the semi-Markov model, which is the sum of all
 transition intervals since the start of the simulation.::
 
-  template<typename GSPN, typename Marking, typename TimeStrategy=KahanTime>
+  template<typename GSPN, typename Marking, typename UserState>
   class GSPNState
   {
   public:
     typedef Marking Marking;
     Marking marking;
-    std::map<trans_t<GSPN>,double> enabling_time;
-    double current_time() const;
-    double add_time(double);
+    double CurrentTime() const;
+    double SetTime(double);
+    UserState user;
+    TransitionKey last_transition;
   };
 
 The GSPNState re-advertises the ``Marking`` type through a public typedef.
-There are two ``TimeStrategy`` classes. ``SimpleTime`` stores time in
-a double, and ``KahanTime`` uses the Kahan summation algorithm to 
-ameliorate roundoff error when adding small intervals to larger times.
-
 
