@@ -1374,7 +1374,7 @@ Optional Features:
                           do not reject slow dependency extractors
   --disable-dependency-tracking
                           speeds up one-time build
-  --boost-variant         Build with the boost library that ends in -mt
+  --enable-variant        Build with the boost library that ends in -mt
   --enable-prand          Build the prand wrapper program [no]
 
 Optional Packages:

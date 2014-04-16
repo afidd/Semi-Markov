@@ -19,7 +19,7 @@ AC_CONFIG_FILES([Makefile])
 
 
 AC_ARG_ENABLE([variant],
-  [AS_HELP_STRING([--boost-variant],
+  [AS_HELP_STRING([--enable-variant],
     [Build with the boost library that ends in -mt])],
   [boost_variant="$enableval"],
   [boost_variant=""])
