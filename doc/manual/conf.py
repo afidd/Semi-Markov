@@ -94,7 +94,7 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'default'
+html_theme = 'sphinxdoc'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -186,7 +186,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'Semi-Markov.tex', 'Semi-Markov Documentation',
+  ('index', 'semimarkov.tex', 'Semi-Markov Library',
    'Andrew Dolgert, David Schneider', 'manual'),
 ]
 
@@ -230,7 +230,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'Semi-Markov', 'Semi-Markov Documentation',
+  ('index', 'Semi-Markov', 'Semi-Markov',
    'Andrew Dolgert, David Schneider', 'Semi-Markov', 'One line description of project.',
    'Miscellaneous'),
 ]

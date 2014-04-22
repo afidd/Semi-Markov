@@ -36,7 +36,7 @@ Two classes define storage for tokens at a place in a marking.
 LocalMarking Class
 ------------------
 
-.. cpp:class:: afidd::smv::LocalMarking\<typename... TokenContainers\>
+.. cpp:class:: afidd::smv::LocalMarking\<typename TokenContainers\>
 
    This class is responsible for reading and changing the subset
    of the marking associated with the input places and output
@@ -163,7 +163,7 @@ Marking Class
 The Marking class is much like the LocalMarking, but it specifies
 places using a PlaceKey.
 
-.. cpp:class:: afidd::smv::Marking<PlaceKey,typepname... TokenContainers>
+.. cpp:class:: afidd::smv::Marking<PlaceKey,typename TokenContainers>
 
    This class holds the marking for the whole system. Each place
    can contain one type of token container, specified by the
