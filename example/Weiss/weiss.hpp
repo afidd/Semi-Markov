@@ -159,7 +159,7 @@ Enabled(const BrownionGSPN& et, TransitionKey trans_id,
 }
 
 void Fire(BrownionGSPN& et, TransitionKey trans_id, UserState& s, Local& lm,
-      RandGen& rng)
+      double t0, RandGen& rng)
 {
   constexpr int token_layer = 0;
   const int from_edge = 0;

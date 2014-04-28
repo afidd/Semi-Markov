@@ -135,7 +135,7 @@ class PartialCoreMatrix
 
     auto lm=state_->marking.GetLocalMarking();
     state_->marking.InitLocal(lm, neighboring_places);
-    Fire(gspn_, trans_id, state_->user, lm, rng);
+    Fire(gspn_, trans_id, state_->user, lm, state_->CurrentTime(), rng);
     state_->marking.ReadLocal(lm, neighboring_places);
 
     BOOST_LOG_TRIVIAL(trace) << "Fire "<<trans_id <<" neighbors: "<<
