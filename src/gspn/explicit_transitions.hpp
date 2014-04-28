@@ -59,7 +59,7 @@ public:
     return {false,std::unique_ptr<TransitionDistribution<RNG>>(nullptr)};
   }
 
-  virtual void Fire(ExtraState& s, LM& lm, RNG& rng) const {
+  virtual void Fire(ExtraState& s, LM& lm, double t0, RNG& rng) const {
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
 };

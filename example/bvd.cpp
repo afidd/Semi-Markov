@@ -169,7 +169,7 @@ public:
     }
   }
 
-  virtual void Fire(UserState& s, Local& lm, CowGen& rng) const {
+  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) const {
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
 };

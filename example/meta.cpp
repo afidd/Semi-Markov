@@ -268,7 +268,7 @@ class InfectNeighbor : public SIRTransition
   }
 
   virtual void Fire(WithParams& s, Local& lm,
-      RNG& rng) const override {
+      double t0, RNG& rng) const override {
     BOOST_LOG_TRIVIAL(debug) << "Fire infection " << lm;
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
@@ -292,7 +292,8 @@ class Recover : public SIRTransition
     }
   }
 
-  virtual void Fire(WithParams& s, Local& lm, RNG& rng) const override {
+  virtual void Fire(WithParams& s, Local& lm,
+      double t0, RNG& rng) const override {
     BOOST_LOG_TRIVIAL(debug) << "Fire recovery "<< lm;
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
