@@ -281,8 +281,13 @@ class NonHomogeneousPoissonProcesses
    */
   virtual std::tuple<TransitionKey, double> Next(double now, RNG& rng
       ) const override {
-    const auto& least=queue_.top();
-    return std::make_tuple(least.key, least.time);
+    if (!queue_.empty()) {
+      const auto& least=queue_.top();
+      return std::make_tuple(least.key, least.time);
+    } else {
+      return std::make_tuple(TransitionKey{},
+          std::numeric_limits<double>::infinity());
+    }
   }
 
   /*! Ask whether a transition is enabled.
