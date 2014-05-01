@@ -148,6 +148,13 @@ public:
   }
 
 
+  template<typename Writer>
+  void WriteKeys(const Writer& writer) {
+    for (const auto& kv : transitions) {
+      writer.Write(kv.first, this->VertexTransition(kv.first));
+    }
+  }
+
   friend BuildGraph<ExplicitTransitions<PKey,TKey,Local,ETRand,ExtraState>>;
 
   template<typename State, typename P, typename T, typename L, typename Random>
