@@ -679,9 +679,13 @@ public:
       if (begin!=token_container->end()) {
         return {op(*begin), true};
       } else {
+        BOOST_LOG_TRIVIAL(trace)<<"LM::GetToken empty "<<place_idx
+          << " <" << I << ">";
         return {return_type{}, false};
       }
     } else {
+      BOOST_LOG_TRIVIAL(trace)<<"LM::GetToken token_container=null "<<place_idx
+        << " <" << I << ">";
       return {return_type{}, false};
     }
   }

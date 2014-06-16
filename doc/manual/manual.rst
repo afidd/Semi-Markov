@@ -3,10 +3,11 @@ Semi-Markov Library Manual
 ################################
 
 .. toctree::
+   :maxdepth: 2
 
    intro
    install
-   mathematics
+   background
    explicit
-   gspntrajectory
-   observestate
+   examples
+   references

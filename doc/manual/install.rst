@@ -1,12 +1,13 @@
-==============================
+********************************
 Requirements and Installation
-==============================
+********************************
 
 This is a header-only library. Running ``./configure`` and ``make``
 will build example codes and copy header files into the specified
 ``include`` directory.
 
-Requirements:
+Requirements
+----------------
 
 * C++ supporting the C++11 standard, which includes gcc 4.8 or newer
   and clang 3.4 or newer.
@@ -20,7 +21,8 @@ Requirements:
   so it should compile anywhere.
 
 
-Installation:
+Installation
+---------------
 
 #. Determine the flavor of your boost libraries. The names of Boost
    binaries may contain extra information, most commonly ending in ``-mt``,
