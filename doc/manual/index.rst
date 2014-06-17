@@ -5,7 +5,7 @@
 AFIDD: Semi-Markov
 =======================================
 
-A C++ library to do Gillespie-type simulations, stochastically
+A C++ library to do stochastic simulations
 in continuous time, of discrete-event models. This library permits
 non-contant hazard rates, so that distributions do not need to be
 exponentially-distributed. It focuses on defining a system with
