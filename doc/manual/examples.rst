@@ -5,9 +5,57 @@ Examples
 
 Weiss Two-state Brownion
 =========================
-The `Weiss two state Brownion example`_ is in a separate PDF.
+
+In the preface to his classic book on semi-Markov
+processes [Howard:1971]_, Howard offers the following guidance
+to readers:
+
+.. epigraph:: *It is often said that good ideas are simple; the Markov
+        process is no exception.  In fact there is no problem in
+        this book that cannot be made clear to a child.  The
+        device we use to make such expositions simple is a pond
+        covered by lily pads among which a frog may jump.
+        Although his jumps may be random, the frog never falls
+        into the water...it should be helpful to all readers to
+        discuss each chapter using the lily pond analogy.*
+
+While one may question Howard's view of the abstract reasoning
+capabilities of children, his advice about frogs and lily pads is
+sound. The Two-state Brownion model described by Weiss is that
+of a frog on lily pads, where the frog may be sleeping or awake.
+
+Imagine a pond with a frog jumping among seven lily pads as in Figure
+:ref:`pond`.  The probability of jumping to pad :math:`i` at or
+before time :math:`t=\tau` given that the frog arrived at pad :math:`j`
+at :math:`t=0` is given by
+
+.. math:: C_{ij}(\tau) = q_{ij} H_{ij}(\tau)
+
+where :math:`q_{ij}` is marginal probability of jumping from pad
+:math:`j` to pad :math:`i` at any time and :math:`H_{ij}(\tau)` is the
+conditional distribution of jump times given that the frog arrived at
+pad :math:`j` at `t=0` and the destination will be pad :math:`j`.  It
+is convenient to assume that the frog will actually move at every
+jump, i.e.,
+
+.. math:: \sum_{k\ne j} q_{kj} = 1
+
+and :math:`q_{jj} = 0`.
+
+.. _pond:
+
+.. figure:: images/pond.svg
+   :scale: 75%
+   :align: center
+   
+   Figure 3.  Location of lily pads in a hypothetical pond.
+
+
+Implementation of
+the `Weiss two state Brownion example`_ is in a separate PDF.
 
 .. _Weiss two state Brownion example: weiss.pdf
+
 
 Susceptible-Infected-Recovered
 ================================
@@ -58,7 +106,7 @@ store the model's marking.
      hold :math:`(1,0,0)`, or :math:`(0,1,0)`, or :math:`(0,0,1)`.
 
      .. image:: images/metapopsir.*
-        :scale: 40%
+        :width: 300 px
         :alt: Three individuals with state (S,I,R) and infection and recovery transitions.
 
   #. Three places, one for each of  :math:`(n_S, n_I, n_R)`, which contain
@@ -68,7 +116,7 @@ store the model's marking.
      individual's disease state.
 
      .. image:: images/sirnonexponential.*
-        :scale: 40%
+        :width: 400 px
         :alt: Three places, with three infection transitions and three recoveries.
 
   #. A token with no internal state. There are :math:`3N` places, one for
@@ -77,7 +125,7 @@ store the model's marking.
      between 2 and 3, but not between 1 and 3.
 
      .. image:: images/sirindividual.*
-        :scale: 40%
+        :width: 300 px
         :alt: Nine places with three recoveries, showing four of the six infection
               transitions.
 
@@ -144,7 +192,7 @@ three places, each of which holds a count of S, I, and R.
 This is a kind of grouped transition.
 
      .. image:: images/sirexponential.*
-        :scale: 40%
+        :height: 150px
         :alt: The classic SIR diagram. Three places, and two transitions,
               one for infection and one for recovery.
 
@@ -213,8 +261,8 @@ where places correspond to particular metapopulations for which the
 infection and recovery rates are different. Then we can add
 metapopulation-to-metapopulation movement or infection rates.
 
-Implementation
------------------
+Implementation of Case 3
+---------------------------
 Let's choose Case 3, which has a separate place for each
 pair of individual and disease state.  This is implemented
 as an example called ``sir_mixed.cpp``.
@@ -562,3 +610,67 @@ GSPN object to the dynamics and ask it for the next step.::
 We can stop the loop at any point, but it will return
 that it is not running at any point when there are no
 enabled transitions.
+
+Implementation of Case 1
+---------------------------
+
+If we were to implement the first representation of the
+state, where each token has the value :math:`(s,i,r)`,
+how would we define the tokens and transitions?
+The token itself is just a struct.::
+
+  struct MetaToken {
+    int s;
+    int i;
+    int r;
+    MetaToken()=default;
+    MetaToken(int s, int i, int r) : s(s), i(i), r(r) {}
+  };
+
+More interesting are the transitions. How do we grab
+and read or modify the token? We have to look inside the
+token in the local marking. This is done by applying a function
+to the token. We pass into the local marking a functor, but
+the local marking returns two things, whether it found
+a token and then the result of the functor.::
+
+  class Infect : public MetaTransition {
+    virtual std::pair<bool, std::unique_ptr<Dist>>
+    Enabled(const UserState& s, const Local& lm, double te,
+        double t0) const override {
+      bool found;
+      bool have_infector;
+      std::tie(found, have_infector)=
+        lm.template GetToken<0>(0, [](const MetaToken& mt)->bool {
+          return mt.i>0;
+        });
+      assert(found);
+      bool have_susceptible;
+      std::tie(found, have_susceptible)=
+        lm.template GetToken<0>(1, [](const MetaToken& mt)->bool {
+          return mt.s>0;
+        });
+      assert(found);
+      if (have_infector && have_susceptible) {
+        return {true, std::unique_ptr<ExpDist>(new ExpDist(s.params.at(1), te))};
+      }
+    };
+
+    virtual void Fire(UserState& s, Local& lm, double t0,
+        RandGen& rng) const override {
+      int from_place=1;
+      int to_place=1;
+      int token_cnt=1;
+      lm.template Move<0,0>(from_place, to_place, token_cnt,
+        [](MetaToken& mt)->void {
+        assert(mt.s==1 && mt.i==0);
+        mt.i=1;
+        mt.s=0;
+      });
+    }
+  };
+
+We are still checking for a susceptible and an infected to determine
+enabling, and then the firing transition moves a susceptible into
+an infected state. It just does it by modifying the token
+rather than moving the token to a place.

@@ -3,13 +3,19 @@
 Background
 *****************
 
-What is a hazard?
-====================
+This addresses two main points, how to specify a model for
+the library using distributions defined by hazards and
+why such a specification, with its initial conditions,
+is sufficient to define the trajectory for a model.
+
+
+The Hazard from Survival Analysis
+==================================
 
 Discrete case
 ----------------
 
-The discrete case is much easier to understand that the continuous
+The discrete case is much easier to understand than the continuous
 case because it can be explained without employing any results from
 calculus.  Throughout this section, :math:`\bf{X}` will be assumed to
 real-valued random variable.  For example, :math:`\bf{X}` could
@@ -24,7 +30,7 @@ The (cumulative) distribution of :math:`\bf{X}` is defined as
 
 .. math:: F_{X}(k) = \mathcal{P}[x \le k]
 
-assuming :math:`F_{X}(\infty) = 1`.  It is easy to see that the 
+assuming :math:`F_{X}(\infty) = 1`.  The 
 density can be expressed as the difference in adjacent values of the 
 distribution
 
@@ -59,14 +65,14 @@ In the case of Stocks' data, the hazards shown in
 symptoms appearing at day :math:`k` given that the patient had not
 displayed symptoms at any previous visit.  As time goes on, patients
 who have already developed symptoms effectively reduce the pool of
-patients in the study who still in a state where they might first
+patients in the study who are still in a state where they might first
 present symptoms on day :math:`k`.  This is the origin of the term in
 the denominator.
 
 .. _latent_period_hazard:
 
 .. figure:: images/Stocks_hazard.*
-   :scale: 50%
+   :width: 500 px
    :align: center
 
    Figure 2.  Estimated hazards of latent periods for measles in
@@ -77,7 +83,15 @@ the rate of appearance of symptoms per asymptomatic (infected but not
 yet symptomatic) patient per day.  For example, the hazard inferred
 from the Weibull distribution is approximately :math:`0.15` on day 10.
 In other words, 15% of the patients that are asymptomatic on day 9
-will present symptoms when examined on day 10.  
+will present symptoms when examined on day 10.
+
+.. figure:: images/stocks_person.*
+   :width: 200 px
+   :align: center
+
+   Figure 3. Each participant of the Stocks study could either
+   become symptomatic or leave the study. Focusing on the
+   hazard accounts for the effect of those who leave.
 
 This interpretation is extremely important because it connects a
 hazard with a rate for a specific process, and that rate has well
@@ -88,19 +102,53 @@ it would lead to a systematic errors in the estimation of process
 rates, especially at long times when the depletion effect is most
 pronounced.
 
+
+
 Continuous case
 --------------------
 
 The random variable :math:`\bf{X}` is again assumed to be a
 real-valued, but the measurements will not be binned as above.
+The cumulative distribution not an integer :math:`k` but a continuous
+time interval, :math:`\tau`.
 
-***This section is incomplete***
+.. math::
+
+   F_X(\tau)=P[x\le\tau]
+
+assuming :math:`F_X(\infty)=1`. The density is the derivative
+of the cumulative distribution. The concept of the hazard is
+part of survival analysis, where survival is
+:math:`G_X(\tau)=1-F_X(\tau)`, and represents the probability
+the random variable, a time interval, is longer than :math:`\tau`.
+One expression for the hazard is that the density of the random
+variable is equal to the probability it survives to a time :math:`\tau`
+multiplied by the hazard rate for firing at time :math:`\tau`, or, in
+probabilities,
+
+.. math::
+
+   P[\tau<x\le\tau+d\tau]d\tau=P[\tau<x]P[\tau<x\le\tau+d\tau+d\tau|\tau<x].
+
+Writing this same equation with its almost-sure equivalents defines
+the continuous hazard, :math:`\lambda_X(\tau)`,
+
+.. math::
+  
+   f_X(\tau)=G_X(\tau)\lambda_X(\tau).
+
+This is a rearrangement away from the definition of the discrete case.
 
 
-What is a finite state machine?
-=================================
+Finite State Machines Generate Trajectories
+============================================
 
-A *finite state machine* is a mathematical model for a particularly
+This library accepts a specification of a model in terms of
+hazards, an initial condition, and produces trajectories.
+This set of high-level steps to simulation (specify, initialize,
+step) has a well-defined abstraction called a *finite state machine.*
+It isn't the finite state machine familiar to programmers but a
+mathematical model, coming from category theory, for a particularly
 simple class of computing systems.  At a conceptual level, a finite
 state machine can be considered a black box that receives a sequence
 of input signal and produces an output signal for each input signal.
@@ -110,15 +158,15 @@ far.  For each input signal, the box performs two operations.  In both
 cases, the decision depends on the current internal state and the
 identity of the input signal just received.
 
-* **Chose next state** 
+* **Chose next state**
 * **Generate output token**
 
 It is helpful to view the finite state machine layer as a mechanism to
 simulate a *Markov chain* or *Markov process*.
 
 
-What is a Markov chain?
-===========================
+Markov Chain for Discrete-Time Trajectories
+=============================================
 
 Roughly speaking, a *Markov chain*, :math:`\bf{X}`, is a probabilistic
 system that makes random jumps among a finite set of distinct states,
@@ -133,14 +181,14 @@ probabilities for state transitions must satisfy
 Since more distant history does not affect future behavior, Markov
 chains are sometimes characterized as *memoryless*.
 
-It is not hard to show that this relation can be iterated to compute
+This relation can be iterated to compute
 the conditional probabilities for multiple time steps
 
 .. math:: \mathcal{P}[X_{n+2} = s_{m} | X_n=s_k] = \sum_{l} \mathcal{P}[X_{n+2} = s_{m} |
 	  X_{n+1}=s_l] \mathcal{P}[X_{n+1} = s_{l} | X_{n}=s_k]
 
 Note, the transition probabilities :math:`\mathcal{P}[X_{n+1} = s_{l} |
-X_{n}=s_k]` may depend on time (the index :math:`n`).  These so-called
+X_{n}=s_k]` may depend on time (through the index :math:`n`).  These so-called
 time-inhomogeneous Markov chains arise when the system of interest is
 driven by external entities.  Chains with time-independent conditional
 transition probabilities are called time-homogeneous.  The dynamics of
@@ -148,10 +196,10 @@ a time-homogeneous Markov chain is completely determined by the
 initial state and the transition probabilities.  All processes
 considered in this document are time-homogeneous.
 
-What is a Markov process?
-===============================
+Markov Process for Continuous-Time Trajectories
+=================================================
 
-The simplest way to think of a *Markov process* is a generalization of
+A *Markov process* is a generalization of
 the Markov chain such that time is viewed as continuous rather than
 discrete.  As a result, it makes sense to record the times at which
 the transitions occur as part of the process itself.  
@@ -173,7 +221,7 @@ as shown in :ref:`piecewise_Z`
    :scale: 100%
    :align: center
 
-   Figure 2.  **Realization of a continuous time stochastic process and
+   Figure 4.  **Realization of a continuous time stochastic process and
    associated Markov chain.**
 
 A realization of the process :math:`\bf{Y}` is defined by the closed
@@ -198,90 +246,97 @@ be unchanged by uniform shifts in time
 
 .. math:: \mathcal{P}[Z_{t+\tau} | Z_{s+\tau}] = \mathcal{P}[Z_{t} | Z_{s} ]
 
-
 for :math:`0<s<t` and :math:`\tau > 0`.  Stochastic processes with
 shift invariant state transition probabilities are called
 *stationary*.  
 
-***This section is incomplete***
+When we examined hazard rates above, we were examining the rate
+of transitions for a Markov process. The overall probability
+of the next state of the Markov process is called the core
+matrix,
 
-What is a semi-Markov process?
-=======================================
+.. math:: \mathcal{P}[Z_{t} | Z_{s} ]=Q_{ij}(t_{n+1}-t_n)
 
-There are many excellent books on semi-Markov models,
-notably [Howard2007]_. Our goal here is to define the generalized
-stochastic Petri net as a representation of a semi-Markov
-model in order to explain how the library decomposes it
-into algorithms.
+indicating a state change between the states :math:`(s_i,s_j)`.
+The derivative of this is a rate,
 
+.. math:: q_{ij}(t_{n+1}-t_n)=\frac{dQ_{ij}(t_{n+1}-t_n)}{dt},
 
-We define the semi-Markov process from the Markov process, following
-[Pyke1961]_. A *Markov chain* is a discrete variable on a set of
-states, :math:`J`. At each transition, a next state is selected
-from the set :math:`J` with probability determined by the matrix
-:math:`\pi_{ij}`. You are in state :math:`i` and going to one of
-the states :math:`j`, with no specification of a time.
+which is a joint distribution over states and time intervals.
+Normalization for this quantity sums over possible states
+and future times,
 
-A *Markov process* introduces the time at which the next state
-will be chosen. It is defined on a joint discrete and continuous
-space, :math:`(J,X)`, where the continuous space runs from minus
-infinity to infinity. We usually think of a Markov process as
-having a continuous variable that is exponentially-distributed
-in time. With a process of this sort, you can interrupt it at
-any moment between transitions and still be able to say with
-the same certainty, that it will likely fire within a given interval.
-This property is called memorylessness. A Markov process doesn't
-inherently have this restriction, though. The distribution of
-its continuous stochastic variable can have any distribution,
-such as Weibull, Gamma, or piecewise-continuous.
+.. math:: 1=\int_0^\infty \sum_j  q_{ij}(s)ds.
 
-While a Markov process determines the choice of the
-next state and time of the next state, a semi-Markov process
-records the state of a Markov process at any time. If we track
-the sum of times, :math:`S=∑Δt_{ij}`, then the semi-Markov
-process tracks the state of the system at time :math:`S`.
-The result is that we have a system which can have a
-non-exponential sojourn in any state.
-
-How do we simulate a trajectory from such a process?
-We use the Markov process, called the *embedded* Markov process,
-to select a state at each time. The *core matrix* determines the
-probability of selecting the next state and time.
+The survival, in terms of the core matrix, is
 
 .. math::
 
-   q_{ij}(\tau)=P(j, \tau|i, t_0)
+   G_i(\tau)=1-\int_0^\tau \sum_k  q_{ik}(s)ds.
 
-There are a few choices for how to sample from a joint
-discrete and continuous process. The first method is to factorize
-the probability into a marginal and conditional distribution. Select 
-uniformly from the marginal distribution, and then use that result
-to select uniformly from the conditional distribution at that value.
+This means our hazard is
 
 .. math::
 
-   q_{ij}(\tau)=\pi_{ij}(\infty)h_{ij}(\tau)
+   \lambda_{ij}(\tau)=\frac{q_{ij}(\tau)}{1-\int_0^\tau \sum_k  q_{ik}(s)ds}.
 
-   q_{ij}(\tau)=\pi_{ij}(\tau)w_{i}(\tau)
+For the measles example, the set of future states :math:`j` of each individual
+include symptomatic and all the possible other ways an individual
+leaves the study, so you can think of :math:`j=\mbox{left town}`.
+In practice, we build a hazard in two steps. First, count the probability
+over all time for any one eventual state :math:`j`. This is the 
+same stochastic probability :math:`\pi_{ij}` that is seen in Markov
+chains. Second, measure the distribution of times at which 
+intervals enter each new state :math:`j`, given that they are headed
+to that state. This is called the holding time, :math:`h_{ij}(\tau)`,
+and is a conditional probability. Together, these two give us
+the core matrix,
 
-The first equation marginalizes time-dependence to find the
-Markov chain for the system, :math:`\pi_{ij}(\infty)`. Given a chosen
-transition, the :math:`h_{ij}(\tau)` are the holding times for next
-states. The second equation marginalizes over all possible next transitions
-of the system to decide first when it will fire, as given by the
-single waiting time, :math:`w_i(\tau)`. Then, at a particular time
-it finds the probability of transtions, :math:`\pi_{ij}(\tau)`.
+.. math:: q_{ij}(\tau)=\pi_{ij}h_{ij}(\tau).
 
-Imagine that we had a system with a very large state space, possibly
-infinite, but that, at any point in time only a finite number of
-transitions were possible. The core matrix would be infinite, but its
-non-zero entries would be finite. We could simulate such a system
-by looking at the non-zero entries after each transition. We would just
-need to track which transitions existed at each step.
+Note that :math:`h_{ij}(\tau)` is a density whose integral
+:math:`H_{ij}(\tau)` is a cumulative distribution. If we write the
+same equation in terms of probabilities, we see that it amounts
+to separating the Markov process into a marginal and conditional
+distribution.
+
+.. math::
+
+   \begin{eqnarray}
+   q_{ij}(\tau)&=&\frac{d}{d\tau}P[Z_t|Z_s]\\
+   &=&\frac{d}{d\tau}P[s_j|s_i,t_n]P[t_{n-1}-t_n\le\tau|s_i,s_j,t_n]\\
+     & = & P[s_j|s_i,t_n]\frac{d}{d\tau}P[t_{n-1}-t_n\le\tau|s_i,s_j,t_n] \\
+     & = & \pi_{ij}\frac{d}{d\tau}H_{ij}(\tau) \\
+     & = & \pi_{ij}h_{ij}(\tau)
+   \end{eqnarray}
+
+Choosing the other option for the marginal gives us the
+waiting time formulation for the core matrix. It corresponds
+to asking first what is the distribution of times at which the
+next event happens, no matter which event, and then asking
+which events are more likely given the time of the event.
+
+.. math::
+
+   \begin{eqnarray}
+   q_{ij}(\tau)&=&\frac{d}{d\tau}P[Z_t|Z_s]\\
+   &=&\frac{d}{d\tau}P[s_j|s_i,t_n,t_{n+1}]P[t_{n-1}-t_n\le\tau|s_i,t_n]\\
+     & = & \frac{d}{d\tau}(\Pi_{ij}(\tau)W_i(\tau)) \\
+     & = & \pi_{ij}(\tau)\frac{d}{d\tau}W_i(\tau) \\
+     & = & \pi_{ij}(\tau)w_{i}(\tau)
+   \end{eqnarray}
+
+While the waiting time density :math:`w_i(\tau)`, is the derivative
+of the waiting time, we won't end up needing to relation
+:math:`\pi_{ij}(\tau)` to :math:`\Pi_{ij}(\tau)` when finding trajectories
+or computing hazards, so the more complicated relationship won't
+be a problem.
 
 
-What is a generalized stochastic Petri net?
-===============================================
+
+
+Generalized Stochastic Petri Net for Bookkeeping
+=================================================
 
 A **generalized stochastic Petri net** (GSPN) is a formal way to
 specify a a system of interacting, competing processes. Different

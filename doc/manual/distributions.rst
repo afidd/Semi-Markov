@@ -1,6 +1,6 @@
-==================================
+************************************
 Continuous Distributions Reference
-==================================
+************************************
 
 The core matrix of a semi-Markov system is defined on a joint
 discrete and continuous space, where the discrete set is of
@@ -39,6 +39,9 @@ quantile, :math:`F^{-1},` look like
 Given any distributions from Boost::Random or std::random, this
 formula calculates the shifted quantile from the original quantile
 and cumulative distribution.
+
+TransitionDistribution Base Class
+====================================
 
 Transitions for this library implement the following interface.
 
@@ -88,6 +91,9 @@ of sampling.
 
 The following distributions are currently in the library.
 
+Exponential Distribution
+===========================
+
 .. cpp:class:: afidd::smv::ExponentialDistribution<RandomNumberGenerator>
 
    The `exponential distribution <http://en.wikipedia.org/wiki/Exponential_distribution>`_
@@ -129,6 +135,8 @@ The following distributions are currently in the library.
    this distribution will fire at all. 
 
 
+Weibull Distribution
+=======================
 
 .. cpp:class:: afidd::smv::WeibullDistribution<RandomNumberGenerator>
 
@@ -149,6 +157,8 @@ The following distributions are currently in the library.
    This creates a Weibull distribution with parameters as defined above.
    The shift moves the distribution to the right.
 
+Gamma Distribution
+===========================
 
 .. cpp:class:: afidd::smv::GammaDistribution<RandomNumberGenerator>
 
@@ -159,6 +169,8 @@ The following distributions are currently in the library.
 
    The constructor initializes the two parameters, :math:`\alpha` and :math:`\theta.` It also sets the enabling time and optional shift and normal.
 
+Piecewise Linear Distribution
+===============================
 
 .. cpp:class:: afidd::smv::PiecewiseLinearDistribution<RandomNumberGenerator>
 
