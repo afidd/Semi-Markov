@@ -7,8 +7,30 @@ Semi-Markov Library FAQ
 Testing
 ^^^^^^^^^^
 
-Regular testing is done on Linux and Mac with gcc 4.7, gcc 4.8, clang 3.3,
-and clang 3.4.
+There are three levels of testing.
 
+* **Build Tests** Regular testing is done on Linux and Mac with gcc 4.7, gcc 4.8, clang 3.3,
+  and clang 3.4. There is a `Jenkins <http://jenkins-ci.org/>`_ instance locally that runs
+  builds inside of `Docker <http://docker.io/>`_ containers. This handles builds on Ubuntu
+  and Fedora. Mac builds are tested by hand.
+
+.. figure:: images/jenkins_main.*
+   :align: center
+   :width: 400px
+
+* **System-level Tests** There are currently just a few of these, namely a set of SIR
+  models whose theoretical properties are known, contained in examples/sir_mixed.cpp.
+  We verify the percentage of runs which become epidemic.
+
+* **Unit Tests** The distributions (exponential, Weibull, and others) have a unit test
+  called disttest, built from the test directory. This samples the distributions
+  and compares Kolmogorov-Smirnov estimators of those samples with theoretical results.
+
+
+Code Style
+^^^^^^^^^^^^^
+
+The code follows the Boost library guidelines for compatibility, but Boost isn't
+a style guide, so it follows the Google C++ Style Guide.
 
 
