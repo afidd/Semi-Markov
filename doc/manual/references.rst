@@ -7,6 +7,10 @@ References
 
 .. [Gillespie:1978] D. T. Gillespie, “Monte Carlo simulation of random walks with residence time dependent transition probability rates,” J. Comput. Phys., vol. 28, no. 3, pp. 395–407, Sep. 1978.
 
+.. [Grimm2010] V. Grimm, U. Berger, D. L. DeAngelis, J. G. Polhill, J. Giske, and S. F. Railsback, “The ODD protocol: A review and first update,” Ecol. Modell., vol. 221, no. 23, pp. 2760–2768, Nov. 2010.
+
+.. [Hartig2011] F. Hartig, J. M. Calabrese, B. Reineking, T. Wiegand, and A. Huth, “Statistical inference for stochastic simulation models--theory and application.,” Ecol. Lett., vol. 14, no. 8, pp. 816–27, Aug. 2011.
+
 .. [Howard:1971] R. A. Howard, "Dynamic Probabilistic Systems. Vol. II:
 		Semi-Markov and Decision Processes" (J. Wiley and Sons, 1971).
 
