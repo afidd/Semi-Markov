@@ -674,3 +674,103 @@ We are still checking for a susceptible and an infected to determine
 enabling, and then the firing transition moves a susceptible into
 an infected state. It just does it by modifying the token
 rather than moving the token to a place.
+
+Bovine Viral-Diarrhea Virus on a Dairy Farm
+============================================
+There is an excellent paper by [Viet:2004]_ and others on
+Bovine viral-diarrhea virus (BVDV) spread in dairy farms.
+In this paper, the authors construct and run a discrete, stochastic,
+continuous-time model for herds of cows at a dairy farm.
+We describe now
+how one would implement their simulation with the Semi-Markov
+library instead of writing the whole thing by hand.
+
+There will be two layers to this simulation.
+
+1. Farm management for a dairy farm. Data for this model comes
+   from published studies on such topics as typical farm sizes,
+   parturition timing, and cow life span. This model was run
+   and validated on its own before further complication.
+
+2. Disease spread on that farm. This disease can cause
+   transient or persistent infection. It can cause 
+   abortion in the cow, depending on timing of infection.
+
+In a larger context, the single-farm simulation could be used
+to estimate, statistically, how long it takes from introducing
+an infected cow to finding an infected cow on a truck to another
+farm. This would then form the basis for a stochastic farm-to-farm model,
+even on a national scale, which would incorporate both
+known farm management practices and uncertainty about disease
+processes.
+
+
+Dairy Farm Model
+------------------
+The dairy farm model groups cows into four herds, the
+calves, heifers before breeding, heifers after breeding,
+and dairy cows. We typically make diagrams like
+this below.
+
+.. figure:: images/bvd_gist.*
+   :align: center
+   :width: 200px
+
+There are a host of rules for the farm. For instance, the
+male calves are sold at about ten days. Heifer breeding
+times, likelihood of giving birth, and likelihood of selling
+or destroying a dairy cow all enter the model as hazard
+rates in the GSPN. This GSPN is a formalization of the
+diagram above.
+
+.. figure:: images/viet-farm.*
+   :align: center
+   :height: 300px
+
+You don't see in the figure above that the rates of transitions
+are quite complicated because they are taken from 
+field observations of farm management practices.
+
+For this model, each token in the simulation represents
+a unique cow. The token carries a birth date and records
+the cow's parity. Transitions will move cows from one herd
+to another, or out of the simulation. Births create new tokens.
+
+Disease Model
+----------------
+The disease model is more complicated than just SIR
+because it accounts for immunity and persistent infection.
+It also labels infection states differently depending on
+how long the cow has been pregnant because this determines
+the likelihood of survival and/or persistent infection of
+the calf.
+
+.. figure:: images/viet-factored.*
+   :height: 400px
+
+Overlaying this model on top of the farm model means
+that each cow can now be both in a herd and in
+one of these disease states. It requires composing the
+two graphs. The token still represents unique cows.
+
+
+Adding Intervention to the Model
+---------------------------------
+We've described what was in the paper. What would
+it look like if we added a vaccination intervention
+to this model? Vaccination would create a new
+state for the disease portion. We could account for
+availability of a veterinarian by including a second
+type of token in the model.
+
+.. figure:: images/viet-vet.*
+   :width: 300px
+
+There would could be a
+veterinarian-at-work place and then a separate
+veterinarian-at-farm place for each farm in the model.
+The token then moves to farms with some hazard rate
+and dwells at each farm for a time. While the token
+is present at the farm, a herd can transition from
+susceptible to an immune-vaccinated state.
+
