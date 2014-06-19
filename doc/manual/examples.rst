@@ -731,6 +731,14 @@ You don't see in the figure above that the rates of transitions
 are quite complicated because they are taken from 
 field observations of farm management practices.
 
+.. figure:: images/aitoconception.*
+   :width: 500px
+   :align: center
+   
+   The time from artificial insemination to conception,
+   taken from [Viet:2004]_. Field observations typically
+   take the form of a chart like this one.
+
 For this model, each token in the simulation represents
 a unique cow. The token carries a birth date and records
 the cow's parity. Transitions will move cows from one herd
