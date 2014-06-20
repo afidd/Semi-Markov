@@ -10,4 +10,5 @@ Semi-Markov Library Manual
    background
    explicit
    examples
+   implementation
    references

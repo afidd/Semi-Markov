@@ -16,6 +16,8 @@ References
 
 .. [Howard2007] R. A. Howard, Dynamic Probabilistic Systems: Semi-Markov and Decision Processes. Mineola, NY: Dover, 2007.
 
+.. [Meyers:2013] Scott Meyers, `The new C++ <http://www.aristeia.com/C++11.html>`_.
+
 .. [Pyke1961] R. Pyke, “Markov Renewal Process: Definition and Preliminary Properties,” Ann. Math. Stat., vol. 32, no. 4, pp. 1231–1242, 1961.
 
 .. [Stocks:1931] P. Stocks, "Incubation period of measles," British
