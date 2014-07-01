@@ -42,6 +42,9 @@
 
 namespace afidd
 {
+
+struct IndistinguishableToken {};
+
 namespace smv
 {
 

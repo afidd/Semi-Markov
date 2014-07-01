@@ -1,0 +1,39 @@
+\documentclass{article}
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{xspace}
+%\usepackage{siunitx}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{palatino}
+\usepackage{microtype}
+
+\newcommand{\introduce}{b}
+\newcommand{\drop}{r_d}
+\newcommand{\pretty}{p}
+\newcommand{\takeoff}{r_t}
+\newcommand{\tasty}{a}
+\newcommand{\susceptibility}{\gamma} % aphid susceptibility
+\newcommand{\infectiousness}{\beta}
+\newcommand{\wane}{w}
+
+\title{Frequency-dependent, Stochastic SIR}
+\author{Drew}
+
+\begin{document}
+\maketitle
+
+\url{http://kinglab.eeb.lsa.umich.edu/EEID/eeid/ecology/EEID2012_Simulation.pdf}
+
+$\beta(t)=\beta_0(1+\beta_1 \cos(2\pi t))$
+\begin{equation}
+  \int_{t_0}^{g(t_i,t_0)}\beta_0(1+\beta_1 \cos(2\pi t))=\left.\beta_0(t+\frac{\beta_1}{2\pi}\sin(2\pi t))\right|_{t_0}^{g(t_i,t_0)}
+\end{equation}
+
+\end{document}
+
+
