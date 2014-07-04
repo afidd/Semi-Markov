@@ -336,15 +336,15 @@ struct initialize_local
       auto place_tokens=typed_dict.find(place_id);
       if (place_tokens!=typed_dict.end())
       {
-        BOOST_LOG_TRIVIAL(trace)<<"initialize_local<"<<layer<<"> "<<place_id
-          <<" "<<idx<<" "<<place_tokens->second.size();
+        SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"initialize_local<"<<layer<<"> "<<place_id
+          <<" "<<idx<<" "<<place_tokens->second.size());
         lm.template Set<J>(idx, &place_tokens->second,
                            stochiometric_coefficient);
       }
       else
       {
-        BOOST_LOG_TRIVIAL(trace)<<"initialize_local<"<<layer<<"> "<<place_id
-          <<" "<<idx<<" null";
+        SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"initialize_local<"<<layer<<"> "<<place_id
+          <<" "<<idx<<" null");
         lm.template Set<J>(idx, nullptr, stochiometric_coefficient);
       }
     }
@@ -524,7 +524,7 @@ public:
 
   void Reserve(size_t cnt)
   {
-    BOOST_LOG_TRIVIAL(trace)<<"LocalMarking::reserve "<<cnt;
+    SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"LocalMarking::reserve "<<cnt);
     m_.reserve(cnt);
   }
 
@@ -563,7 +563,7 @@ public:
   void Add(int place_idx, const typename boost::mpl::at<
       typename LocalMarking::token_types,boost::mpl::int_<I>>::type& token)
   {
-    BOOST_LOG_TRIVIAL(trace)<<"LocalMarking::add";
+    SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"LocalMarking::add");
     typedef typename boost::mpl::at<typename LocalMarking::container_types,
       boost::mpl::int_<I>>::type container_type;
 
@@ -587,7 +587,7 @@ public:
 
   template<int I, typename RNG>
   void Remove(int place_idx, size_t cnt, RNG& rng) {
-    BOOST_LOG_TRIVIAL(trace)<<"LocalMarking::remove";
+    SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"LocalMarking::remove");
     typedef typename boost::mpl::at<typename LocalMarking::container_types,
       boost::mpl::int_<I>>::type container_type;
 
@@ -682,8 +682,8 @@ public:
       if (begin!=token_container->end()) {
         return {op(*begin), true};
       } else {
-        BOOST_LOG_TRIVIAL(trace)<<"LM::GetToken empty "<<place_idx
-          << " <" << I << ">";
+        SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"LM::GetToken empty "<<place_idx
+          << " <" << I << ">");
         return {return_type{}, false};
       }
     } else {
@@ -700,8 +700,8 @@ public:
   Move(int place_from, int place_to, size_t cnt,
       const Modifier& modify_token)
   {
-    BOOST_LOG_TRIVIAL(trace)<< "Moving "<<cnt<<" tokens from "<<place_from
-      <<" to "<<place_to;
+    SMVLOG(BOOST_LOG_TRIVIAL(trace)<< "Moving "<<cnt<<" tokens from "<<place_from
+      <<" to "<<place_to);
     if (0==cnt) return;
 
     auto& place_from_container=m_.at(place_from);
@@ -714,11 +714,11 @@ public:
         auto& place_to_container=m_.at(place_to);
         auto& to_container=std::get<J>(std::get<0>(place_to_container));
         if (to_container==nullptr) {
-          BOOST_LOG_TRIVIAL(trace)<< "Moving to_container null";
+          SMVLOG(BOOST_LOG_TRIVIAL(trace)<< "Moving to_container null");
           to_container=new to_container_type{};
           added_.insert(place_to);
         } else {
-          BOOST_LOG_TRIVIAL(trace)<< "Moving to_container exists";
+          SMVLOG(BOOST_LOG_TRIVIAL(trace)<< "Moving to_container exists");
         }
         if (from_container!=to_container) {
           for (auto didx=cnt; didx>0; --didx) {
@@ -738,7 +738,8 @@ public:
           }
         }
         if (from_container->size()==0) {
-          BOOST_LOG_TRIVIAL(trace)<<"Moving mark "<<place_from<<" to erase.";
+          SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"Moving mark "<<place_from
+            <<" to erase.");
           removed_.insert(place_from);
         }
       } else {
@@ -749,7 +750,8 @@ public:
       BOOST_LOG_TRIVIAL(error)<<"Cannot move a token from an empty container "
         <<place_from<<" "<<place_to<<" "<<I<<" "<<cnt;
     }
-    BOOST_LOG_TRIVIAL(trace)<< "~Moving "<<cnt<<" tokens from "<<place_from;
+    SMVLOG(BOOST_LOG_TRIVIAL(trace)<< "~Moving "<<cnt<<" tokens from "
+      <<place_from);
   }
 
 
@@ -783,7 +785,7 @@ public:
 
   template<int I, typename RNG, typename AndModify>
   void TransferByStochiometricCoefficient(RNG& rng, const AndModify& mod) {
-    BOOST_LOG_TRIVIAL(trace)<<"TransferByStochiometricCoefficient";
+    SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"TransferByStochiometricCoefficient");
     using TokenType=typename boost::mpl::at<
       typename LocalMarking::token_types,boost::mpl::int_<I>>::type&;
     detail::DoNothing<TokenType> do_nothing;
@@ -839,7 +841,7 @@ public:
     for ( ; initer!=ins.end(); ++initer) {
       this->Remove<I,RNG>(*initer, 1, rng);
     }
-    BOOST_LOG_TRIVIAL(trace)<<"~TransferByStochiometricCoefficient";
+    SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"~TransferByStochiometricCoefficient");
   }
 
 
@@ -858,7 +860,7 @@ public:
 
   template<int I>
   bool InputTokensSufficient() const {
-    BOOST_LOG_TRIVIAL(trace)<<"input_tokens_sufficient";
+    SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"input_tokens_sufficient");
 
     int place_idx=0;
     int layer=0;

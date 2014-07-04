@@ -55,7 +55,8 @@ public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<RNG>>>
   Enabled(const ExtraState& s, const LM& lm,
           double enabling_time, double current_time) const {
-    BOOST_LOG_TRIVIAL(debug) << "The base enabled is unlikely correct to call";
+    SMVLOG(BOOST_LOG_TRIVIAL(debug) <<
+      "The base enabled is unlikely correct to call");
     return {false,std::unique_ptr<TransitionDistribution<RNG>>(nullptr)};
   }
 
@@ -192,7 +193,7 @@ NeighborsOfTransition(
   ExplicitTransitions<P,T,L,Random,State>& et,
   typename ExplicitTransitions<P,T,L,Random,State>::TransitionKey trans_id)
 {
-  return NeighborsOfTransition(et.graph, trans_id);
+  return GraphNeighborsOfTransition<PetriGraphType>(et.graph, trans_id);
 }
 
 
@@ -203,7 +204,7 @@ void NeighborsOfPlaces(
   const std::set<typename ExplicitTransitions<P,T,L,Random,State>::PlaceKey>&
   place_id, F func)
 {
-  return NeighborsOfPlaces(et.graph, place_id, func);
+  return GraphNeighborsOfPlaces(et.graph, place_id, func);
 }
 
 

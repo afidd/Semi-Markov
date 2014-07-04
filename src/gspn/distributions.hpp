@@ -47,11 +47,13 @@ namespace smv
 
 namespace detail
 {
-  double FracError(double a, double b) {
+  template<typename Real>
+  Real FracError(Real a, Real b) {
     return std::abs((a-b)/a);
   }
 
-  bool CheckFracError(double a, double b, double tol, const std::string& m) {
+  template<typename Real>
+  bool CheckFracError(Real a, Real b, Real tol, const std::string& m) {
     if (detail::FracError(a, b)>tol)
     {
       BOOST_LOG_TRIVIAL(info) << "Fractional error of "<<m<< " too large. "

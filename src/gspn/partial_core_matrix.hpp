@@ -124,23 +124,28 @@ class PartialCoreMatrix
           ; // not enabled, not becoming enabled.
         }
       });
-    BOOST_LOG_TRIVIAL(trace) << "Marking modified cnt: "<<
-        state_->marking.Modified().size();
+    SMVLOG(BOOST_LOG_TRIVIAL(trace) << "Marking modified cnt: "<<
+        state_->marking.Modified().size());
     state_->marking.Clear();
   }
 
 
   void Trigger(TransitionKey trans_id, double when, RNG& rng) {
+    if (abs(when-state_->CurrentTime())>1e-4) {
+      BOOST_LOG_TRIVIAL(error) << "Firing negative time "<<when <<
+      " given current time "<<state_->CurrentTime() <<" for transition "
+      <<trans_id;
+    }
     auto neighboring_places=NeighborsOfTransition(gspn_, trans_id);
 
     auto lm=state_->marking.GetLocalMarking();
     state_->marking.InitLocal(lm, neighboring_places);
-    Fire(gspn_, trans_id, state_->user, lm, state_->CurrentTime(), rng);
+    Fire(gspn_, trans_id, state_->user, lm, when, rng);
     state_->marking.ReadLocal(lm, neighboring_places);
 
-    BOOST_LOG_TRIVIAL(trace) << "Fire "<<trans_id <<" neighbors: "<<
+    SMVLOG(BOOST_LOG_TRIVIAL(trace) << "Fire "<<trans_id <<" neighbors: "<<
         neighboring_places.size() << " modifies "
-        << state_->marking.Modified().size() << " places.";
+        << state_->marking.Modified().size() << " places.");
 
     state_->SetTime(when);
 

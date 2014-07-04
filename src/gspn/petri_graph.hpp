@@ -28,7 +28,6 @@
 
 #include <vector>
 #include "stochnet.hpp"
-#include "boost/log/core.hpp"
 #include "boost/graph/adjacency_list.hpp"
 #include "boost/property_map/vector_property_map.hpp"
 #include "marking.hpp"
@@ -120,8 +119,9 @@ namespace smv
 /*! Find all places in and out of a transition, in order.
 
  */
+template<typename Graph>
 std::vector<std::tuple<int64_t,int,int>>
-NeighborsOfTransition(PetriGraphType& g, int64_t trans_id) {
+GraphNeighborsOfTransition(Graph& g, int64_t trans_id) {
   assert(g[trans_id].color==PetriGraphColor::Transition);
   std::vector<std::tuple<int64_t,int,int>> place_ids;
 
@@ -152,12 +152,12 @@ NeighborsOfTransition(PetriGraphType& g, int64_t trans_id) {
 /*! Find all transitions which depend on the Marking at a set of places.
  */
 template<typename F>
-void NeighborsOfPlaces(PetriGraphType& g,
+void GraphNeighborsOfPlaces(PetriGraphType& g,
   const std::set<int64_t>& place_id, F func) {
   auto seen=std::set<int64_t>();
 
   auto report=[&seen, &func, &g] (int64_t id) {
-    BOOST_LOG_TRIVIAL(trace) << "transition " << id;
+    SMVLOG(BOOST_LOG_TRIVIAL(trace) << "transition " << id);
     assert(g[id].color==PetriGraphColor::Transition);
     if (seen.find(id)==seen.end()) {
       func(id);
@@ -166,7 +166,7 @@ void NeighborsOfPlaces(PetriGraphType& g,
   };
 
   for ( auto p : place_id) {
-    BOOST_LOG_TRIVIAL(trace) << "neighbors of place " << p;
+    SMVLOG(BOOST_LOG_TRIVIAL(trace) << "neighbors of place " << p);
     assert(g[p].color==PetriGraphColor::Place);
     auto ie=in_edges(p, g);
     for (; ie.first!=ie.second; ++ie.first) {

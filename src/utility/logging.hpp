@@ -37,7 +37,8 @@
 namespace afidd
 {
 
-void LogInit(std::string level)
+template<typename LevelType>
+void LogInit(LevelType level)
 {
   namespace logging=boost::log;
 
@@ -68,6 +69,11 @@ void LogInit(std::string level)
   logging::core::get()->set_filter(logging::trivial::severity >= assign_level);
 }
 
+#ifndef SMVHIDELOG
+  #define SMVLOG( x ) x
+#else
+  #define SMVLOG( x )
+#endif
 
 }
 

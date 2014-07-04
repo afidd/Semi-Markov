@@ -97,8 +97,8 @@ public:
       auto layer=std::get<1>(line);
       auto stochiometric_coefficient=std::get<2>(line);
 
-      BOOST_LOG_TRIVIAL(trace)<<"Marking::init_local<"<<layer<<">("
-        <<place_id<<", "<<idx<<", "<<stochiometric_coefficient<<")";
+      SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"Marking::init_local<"<<layer<<">("
+        <<place_id<<", "<<idx<<", "<<stochiometric_coefficient<<")");
       il(maps_, place_id, idx, layer, stochiometric_coefficient, lm);
 
       ++idx;
@@ -279,8 +279,8 @@ template<int I, int J, typename Marking, typename Modifier>
 void Move(Marking& m, typename Marking::place_t place_from,
     typename Marking::place_t place_to, size_t cnt,
     const Modifier& modify_token) {
-  BOOST_LOG_TRIVIAL(trace)<< "Moving "<<cnt<<" tokens from "<<place_from
-    <<" to "<<place_to;
+  SMVLOG(BOOST_LOG_TRIVIAL(trace)<< "Moving "<<cnt<<" tokens from "<<place_from
+    <<" to "<<place_to);
   if (0==cnt) return;
 
   typedef typename boost::mpl::at<typename Marking::container_types,
@@ -299,13 +299,13 @@ void Move(Marking& m, typename Marking::place_t place_from,
     for (auto didx=cnt; didx>0; --didx) {
       auto begin=place_tokens->second.begin();
       if (begin!=place_tokens->second.end()) {
-        BOOST_LOG_TRIVIAL(trace)<<"about to apply";
+        SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"about to apply");
         detail::apply_token_function(*begin, modify_token);
-        BOOST_LOG_TRIVIAL(trace)<<"about to add";
+        SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"about to add");
         detail::add_to_container(dest_tokens->second, *begin);
-        BOOST_LOG_TRIVIAL(trace)<<"about to erase";
+        SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"about to erase");
         place_tokens->second.erase(begin);
-        BOOST_LOG_TRIVIAL(trace)<<"erased";
+        SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"erased");
       } else {
         // not enough tokens.
         assert(begin!=place_tokens->second.end());
@@ -320,7 +320,8 @@ void Move(Marking& m, typename Marking::place_t place_from,
 
   m.modified_.insert(place_from);
   m.modified_.insert(place_to);
-  BOOST_LOG_TRIVIAL(trace)<<"move(Marking) modified "<<place_from<<","<<place_to;
+  SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"move(Marking) modified "<<place_from
+    <<","<<place_to);
   return;
 }
 

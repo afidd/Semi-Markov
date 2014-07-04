@@ -67,7 +67,7 @@ bool PutPlace(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
     vert_t k, BGPlace val)
 {
   if (map.pv.find(val)!=map.pv.end()) {
-    BOOST_LOG_TRIVIAL(error) << "Place "<<val<<" already exists.";
+    SMVLOG(BOOST_LOG_TRIVIAL(error) << "Place "<<val<<" already exists.");
     return false;
   }
   map.pv.emplace(val, k);
@@ -82,7 +82,7 @@ bool PutTransition(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
     vert_t k, BGTransition val)
 {
   if (map.tv.find(val)!=map.tv.end()) {
-    BOOST_LOG_TRIVIAL(error) << "Transition "<<val<<" already exists.";
+    SMVLOG(BOOST_LOG_TRIVIAL(error) << "Transition "<<val<<" already exists.");
     return false;
   }
   map.tv.emplace(val, k);
@@ -99,8 +99,8 @@ GetPvertex(const BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
 {
   auto it=map.pv.find(key);
   if (it==map.pv.end()) {
-    BOOST_LOG_TRIVIAL(error) << "Place does not exist: "<<key
-      <<" map size " << map.pv.size();
+    SMVLOG(BOOST_LOG_TRIVIAL(error) << "Place does not exist: "<<key
+      <<" map size " << map.pv.size());
     return vert_t{};
   }
   return it->second;
@@ -116,7 +116,7 @@ GetTvertex(const BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
 {
   auto it=map.tv.find(key);
   if (it==map.tv.end()) {
-    BOOST_LOG_TRIVIAL(error) << "Transition does not exist: "<<key;
+    SMVLOG(BOOST_LOG_TRIVIAL(error) << "Transition does not exist: "<<key);
     return vert_t{};
   }
   return it->second;
@@ -132,7 +132,7 @@ BGPlace GetPlace(const BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
 {
   auto it=map.vp.find(key);
   if (it==map.vp.end()) {
-    BOOST_LOG_TRIVIAL(error) << "Vertex for place does not exist: "<<key;
+    SMVLOG(BOOST_LOG_TRIVIAL(error) << "Vertex for place does not exist: "<<key);
     return BGPlace{};
   }
   return it->second;
@@ -148,7 +148,8 @@ BGTransition GetTransition(
 {
   auto it=map.vt.find(key);
   if (it==map.vt.end()) {
-    BOOST_LOG_TRIVIAL(error) << "Vertex for transition does not exist: "<<key;
+    SMVLOG(BOOST_LOG_TRIVIAL(error) << "Vertex for transition does not exist: "
+      <<key);
     return BGTransition{};
   }
   return it->second;
@@ -227,7 +228,7 @@ public:
       bool success;
       std::tie(new_edge, success)=boost::add_edge(pv, tv, {weight}, g_);
       if (!success) {
-        BOOST_LOG_TRIVIAL(error) << "Could not add edge";
+        SMVLOG(BOOST_LOG_TRIVIAL(error) << "Could not add edge");
         return false;
       }
     } else {
@@ -235,7 +236,7 @@ public:
       bool success;
       std::tie(new_edge, success)=boost::add_edge(tv, pv, {weight}, g_);
       if (!success) {
-        BOOST_LOG_TRIVIAL(error) << "Could not add edge";
+        SMVLOG(BOOST_LOG_TRIVIAL(error) << "Could not add edge");
         return false;
       }
     }
@@ -253,10 +254,10 @@ public:
   {
     // Check the current graph before we continue.
     size_t stoch_start=NumStochiometricCoefficients(g_);
-    BOOST_LOG_TRIVIAL(debug)<< stoch_start
-        << " stochiometric coefficients start";
+    SMVLOG(BOOST_LOG_TRIVIAL(debug)<< stoch_start
+        << " stochiometric coefficients start");
     auto bipartite=IsBipartitePetriGraph(g_);
-    BOOST_LOG_TRIVIAL(debug)<< " is bipartite "<<bipartite;
+    SMVLOG(BOOST_LOG_TRIVIAL(debug)<< " is bipartite "<<bipartite);
     assert(bipartite);
 
     ET et(num_vertices(g_));
@@ -307,8 +308,8 @@ public:
       auto transition_iter=bimap_.vt.find(old_vertex);
       if (place_iter!=bimap_.vp.end()) {
         if (transition_iter!=bimap_.vt.end()) {
-          BOOST_LOG_TRIVIAL(error)<<"The same vertex points both to a place "
-            "and a transition.";
+          SMVLOG(BOOST_LOG_TRIVIAL(error)<<"The same vertex points both to a place "
+            "and a transition.");
           assert(transition_iter==bimap_.vt.end());
         }
         PutPlace(b, static_cast<int64_t>(new_vertex), place_iter->second);

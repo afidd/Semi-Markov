@@ -3,9 +3,9 @@ SEMIMARKOV_LIBRARY_VERSION=0:1:0
 ACLOCAL_AMFLAGS = ${ACLOCAL_FLAGS}
 AUTOMAKE_OPTIONS = foreign
 
-AM_LDFLAGS = $(BOOST_LDFLAGS) -fPIC 
+AM_LDFLAGS = $(BOOST_LDFLAGS) -fPIC
 
-AM_CPPFLAGS = -std=c++11 -Isrc -Isrc/continuous -Isrc/gspn -Isrc/utility $(BOOST_CPPFLAGS) -fPIC 
+AM_CPPFLAGS = -std=c++11 -Isrc -Isrc/continuous -Isrc/gspn -Isrc/utility $(BOOST_CPPFLAGS) -fPIC  -DSMVHIDELOG
 
 bin_PROGRAMS = weiss bvd sirmixed meta disttest sirexp
 
