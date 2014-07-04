@@ -113,7 +113,7 @@ public:
     if (U>=1) {
       return std::numeric_limits<double>::infinity();
     }
-    return -std::log(U)/std::get<0>(params_);
+    return current_time-std::log(U)/std::get<0>(params_);
   }
 
   virtual bool BoundedHazard() const { return true; }
