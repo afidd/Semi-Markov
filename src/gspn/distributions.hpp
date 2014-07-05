@@ -178,7 +178,9 @@ class ShiftedExponentialDistribution : public TransitionDistribution<RNG>
 public:
   ShiftedExponentialDistribution(double lambda, double enabling_time,
     double shift=0.0, double normal=1.0)
-  : params_(lambda, enabling_time, shift, normal) {}
+  : params_(lambda, enabling_time, shift, normal) {
+    assert(lambda>=0);
+  }
 
 
 
