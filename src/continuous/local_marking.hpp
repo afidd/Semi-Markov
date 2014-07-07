@@ -23,8 +23,8 @@
 //   Please cite the author in any work or product based on this material.
 //
 //   =========================================================================
-#ifndef _LOCALm_ARKING_H_
-#define _LOCALm_ARKING_H_ 1
+#ifndef _LOCAL_MARKING_H_
+#define _LOCAL_MARKING_H_ 1
 
 #include "boost/mpl/vector.hpp"
 #include "boost/mpl/apply.hpp"
@@ -721,6 +721,8 @@ public:
           SMVLOG(BOOST_LOG_TRIVIAL(trace)<< "Moving to_container exists");
         }
         if (from_container!=to_container) {
+          modified_.insert(place_from);
+          modified_.insert(place_to);
           for (auto didx=cnt; didx>0; --didx) {
             auto begin=from_container->begin();
             if (begin!=from_container->end()) {
@@ -924,4 +926,4 @@ public:
 }
 }
 
-#endif // _LOCALm_ARKING_H_
+#endif // _LOCAL_MARKING_H_

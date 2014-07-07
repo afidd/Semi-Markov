@@ -47,6 +47,7 @@ public:
   void SetTime(double timeprime) { absolute_time=timeprime; }
   UserState user;
   TransitionKey last_transition;
+  GSPNState() : absolute_time{0} {}
 };
 
 }

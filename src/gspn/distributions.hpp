@@ -105,8 +105,9 @@ class ExponentialDistribution : public TransitionDistribution<RNG>
 
 public:
   ExponentialDistribution(double lambda, double enabling_time,
-    double normal=1.0) : params_(lambda, enabling_time, normal)
-  {}
+    double normal=1.0) : params_(lambda, enabling_time, normal) {
+    assert(lambda>0);
+  }
 
   virtual double Sample(double current_time, RNG& rng) const {
     auto U=uniform(rng)/std::get<2>(params_);
@@ -179,7 +180,7 @@ public:
   ShiftedExponentialDistribution(double lambda, double enabling_time,
     double shift=0.0, double normal=1.0)
   : params_(lambda, enabling_time, shift, normal) {
-    assert(lambda>=0);
+    assert(lambda>0);
   }
 
 
