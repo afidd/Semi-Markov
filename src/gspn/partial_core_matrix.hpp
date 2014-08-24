@@ -131,7 +131,7 @@ class PartialCoreMatrix
 
 
   void Trigger(TransitionKey trans_id, double when, RNG& rng) {
-    if (abs(when-state_->CurrentTime())>1e-4) {
+    if (when-state_->CurrentTime()<-1e-4) {
       BOOST_LOG_TRIVIAL(error) << "Firing negative time "<<when <<
       " given current time "<<state_->CurrentTime() <<" for transition "
       <<trans_id;

@@ -275,11 +275,14 @@ public:
     }
 
     double d=current_time-(enabling_time+shift);
+    double value=0;
     if (d>0) {
-      return l*std::pow(-std::log(1-U)+std::pow(d/l, k), 1/k)-d;
+      value=l*std::pow(-std::log(1-U)+std::pow(d/l, k), 1/k)-d;
     } else {
-      return -d+l*std::pow(-std::log(1-U), 1/k);
+      value=-d+l*std::pow(-std::log(1-U), 1/k);
     }
+    assert(value>0);
+    return current_time+value;
   }
 
 

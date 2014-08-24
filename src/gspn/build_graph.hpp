@@ -30,6 +30,9 @@
 #include "boost/property_map/property_map.hpp"
 #include "boost/graph/copy.hpp"
 #include "boost/utility/value_init.hpp"
+#include "boost/bimap.hpp"
+#include "boost/bimap/unordered_set_of.hpp"
+#include "boost/bimap/multiset_of.hpp"
 #include "logging.hpp"
 #include "petri_graph.hpp"
 
@@ -46,6 +49,17 @@ template<typename BGPlace, typename BGTransition, typename vert_t>
 struct BiGraphCorrespondence
 {
   typedef vert_t vertex_descriptor;
+
+  typedef boost::bimap<boost::bimaps::set_of<vert_t>,
+            boost::bimaps::set_of<BGPlace>> PlaceMap;
+  // There may be more than one transition with the same
+  // key because we can use transition fusion to fuse nets
+  // and not rename the transitions while renaming all places.
+  typedef boost::bimap<boost::bimaps::set_of<vert_t>,
+            boost::bimaps::multiset_of<BGTransition>> TransitionMap;
+
+  PlaceMap pm_;
+  TransitionMap tm_;
 
   std::map<BGPlace,vert_t> pv;
   std::map<vert_t,BGPlace> vp;
@@ -70,6 +84,16 @@ bool PutPlace(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
     SMVLOG(BOOST_LOG_TRIVIAL(error) << "Place "<<val<<" already exists.");
     return false;
   }
+  using PlaceMap=
+    typename BiGraphCorrespondence<BGPlace,BGTransition,vert_t>::PlaceMap;
+  using VertToPlace=typename PlaceMap::left_value_type;
+  typename PlaceMap::left_map::iterator inserted;
+  bool success;
+  std::tie(inserted, success)=map.pm_.left.insert(VertToPlace(k, val));
+  if (success==false) {
+    SMVLOG(BOOST_LOG_TRIVIAL(error)<<"Failed to insert a place value.");
+    assert(success);
+  }
   map.pv.emplace(val, k);
   map.vp.emplace(k, val);
   return true;
@@ -85,22 +109,33 @@ bool PutTransition(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
     SMVLOG(BOOST_LOG_TRIVIAL(error) << "Transition "<<val<<" already exists.");
     return false;
   }
+  using TransitionMap=
+    typename BiGraphCorrespondence<BGPlace,BGTransition,vert_t>::TransitionMap;
+  using VertToTrans=typename TransitionMap::left_value_type;
+  typename TransitionMap::left_map::iterator inserted;
+  bool success;
+  std::tie(inserted, success)=map.tm_.left.insert(VertToTrans(k, val));
+  if (success==false) {
+    SMVLOG(BOOST_LOG_TRIVIAL(error)<<"Failed to insert a transition value.");
+    assert(success);
+  }
   map.tv.emplace(val, k);
   map.vt.emplace(k, val);
   return true;
 }
 
 
-
+/*! Get the vertex associated with a place.
+ */
 template<typename BGPlace, typename BGTransition, typename vert_t>
 typename BiGraphCorrespondence<BGPlace,BGTransition,vert_t>::vertex_descriptor
 GetPvertex(const BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
     BGPlace& key)
 {
-  auto it=map.pv.find(key);
-  if (it==map.pv.end()) {
+  auto it=map.pm_.right.find(key);
+  if (it==map.pm_.right.end()) {
     SMVLOG(BOOST_LOG_TRIVIAL(error) << "Place does not exist: "<<key
-      <<" map size " << map.pv.size());
+      <<" map size " << map.pm_.right.size());
     return vert_t{};
   }
   return it->second;
@@ -108,14 +143,16 @@ GetPvertex(const BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
 
 
 
-
+/*! Get the vertex associated with a transition. There may be more
+ *  than one vertex, but this returns only the first.
+ */
 template<typename BGPlace, typename BGTransition, typename vert_t>
 typename BiGraphCorrespondence<BGPlace,BGTransition,vert_t>::vertex_descriptor
 GetTvertex(const BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
     BGTransition& key)
 {
-  auto it=map.tv.find(key);
-  if (it==map.tv.end()) {
+  auto it=map.tm_.right.find(key);
+  if (it==map.tm_.right.end()) {
     SMVLOG(BOOST_LOG_TRIVIAL(error) << "Transition does not exist: "<<key);
     return vert_t{};
   }
@@ -130,8 +167,8 @@ BGPlace GetPlace(const BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
   typename BiGraphCorrespondence<BGPlace,BGTransition,
       vert_t>::vertex_descriptor& key)
 {
-  auto it=map.vp.find(key);
-  if (it==map.vp.end()) {
+  auto it=map.pm_.left.find(key);
+  if (it==map.pm_.left.end()) {
     SMVLOG(BOOST_LOG_TRIVIAL(error) << "Vertex for place does not exist: "<<key);
     return BGPlace{};
   }
@@ -146,8 +183,8 @@ BGTransition GetTransition(
   const BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
   typename BiGraphCorrespondence<BGPlace,BGTransition,vert_t>::vertex_descriptor& key)
 {
-  auto it=map.vt.find(key);
-  if (it==map.vt.end()) {
+  auto it=map.tm_.left.find(key);
+  if (it==map.tm_.left.end()) {
     SMVLOG(BOOST_LOG_TRIVIAL(error) << "Vertex for transition does not exist: "
       <<key);
     return BGTransition{};
