@@ -61,16 +61,11 @@ struct BiGraphCorrespondence
   PlaceMap pm_;
   TransitionMap tm_;
 
-  std::map<BGPlace,vert_t> pv;
-  std::map<vert_t,BGPlace> vp;
-  std::map<BGTransition,vert_t> tv;
-  std::map<vert_t,BGTransition> vt;
-
   inline friend
   std::ostream& operator<<(std::ostream& os, const BiGraphCorrespondence& bgc)
   {
-    return os << "BiGraphCorrespondence(" << bgc.pv.size() << ", "
-      << bgc.vp.size() << ", " << bgc.tv.size() << ", " << bgc.vt.size() << ")";
+    return os << "BiGraphCorrespondence(" << bgc.pm_.left.size() << ", "
+      << bgc.tm_.left.size() << ")";
   }
 };
 
@@ -80,7 +75,7 @@ template<typename BGPlace, typename BGTransition, typename vert_t>
 bool PutPlace(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
     vert_t k, BGPlace val)
 {
-  if (map.pv.find(val)!=map.pv.end()) {
+  if (map.pm_.right.find(val)!=map.pm_.right.end()) {
     SMVLOG(BOOST_LOG_TRIVIAL(error) << "Place "<<val<<" already exists.");
     return false;
   }
@@ -94,8 +89,6 @@ bool PutPlace(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
     SMVLOG(BOOST_LOG_TRIVIAL(error)<<"Failed to insert a place value.");
     assert(success);
   }
-  map.pv.emplace(val, k);
-  map.vp.emplace(k, val);
   return true;
 }
 
@@ -105,10 +98,7 @@ template<typename BGPlace, typename BGTransition, typename vert_t>
 bool PutTransition(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
     vert_t k, BGTransition val)
 {
-  if (map.tv.find(val)!=map.tv.end()) {
-    SMVLOG(BOOST_LOG_TRIVIAL(error) << "Transition "<<val<<" already exists.");
-    return false;
-  }
+  // We allow transitions which have the same key but different vertices.
   using TransitionMap=
     typename BiGraphCorrespondence<BGPlace,BGTransition,vert_t>::TransitionMap;
   using VertToTrans=typename TransitionMap::left_value_type;
@@ -119,8 +109,6 @@ bool PutTransition(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
     SMVLOG(BOOST_LOG_TRIVIAL(error)<<"Failed to insert a transition value.");
     assert(success);
   }
-  map.tv.emplace(val, k);
-  map.vt.emplace(k, val);
   return true;
 }
 
@@ -213,7 +201,7 @@ class BuildGraph
   using edge_t=boost::graph_traits<PetriBuildGraphType>::edge_descriptor;
 
   BiGraphCorrespondence<BGPlace,BGTransition,vert> bimap_;
-  std::map<BGTransition,std::unique_ptr<Transition>> transitions_;
+  std::map<vert,std::unique_ptr<Transition>> transitions_;
 
   // This is the translation map for the compiled graph,
   // not for the one we use internally.
@@ -235,35 +223,35 @@ public:
 
   bool AddTransition(BGTransition t, std::vector<PlaceEdge> e,
     std::unique_ptr<Transition> transition) {
-    auto tv=add_vertex({PetriGraphColor::Transition, 0}, g_);
-    bool added=PutTransition(bimap_, tv, t);
+    auto transition_vertex=add_vertex({PetriGraphColor::Transition, 0}, g_);
+    bool added=PutTransition(bimap_, transition_vertex, t);
 
     for (auto edge : e) {
       BGPlace p=std::get<0>(edge);
       int weight=std::get<1>(edge);
-      if (!this->AddEdge(t, p, weight)) {
+      if (!this->AddEdge(transition_vertex, p, weight)) {
         added=false;
       }
     }
 
-    transitions_.emplace(t, std::move(transition));
+    transitions_.emplace(transition_vertex, std::move(transition));
 
+    assert(added);
     return added;
   }
 
 
 
-  bool AddEdge(BGTransition t, BGPlace p, int weight)
+  bool AddEdge(vert transition, BGPlace p, int weight)
   {
-    auto tv=GetTvertex(bimap_, t);
-    assert(g_[tv].color==PetriGraphColor::Transition);
+    assert(g_[transition].color==PetriGraphColor::Transition);
     auto pv=GetPvertex(bimap_, p);
     assert(g_[pv].color==PetriGraphColor::Place);
 
     if (weight<0) {
       edge_t new_edge;
       bool success;
-      std::tie(new_edge, success)=boost::add_edge(pv, tv, {weight}, g_);
+      std::tie(new_edge, success)=boost::add_edge(pv, transition, {weight}, g_);
       if (!success) {
         SMVLOG(BOOST_LOG_TRIVIAL(error) << "Could not add edge");
         return false;
@@ -271,7 +259,7 @@ public:
     } else {
       edge_t new_edge;
       bool success;
-      std::tie(new_edge, success)=boost::add_edge(tv, pv, {weight}, g_);
+      std::tie(new_edge, success)=boost::add_edge(transition, pv, {weight}, g_);
       if (!success) {
         SMVLOG(BOOST_LOG_TRIVIAL(error) << "Could not add edge");
         return false;
@@ -341,20 +329,20 @@ public:
       auto old_vertex=trans_iter->first;
       auto new_vertex=trans_iter->second;
       // Is the old vertex a place or a transition?
-      auto place_iter=bimap_.vp.find(old_vertex);
-      auto transition_iter=bimap_.vt.find(old_vertex);
-      if (place_iter!=bimap_.vp.end()) {
-        if (transition_iter!=bimap_.vt.end()) {
+      auto place_iter=bimap_.pm_.left.find(old_vertex);
+      auto transition_iter=bimap_.tm_.left.find(old_vertex);
+      if (place_iter!=bimap_.pm_.left.end()) {
+        if (transition_iter!=bimap_.tm_.left.end()) {
           SMVLOG(BOOST_LOG_TRIVIAL(error)<<"The same vertex points both to a place "
             "and a transition.");
-          assert(transition_iter==bimap_.vt.end());
+          assert(transition_iter==bimap_.tm_.left.end());
         }
         PutPlace(b, static_cast<int64_t>(new_vertex), place_iter->second);
-      } else if (transition_iter!=bimap_.vt.end()) {
+      } else if (transition_iter!=bimap_.tm_.left.end()) {
         PutTransition(b, static_cast<int64_t>(new_vertex),
             transition_iter->second);
 
-        auto trans_obj_iter=transitions_.find(transition_iter->second);
+        auto trans_obj_iter=transitions_.find(transition_iter->first);
         if (trans_obj_iter!=transitions_.end()) {
           et.transitions.emplace(new_vertex, std::move(trans_obj_iter->second));
         } else {
