@@ -333,8 +333,8 @@ public:
       auto transition_iter=bimap_.tm_.left.find(old_vertex);
       if (place_iter!=bimap_.pm_.left.end()) {
         if (transition_iter!=bimap_.tm_.left.end()) {
-          SMVLOG(BOOST_LOG_TRIVIAL(error)<<"The same vertex points both to a place "
-            "and a transition.");
+          SMVLOG(BOOST_LOG_TRIVIAL(error)<<"The same vertex points both to "
+            "a place and a transition.");
           assert(transition_iter==bimap_.tm_.left.end());
         }
         PutPlace(b, static_cast<int64_t>(new_vertex), place_iter->second);

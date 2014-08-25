@@ -137,6 +137,7 @@ using ExpDist=ExponentialDistribution<RandGen>;
 // Now make specific transitions.
 class InfectNeighbor : public SIRTransition
 {
+public:
   virtual std::pair<bool, std::unique_ptr<Dist>>
   Enabled(const UserState& s, const Local& lm,
     double te, double t0) const override {
@@ -152,7 +153,6 @@ class InfectNeighbor : public SIRTransition
     BOOST_LOG_TRIVIAL(trace) << "Fire infection " << lm;
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
-
 };
 
 
@@ -162,6 +162,7 @@ class InfectNeighbor : public SIRTransition
 // Now make specific transitions.
 class Recover : public SIRTransition
 {
+public:
   virtual
   std::pair<bool, std::unique_ptr<Dist>> Enabled(const UserState& s,
       const Local& lm, double te, double t0) const override {
@@ -177,7 +178,6 @@ class Recover : public SIRTransition
     BOOST_LOG_TRIVIAL(trace) << "Fire recovery "<< lm;
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
-
 };
 
 
@@ -273,7 +273,7 @@ struct SIROutput
       << " time " << state.CurrentTime() << " step " << step_cnt;
     BOOST_LOG_TRIVIAL(trace) << state.marking;
   }
-  
+
   void final(const SIRState& state) {
     BOOST_LOG_TRIVIAL(info) << "Took "<< step_cnt << " transitions.";
   }

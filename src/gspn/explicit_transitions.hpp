@@ -93,6 +93,9 @@ public:
 private:
   // The GSPN gets the marking type from the State.
   BiMap bimap_;
+  // Transitions are stored as pointers on the free store because they
+  // are polymorphic and base class information would be lost if they
+  // were stored as bare objects.
   std::map<TransitionKey,std::unique_ptr<Transition>> transitions;
   PetriGraph graph;
 
