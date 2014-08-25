@@ -251,18 +251,29 @@ void WriteIds(const GSPN& gspn, const std::string& fname,
 }
 
 
-template<typename SIRState>
+template<typename SIRState, typename SIRGSPN>
 struct SIROutput
 {
   int64_t step_cnt{0};
+  const SIRGSPN& gspn_;
+
+  SIROutput(const SIRGSPN& gspn) : gspn_(gspn) {}
 
   void operator()(const SIRState& state) {
     ++step_cnt;
-    BOOST_LOG_TRIVIAL(debug) << "trans " << state.last_transition
-        << " time " << state.CurrentTime() << " step " << step_cnt;
+    BOOST_LOG_TRIVIAL(debug)<<"trans "<<state.last_transition;
+    auto transition_key=gspn_.VertexTransition(state.last_transition);
+    int64_t id0, id1;
+    typename SIRGSPN::UserPlaceKey key0, key1;
+
+    std::tie(id0, key0)=gspn_.PlaceOfTransition(state.last_transition, 0);
+    std::tie(id1, key1)=gspn_.PlaceOfTransition(state.last_transition, 1);
+    BOOST_LOG_TRIVIAL(debug)<<"place0 "<<key0<<" place1 "<<key1;
+    BOOST_LOG_TRIVIAL(debug) << "trans " << transition_key
+      << " time " << state.CurrentTime() << " step " << step_cnt;
     BOOST_LOG_TRIVIAL(trace) << state.marking;
   }
-
+  
   void final(const SIRState& state) {
     BOOST_LOG_TRIVIAL(info) << "Took "<< step_cnt << " transitions.";
   }
@@ -358,7 +369,7 @@ int main(int argc, char *argv[])
 
   input_string(state);
 
-  SIROutput<SIRState> output_function;
+  SIROutput<SIRState,SIRGSPN> output_function(gspn);
 
   dynamics.Initialize(&state, &rng);
 
@@ -366,7 +377,7 @@ int main(int argc, char *argv[])
   auto nothing=[](SIRState&)->void {};
   while (running) {
     running=dynamics(state);
-    output_function(state);
+    if (running) output_function(state);
   }
   output_function.final(state);
   return 0;

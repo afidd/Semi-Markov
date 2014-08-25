@@ -148,6 +148,35 @@ public:
     return GetTransition(bimap_, v);
   }
 
+  // Given a transition, find all the places that neighbor it.
+  // This exists so that we can ask questions about a transition that fired.
+  std::tuple<int64_t,UserPlaceKey>
+  PlaceOfTransition(int64_t transition_id, int examine_edge) const {
+    int edge_idx=0;
+    auto initer=in_edges(transition_id, graph);
+    for ( ; initer.first!=initer.second; ++initer.first) {
+      if (edge_idx==examine_edge) {
+        int64_t place_vertex=source(*initer.first, graph);
+        auto place_key=GetPlace(bimap_, place_vertex);
+        return std::make_tuple(place_vertex, place_key);
+      }
+      ++edge_idx;
+    }
+    auto outiter=out_edges(transition_id, graph);
+    for (; outiter.first!=outiter.second; ++outiter.first) {
+      if (edge_idx==examine_edge) {
+        int64_t place_vertex=target(*outiter.first, graph);
+        auto place_key=GetPlace(bimap_, place_vertex);
+        return std::make_tuple(place_vertex, place_key);
+      }
+      ++edge_idx;
+    }
+    SMVLOG(BOOST_LOG_TRIVIAL(error)<<
+      "Could not find a place near a transition.");
+    assert(false);
+    return std::make_tuple(0, UserPlaceKey{});
+  }
+
 
   template<typename Writer>
   void WriteKeys(const Writer& writer) {
