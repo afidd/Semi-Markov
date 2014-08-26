@@ -1,0 +1,182 @@
+%\documentclass[review]{elsarticle}
+\documentclass{article}
+\usepackage{hyperref}
+\usepackage{setspace}
+%\usepackage[margin=.5in]{geometry}
+\usepackage{xspace}
+\usepackage{xcolor}
+%\usepackage{amsmath}
+\usepackage{graphicx}
+%%\doublespacing
+
+\begin{document}
+
+\title{Transition Fusion for Semi-Markov Library}
+
+\author{Drew Dolgert}
+\date{21 August 2014}
+
+\section{Sets To Define Transitions}
+Transition fusion is a way to merge GSPN by merging transitions,
+not places, as is usually done. The two processes are equivalent,
+but merging fusions can be clearer for analysis.
+
+The literature on transition fusion is for Petri nets, for which
+a transition is enabled when tokens are on its input places and
+fires by moving tokens to its output places. In this context,
+each transition is given an identifier, which we'll call a key
+in a space T. Two graphs fuse by a rule $(T,T)→T$. This rule
+creates a \emph{new} transition. The rule, alone, is sufficient
+to define the enabling and firing of a transition in the context
+of a Petri net.
+
+A GSPN Transition has more properties than a Petri net transition.
+The enabling rule is an arbitrary function on its input places,
+as is the firing rule. Each transition also has a continuous
+distribution determined by a funciton on its input and output places.
+
+This document is about applying transition fusion to a particular
+case. A contact graph is given, where every node contains one
+of a set of GSPN. The goal is to construct a single GSPN from
+the nodes and a set of rules which create nodes associated with
+each edge, connecting the GSPN at the nodes.
+
+For the Semi-Markov library, every place and transition has a
+unique, assigned name, called a key. The C++ graph implementation
+unfortunately insists on associating each vertex in the graph
+with an opaque vertex descriptor of its own choosing, as well.
+Stored separately is a map from vertex descriptor to key and
+vertex descriptor to a transition object or place object.
+
+This fusion tasks doesn't start with separate graphs in the
+same space, $T$. It starts with a set of graphs in their
+own spaces, say $A$ and $B$. The contact graph defines
+a space of nodes, $N$, as well. Let's say $A$ is SIR
+on a dairy farm, so the transition keys represent $(herd, disease state)$.
+Then $B$ is a slaughtering facility, so the keys are
+$(processing step, disease state)$. There is no guarantee
+that the tuples are in the same space or, if they are, that
+they do not overlap.
+
+The simplest space would be a superset of the given ones,
+$C=(A,A,B,B,N,N)$. Since transitions will be associated with edges,
+there are two $N$ entries and two of each type of the node.
+This seems like too much. Let's return to the rules. For this
+construction, they are of the form,
+$(A,A)\rightarrrow D$, $(B,B)\rightarrrow D$, $(A,B)\rightarrrow D$,
+or $(B,A)\rightarrrow D$. We could define $A→D$ and $B→D$ so
+that the unified space is $C=(D,N,N)$.
+
+It feels like any transition, identified first by its vertex
+descriptor, has an identity that can be traced through a series
+of maps, $C$ to $D$, $D$ to $A$, $A$ to disease transition.
+This tracing can happen at every time step because an observer will
+track certain changes to the state of the system.
+
+How many types of transitions are in the system?
+$\#A+\#B+\#(rules)$. The space for $D$ would be small, so maybe
+this could be built as an explicit map, except for the darned
+disparate types.
+
+Returning to the fusion of transitions, one possible sequence is
+the following.
+
+\begin{enumerate}
+\item Create a complete set of places and transitions just by promoting
+each node in the contact graph to $C$. This graph will now have
+virtual transitions, which means those ready to be fused. Every 
+transition is now in the $C$ space.
+
+\item Iterate the original contact graph, armed with the rules
+and instances of $A$ and $B$, to create a new set of rules
+from $(C,C) → C$.
+
+\item Return with the new set of rules to the larger graph and
+create the new transitions.
+
+\item Remove all virtual transitions.
+\end{enumerate}
+
+For a Petri net, fusing transitions means creating a new one
+with specified inputs and outputs. The new transition in a GSPN
+isn't simply a fusion because it has three parts, enabling, firing,
+and distribution. Therefore this creation of new transition
+from two previous ones would be a general function. There could
+be a default rule, useful in some cases, which combines inputs
+and outputs, uses a new enabling rule which checks whether either
+was enabled, and fires both firing rules when firing the fused
+transition. The continuous distribution, however, seems logically
+up for grabs. Maybe using the first transition's distribution
+rule could work.
+
+
+\section{An Idea to Use Places more, Transition Keys less}
+Because this is transition fusion, the places are all untouched
+in the sense that they retain their original keys and will just
+get put into other sets. Maybe what's needed is to forgo transition
+keys as unique and instead just have some transition identifier,
+intended to distinguish types of transitions, and then make it
+easy in the code to ask what are the places associated with a transition.
+This has to be efficient anyway.
+
+So the places are a hierarchy of identifiers. The transitions have
+only one identifier, sufficient to distinguish two transitions which
+have the same set of input and output places.
+
+This strategy might fail for colored transitions, for which
+you would want to see the transition instance, itself, because
+the color of the token is stored in the instance.
+
+\section{Space in Which to Do Fusion}
+25 August 2014.
+The code now allows user transition keys which aren't unique.
+Computation uses vertex\_descriptors as the ``keys'' for identification
+of transitions. The reason to have any kind of user key for transitions
+and places is so that observer code can figure out what it is that
+happened. Non-unique transitions can be fine as long as we can identify
+places attached to the transitions, so there is now a method on the
+ExplicitTransitions class to make it simpler to ask what places associate
+with a particular transition. Given that this query is exactly what
+the main algorithm needs for speed, it is $\mathcal{O}(1)$ anyway, so it's
+probably a better choice than having unique transitions. Any user transition
+key attached to a transition would now be used to distinguish multiple
+transitions with the same input and output places.
+
+What form will the transition algorithm take? Specifically, will it use
+vertex\_descriptors or user keys? Specification will include two
+types of graphs, the contact graph and the subgraphs. Subgraphs
+have vertex\_descriptors which are under control of the Boost Graph
+Library and will likely not be unique between subgraphs. Different
+types of subgraphs, which we will call $A$ and $B$ in examples, may
+not have unique user keys, either, but we could enforce them to be unique.
+
+The contact graph will need to specify an undirected graph with some
+identifier for which subgraph is at which node. It has to be any
+unique identifier which can then be mapped to a list of subgraph types.
+For example, ``dairy farm'' versus ``processing plant.'' In addition, the
+contact graph nodes will likely have other node properties, for example
+latititude and longitude or names of some sort. For our purposes,
+the contact graph nodes each have a pair, (unique node name, subgraph type).
+The unique node name can be either a vertex\_descriptor or a user-supplied
+unique name.
+
+What is a fusion? It would be specified as a pair of transitions.
+Remember the user transition keys may not be unique. It could be
+(subgraph type, user transition key), (subgraph type, user transition key).
+It could be (subgraph type, vertex\_descriptor),
+(subgraph type, vertex\_descriptor). I see a sequence of specifications
+
+\begin{enumerate}
+  \item pair of (subgraph type, user transition key)
+  \item pair of (subgraph type, vertex within subgraph)
+  \item pair of (vertex within larger graph)
+\end{enumerate}
+
+When places are inserted into the larger graph, they are given user
+transition keys that are of the form (unique node name, subgraph user place key).
+When transitions are inserted into the larger graph, they are given the
+name (subgraph user transition key). During the build process,
+we need to be able to identify the subgraph vertex type, so we need to
+track a map between (subgraph vertex\_descriptor) for a unique node name and
+(larger graph vertex\_descriptor). This is a one-way map that exists
+only while building the larger graph.
