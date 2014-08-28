@@ -350,6 +350,8 @@ semimarkov_0_1_include_HEADERS = src/stochnet.hpp src/smv.hpp src/smv_config.hpp
 #semimarkov_0_1_LDFLAGS = -version-info $(SEMIMARKOV_LIBRARY_VERSION)
 bvd_SOURCES = example/bvd.cpp example/cow_token.hpp $(semimarkov_0_1_include_HEADERS)
 sirmixed_SOURCES = example/sir_mixed.cpp $(semimarkov_0_1_include_HEADERS)
+
+#sirgraph_SOURCES = example/sir_graph.cpp $(semimarkov_0_1_include_HEADERS)
 meta_SOURCES = example/meta.cpp $(semimarkov_0_1_include_HEADERS)
 weiss_SOURCES = example/Weiss/weiss.cpp example/Weiss/weiss.hpp $(semimarkov_0_1_include_HEADERS)
 disttest_SOURCES = test/distributions_test.cpp src/stochnet.hpp src/gspn/distributions.hpp src/utility/gspn_random.hpp src/utility/logging.hpp

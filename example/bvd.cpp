@@ -95,36 +95,31 @@ struct CowPlace
  */
 struct CowT
 {
-  int cow1;
-  int cow2;
-  int sg1;
-  int sg2;
   int kind;
 
   CowT()=default;
-  CowT(int c1, int c2, int s1, int s2, int k)
-  : cow1(c1), cow2(c2), sg1(s1), sg2(s2), kind(k)
-  {}
+  CowT(int k): kind(k){}
 
   friend inline
   bool operator<(const CowT& a, const CowT& b) {
-    return LazyLess(a.cow1, b.cow1, a.cow2, b.cow2,
-      a.sg1, b.sg1, a.sg2, b.sg2, a.kind, b.kind);
+    return  a.kind < b.kind;
   }
 
   friend inline
   bool operator==(const CowT& a, const CowT& b) {
-    return (a.cow1==b.cow1) && (a.cow2==b.cow2)
-        && (a.sg1==b.sg1) && (a.sg2==b.sg2) && (a.kind==b.kind);
+    return a.kind==b.kind;
   }
 
   friend inline
   std::ostream& operator<<(std::ostream& os, const CowT& cp) {
-    return os << '(' << cp.cow1 << "," << cp.cow2 << ","
-      << cp.sg1 << ',' << cp.sg2 << ',' << ", " << cp.kind << ')';
+    return os << '(' << cp.kind << ')';
   }
 };
 
+
+struct CowUserState {
+  std::map<std::string,double> params;
+};
 
 
 
@@ -133,21 +128,12 @@ struct CowT
 using Local=smv::LocalMarking<smv::Colored<Cow>,
     smv::Uncolored<std::map<int,double>>>;
 using CowTransitions=smv::ExplicitTransitions<
-    CowPlace,CowT,Local,CowGen>;
+    CowPlace,CowT,Local,CowGen,CowUserState>;
 
 // We make a transition that meets the requirements of the GSPN object
 // by deriving it from the Transition type it defines.
 
-class CowTransition
-: public smv::ExplicitTransition<Local,CowGen>
-{
-public:
-  CowTransition(int64_t cow_id) : cow_id(cow_id) {}
-  virtual ~CowTransition() {}
-
-  int64_t cow_id;
-};
-
+using CowTransition=smv::ExplicitTransition<Local,CowGen,CowUserState>;
 
 // These are just shorthand.
 using Dist=smv::TransitionDistribution<CowGen>;
@@ -155,11 +141,149 @@ using ExpDist=smv::ExponentialDistribution<CowGen>;
 
 
 
-class InfectNeighbor : public CowTransition
+
+class CalfToH1 : public CowTransition
 {
 public:
-  InfectNeighbor(int64_t cow_id) : CowTransition(cow_id) {}
+  virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
+  Enabled(const UserState& s, const Local& lm, double te, double t0) const {
+    if (lm.template InputTokensSufficient<0>()) {
+      double weaning=s.params.at("weaning");
+      return {true, std::unique_ptr<Dist>(
+          new smv::DiracDistribution(weaning, te))};
+    } else {
+      return {false, std::unique_ptr<Dist>(nullptr)};
+    }
+  }
 
+  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) const {
+    lm.template TransferByStochiometricCoefficient<0>(rng);
+  }
+};
+
+
+
+class H1ToH2 : public CowTransition
+{
+public:
+  virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
+  Enabled(const UserState& s, const Local& lm, double te, double t0) const {
+    if (lm.template InputTokensSufficient<0>()) {
+      double left=s.params.at("breeding_left");
+      double middle=s.params.at("breeding_middle");
+      double right=s.params.at("breeding_right");
+      return {true, std::unique_ptr<Dist>(
+          new smv::TriangularDistribution(left, middle, right, te))};
+    } else {
+      return {false, std::unique_ptr<Dist>(nullptr)};
+    }
+  }
+
+  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) const {
+    lm.template TransferByStochiometricCoefficient<0>(rng);
+  }
+};
+
+
+
+class SellCalf : public CowTransition
+{
+public:
+  virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
+  Enabled(const UserState& s, const Local& lm, double te, double t0) const {
+    if (lm.template InputTokensSufficient<0>()) {
+      return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
+    } else {
+      return {false, std::unique_ptr<Dist>(nullptr)};
+    }
+  }
+
+  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) const {
+    lm.template TransferByStochiometricCoefficient<0>(rng);
+  }
+};
+
+
+
+class H2ToDairy : public CowTransition
+{
+public:
+  virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
+  Enabled(const UserState& s, const Local& lm, double te, double t0) const {
+    if (lm.template InputTokensSufficient<0>()) {
+      return {true, std::unique_ptr<Dist>(new CalvingDistribution(te))};
+    } else {
+      return {false, std::unique_ptr<Dist>(nullptr)};
+    }
+  }
+
+  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) const {
+    lm.template TransferByStochiometricCoefficient<0>(rng);
+  }
+};
+
+
+
+class Parturition : public CowTransition
+{
+public:
+  virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
+  Enabled(const UserState& s, const Local& lm, double te, double t0) const {
+    if (lm.template InputTokensSufficient<0>()) {
+      return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
+    } else {
+      return {false, std::unique_ptr<Dist>(nullptr)};
+    }
+  }
+
+  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) const {
+    lm.template TransferByStochiometricCoefficient<0>(rng);
+  }
+};
+
+
+
+class CalfToDeath : public CowTransition
+{
+public:
+  virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
+  Enabled(const UserState& s, const Local& lm, double te, double t0) const {
+    if (lm.template InputTokensSufficient<0>()) {
+      return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
+    } else {
+      return {false, std::unique_ptr<Dist>(nullptr)};
+    }
+  }
+
+  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) const {
+    lm.template TransferByStochiometricCoefficient<0>(rng);
+  }
+};
+
+
+
+class H2ToDeath : public CowTransition
+{
+public:
+  virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
+  Enabled(const UserState& s, const Local& lm, double te, double t0) const {
+    if (lm.template InputTokensSufficient<0>()) {
+      return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
+    } else {
+      return {false, std::unique_ptr<Dist>(nullptr)};
+    }
+  }
+
+  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) const {
+    lm.template TransferByStochiometricCoefficient<0>(rng);
+  }
+};
+
+
+
+class DairyToDeath : public CowTransition
+{
+public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
   Enabled(const UserState& s, const Local& lm, double te, double t0) const {
     if (lm.template InputTokensSufficient<0>()) {
@@ -177,6 +301,42 @@ public:
 
 
 
+class H2Cull : public CowTransition
+{
+public:
+  virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
+  Enabled(const UserState& s, const Local& lm, double te, double t0) const {
+    if (lm.template InputTokensSufficient<0>()) {
+      return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
+    } else {
+      return {false, std::unique_ptr<Dist>(nullptr)};
+    }
+  }
+
+  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) const {
+    lm.template TransferByStochiometricCoefficient<0>(rng);
+  }
+};
+
+
+
+
+class DairyCull : public CowTransition
+{
+public:
+  virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
+  Enabled(const UserState& s, const Local& lm, double te, double t0) const {
+    if (lm.template InputTokensSufficient<0>()) {
+      return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
+    } else {
+      return {false, std::unique_ptr<Dist>(nullptr)};
+    }
+  }
+
+  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) const {
+    lm.template TransferByStochiometricCoefficient<0>(rng);
+  }
+};
 
 
 
@@ -192,36 +352,91 @@ Herd(int64_t initial_cnt, int64_t total_cnt)
   enum { c, h1, h2, d, death, sale, culling};
   // disease states
   enum { dm, ds, dti, dr, dpi};
+  // Transition kinds
+  enum { moveherd, purchase, sale, cull, die, birth };
 
   for (auto sg : {c, h1, h2, d, death, sale, culling}) {
     for (int who=0; who<total_cnt; ++who) {
       for (auto disease : std::vector<int>{dm, ds, dti, dr, dpi}) {
         bg.AddPlace({disease, who, sg}, 0);
       }
-      // same group, same cow, kind=0 is becoming susceptible.
-      bg.AddTransition({who, who, sg, sg, 0},
-        {PlaceEdge{CowPlace{dm, who, sg}, -1},
-         PlaceEdge{CowPlace{ds, who, sg}, 1}},
-        std::unique_ptr<CowTransition>(new InfectNeighbor(who))
-        );
-
-      // same group, same cow, kind=1 is recovering.
-      bg.AddTransition({who, who, sg, sg, 1},
-        {PlaceEdge{CowPlace{dti, who, sg}, -1},
-         PlaceEdge{CowPlace{dr, who, sg}, 1}},
-        std::unique_ptr<CowTransition>(new InfectNeighbor(who))
-        );
     }
   }
 
-  for (auto sg : {c, h1, h2, d, death, sale, culling}) {
-    for (int who=0; who<total_cnt; ++who) {
-      for (auto disease : std::vector<int>{dm, ds, dti, dr, dpi})
-      {
-      }
-    }
+  for (int who=0; who<total_cnt; ++who) {
+    bg.AddTransition({moveherd},
+      {PlaceEdge{CowPlace{ds, who, c}, -1},
+       PlaceEdge{CowPlace{ds, who, h1}, 1}},
+       std::unique_ptr<CowTransition>(new CalfToH1()));
+  }
+  for (int who=0; who<total_cnt; ++who) {
+    bg.AddTransition({moveherd},
+      {PlaceEdge{CowPlace{ds, who, h1}, -1},
+       PlaceEdge{CowPlace{ds, who, h2}, 1}},
+       std::unique_ptr<CowTransition>(new H1ToH2()));
+  }
+  for (int who=0; who<total_cnt; ++who) {
+    bg.AddTransition({sale},
+      {PlaceEdge{CowPlace{ds, who, c}, -1},
+       PlaceEdge{CowPlace{ds, who, sale}, 1}},
+       std::unique_ptr<CowTransition>(new SellCalf()));
+  }
+  // Why? A new calf's identity depends on which slot is free.
+  // Cannot determine it at time of GSPN construction.
+  std::vector<PlaceEdge> anycalf(total_cnt+2);
+  for (int destination=0; destination<total_cnt; ++destination) {
+    anycalf[2+destination]=PlaceEdge{CowPlace{ds, destination, c}, 1};
+  }
+  for (int who=0; who<total_cnt; ++who) {
+    anycalf[0]=PlaceEdge{CowPlace{ds, who, h2}, -1};
+    anycalf[1]=PlaceEdge{CowPlace{ds, who, d}, 1};
+    bg.AddTransition({birth}, anycalf,
+       std::unique_ptr<CowTransition>(new H2ToDairy()));
+  }
+  for (int who=0; who<total_cnt; ++who) {
+    anycalf[0]=PlaceEdge{CowPlace{ds, who, d}, -1};
+    anycalf[1]=PlaceEdge{CowPlace{ds, who, d}, 1};
+    bg.AddTransition({birth}, anycalf,
+       std::unique_ptr<CowTransition>(new Parturition()));
+  }
+
+  // perinatal death
+  for (int who=0; who<total_cnt; ++who) {
+    bg.AddTransition({die},
+      {PlaceEdge{CowPlace{ds, who, c}, -1},
+       PlaceEdge{CowPlace{ds, who, death}, 1}},
+       std::unique_ptr<CowTransition>(new CalfToDeath()));
+  }
+
+  // no H1 death, but H2 death
+  for (int who=0; who<total_cnt; ++who) {
+    bg.AddTransition({die},
+      {PlaceEdge{CowPlace{ds, who, h2}, -1},
+       PlaceEdge{CowPlace{ds, who, death}, 1}},
+       std::unique_ptr<CowTransition>(new H2ToDeath()));
   }
   
+  // culling of dairy
+  for (int who=0; who<total_cnt; ++who) {
+    bg.AddTransition({die},
+      {PlaceEdge{CowPlace{ds, who, d}, -1},
+       PlaceEdge{CowPlace{ds, who, death}, 1}},
+       std::unique_ptr<CowTransition>(new DairyToDeath()));
+  }
+  
+
+  for (int who=0; who<total_cnt; ++who) {
+    bg.AddTransition({cull},
+      {PlaceEdge{CowPlace{ds, who, h2}, -1},
+       PlaceEdge{CowPlace{ds, who, culling}, 1}},
+       std::unique_ptr<CowTransition>(new H2Cull()));
+  }
+  for (int who=0; who<total_cnt; ++who) {
+    bg.AddTransition({cull},
+      {PlaceEdge{CowPlace{ds, who, d}, -1},
+       PlaceEdge{CowPlace{ds, who, culling}, 1}},
+       std::unique_ptr<CowTransition>(new DairyCull()));
+  }
   return std::move(bg.Build());
 }
 

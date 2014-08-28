@@ -591,6 +591,102 @@ public:
 };
 
 
+
+template<typename RNG>
+class DiracDistribution : public TransitionDistribution<RNG> {
+  double value_;
+  double te_;
+ public:
+  DiracDistribution(double value, double te) : value_(value), te_(te) {}
+
+  virtual bool BoundedHazard() const { return false; }
+
+  virtual double HazardIntegral(double t0, double t1) const {
+    return 0.0;
+  }
+  
+  virtual double ImplicitHazardIntegral(double xa, double t0) const {
+    return 0.0;
+  }
+
+  virtual double EnablingTime() const {
+    return te_;
+  }
+
+  double Sample(double current_time, RNG& rng) {
+    return value_;
+  }
+
+  double CumulativeProbability(double enabling_time, double current_time,
+    double x)
+  {
+    return 0.0;
+  }
+
+  bool CheckSamples(const std::vector<double>& samples, double dt)
+  {
+    bool pass=true;
+
+    // Try Kolmogorov-Smirnov test.
+
+    return pass;
+  }
+};
+
+
+
+
+template<typename RNG>
+class TriangularDistribution : public TransitionDistribution<RNG>
+{
+  PiecewiseLinearDistribution<RNG> pld_;
+ public:
+  TriangularDistribution(double left, double middle, double right, double te) {
+    // Why is there an extra point? Roundoff error. Don't want
+    // this to arrive at 0.9999 and not return. The distribution
+    // is defined such that it is complete.
+    std::vector<double> b={left, middle, right, right+(right-left)};
+    double height=2/(right-left);
+    std::vector<double> w={0, height, 0, height};
+    pld_=PiecewiseLinearDistribution<RNG>(b, w, te);
+  }
+
+  virtual bool BoundedHazard() const { return false; }
+
+  virtual double HazardIntegral(double t0, double t1) const {
+    return 0.0;
+  }
+  
+  virtual double ImplicitHazardIntegral(double xa, double t0) const {
+    return 0.0;
+  }
+
+  virtual double EnablingTime() const {
+    return pld_.EnablingTime();
+  }
+
+  double Sample(double current_time, RNG& rng) {
+    return pld_.Sample(current_time, rng);
+  }
+
+  double CumulativeProbability(double enabling_time, double current_time,
+    double x)
+  {
+    return 0.0;
+  }
+
+  bool CheckSamples(const std::vector<double>& samples, double dt)
+  {
+    bool pass=true;
+
+    // Try Kolmogorov-Smirnov test.
+
+    return pass;
+  }
+};
+
+
+
 } // smv
 } // afidd
 #endif // _DISTRIBUTIONS_H_
