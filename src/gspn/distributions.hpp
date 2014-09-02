@@ -488,6 +488,7 @@ class PiecewiseLinearDistribution : public TransitionDistribution<RNG>
   std::vector<double> _partial_sum;
 
 public:
+  PiecewiseLinearDistribution()=default;
   PiecewiseLinearDistribution(const std::vector<double>& b,
     const std::vector<double>& w, double enabling_time,
     double shift=0.0, double normal=1.0)
@@ -613,17 +614,17 @@ class DiracDistribution : public TransitionDistribution<RNG> {
     return te_;
   }
 
-  double Sample(double current_time, RNG& rng) {
+  double Sample(double current_time, RNG& rng) const {
     return value_;
   }
 
   double CumulativeProbability(double enabling_time, double current_time,
-    double x)
+    double x) const
   {
     return 0.0;
   }
 
-  bool CheckSamples(const std::vector<double>& samples, double dt)
+  bool CheckSamples(const std::vector<double>& samples, double dt) const
   {
     bool pass=true;
 
@@ -641,6 +642,7 @@ class TriangularDistribution : public TransitionDistribution<RNG>
 {
   PiecewiseLinearDistribution<RNG> pld_;
  public:
+  TriangularDistribution()=default;
   TriangularDistribution(double left, double middle, double right, double te) {
     // Why is there an extra point? Roundoff error. Don't want
     // this to arrive at 0.9999 and not return. The distribution
@@ -665,12 +667,12 @@ class TriangularDistribution : public TransitionDistribution<RNG>
     return pld_.EnablingTime();
   }
 
-  double Sample(double current_time, RNG& rng) {
+  double Sample(double current_time, RNG& rng) const {
     return pld_.Sample(current_time, rng);
   }
 
   double CumulativeProbability(double enabling_time, double current_time,
-    double x)
+    double x) const
   {
     return 0.0;
   }

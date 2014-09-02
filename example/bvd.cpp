@@ -38,6 +38,7 @@
 #include "boost/property_map/property_map.hpp"
 #include "boost/mpl/vector.hpp"
 #include "smv.hpp"
+#include "bvd_distributions.hpp"
 #include "cow_token.hpp"
 
 
@@ -149,8 +150,8 @@ public:
   Enabled(const UserState& s, const Local& lm, double te, double t0) const {
     if (lm.template InputTokensSufficient<0>()) {
       double weaning=s.params.at("weaning");
-      return {true, std::unique_ptr<Dist>(
-          new smv::DiracDistribution(weaning, te))};
+      auto dist=new smv::DiracDistribution<CowGen>(weaning, te);
+      return {true, std::unique_ptr<Dist>(dist)};
     } else {
       return {false, std::unique_ptr<Dist>(nullptr)};
     }
@@ -173,7 +174,7 @@ public:
       double middle=s.params.at("breeding_middle");
       double right=s.params.at("breeding_right");
       return {true, std::unique_ptr<Dist>(
-          new smv::TriangularDistribution(left, middle, right, te))};
+          new smv::TriangularDistribution<CowGen>(left, middle, right, te))};
     } else {
       return {false, std::unique_ptr<Dist>(nullptr)};
     }
@@ -211,7 +212,8 @@ public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
   Enabled(const UserState& s, const Local& lm, double te, double t0) const {
     if (lm.template InputTokensSufficient<0>()) {
-      return {true, std::unique_ptr<Dist>(new CalvingDistribution(te))};
+      return {true, std::unique_ptr<Dist>(
+        new HeiferCalvingDistribution<CowGen>(te))};
     } else {
       return {false, std::unique_ptr<Dist>(nullptr)};
     }
@@ -349,16 +351,16 @@ Herd(int64_t initial_cnt, int64_t total_cnt)
   BuildGraph<CowTransitions> bg;
   using PlaceEdge=BuildGraph<CowTransitions>::PlaceEdge;
   // subgroups
-  enum { c, h1, h2, d, death, sale, culling};
+  enum { c, h1, h2, d, death, sold, culling};
   // disease states
   enum { dm, ds, dti, dr, dpi};
   // Transition kinds
   enum { moveherd, purchase, sale, cull, die, birth };
 
-  for (auto sg : {c, h1, h2, d, death, sale, culling}) {
+  for (auto sg : std::vector<int>{c, h1, h2, d, death, sale, culling}) {
     for (int who=0; who<total_cnt; ++who) {
       for (auto disease : std::vector<int>{dm, ds, dti, dr, dpi}) {
-        bg.AddPlace({disease, who, sg}, 0);
+        bg.AddPlace(CowPlace{disease, who, sg}, 0);
       }
     }
   }
@@ -378,7 +380,7 @@ Herd(int64_t initial_cnt, int64_t total_cnt)
   for (int who=0; who<total_cnt; ++who) {
     bg.AddTransition({sale},
       {PlaceEdge{CowPlace{ds, who, c}, -1},
-       PlaceEdge{CowPlace{ds, who, sale}, 1}},
+       PlaceEdge{CowPlace{ds, who, sold}, 1}},
        std::unique_ptr<CowTransition>(new SellCalf()));
   }
   // Why? A new calf's identity depends on which slot is free.
@@ -452,7 +454,7 @@ int main(int argc, char *argv[])
   using Mark=smv::Marking<int64_t,
       smv::Colored<Cow>,smv::Uncolored<std::map<int,double>>>;
   Mark m;
-  using CowState=smv::GSPNState<Mark,int64_t>;
+  using CowState=smv::GSPNState<Mark,int64_t,CowUserState>;
   CowState state;
 
   enum { lambda, beta, gamma };
