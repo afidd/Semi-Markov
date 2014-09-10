@@ -59,12 +59,16 @@ that the tuples are in the same space or, if they are, that
 they do not overlap.
 
 The simplest space would be a superset of the given ones,
-$C=(A,A,B,B,N,N)$. Since transitions will be associated with edges,
+\begin{equation}
+C=(A,A,B,B,N,N).
+\end{equation}
+Since transitions will be associated with edges,
 there are two $N$ entries and two of each type of the node.
 This seems like too much. Let's return to the rules. For this
 construction, they are of the form,
-$(A,A)\rightarrrow D$, $(B,B)\rightarrrow D$, $(A,B)\rightarrrow D$,
-or $(B,A)\rightarrrow D$. We could define $A→D$ and $B→D$ so
+
+$(A,A)\rightarrow D$, $(B,B)\rightarrow D$, $(A,B)\rightarrow D$,
+or $(B,A)\rightarrow D$. We could define $A \rightarrow D$ and $B \rightarrow D$ so
 that the unified space is $C=(D,N,N)$.
 
 It feels like any transition, identified first by its vertex
