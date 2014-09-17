@@ -147,7 +147,7 @@ class CalfToH1 : public CowTransition
 {
 public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  Enabled(const UserState& s, const Local& lm, double te, double t0) const {
+  Enabled(const UserState& s, const Local& lm, double te, double t0) {
     if (lm.template InputTokensSufficient<0>()) {
       double weaning=s.params.at("weaning");
       auto dist=new smv::DiracDistribution<CowGen>(weaning, te);
@@ -157,7 +157,7 @@ public:
     }
   }
 
-  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) const {
+  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) {
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
 };
@@ -168,7 +168,7 @@ class H1ToH2 : public CowTransition
 {
 public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  Enabled(const UserState& s, const Local& lm, double te, double t0) const {
+  Enabled(const UserState& s, const Local& lm, double te, double t0) {
     if (lm.template InputTokensSufficient<0>()) {
       double left=s.params.at("breeding_left");
       double middle=s.params.at("breeding_middle");
@@ -180,7 +180,7 @@ public:
     }
   }
 
-  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) const {
+  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) {
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
 };
@@ -191,7 +191,7 @@ class SellCalf : public CowTransition
 {
 public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  Enabled(const UserState& s, const Local& lm, double te, double t0) const {
+  Enabled(const UserState& s, const Local& lm, double te, double t0) {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     } else {
@@ -199,7 +199,7 @@ public:
     }
   }
 
-  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) const {
+  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) {
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
 };
@@ -210,7 +210,7 @@ class H2ToDairy : public CowTransition
 {
 public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  Enabled(const UserState& s, const Local& lm, double te, double t0) const {
+  Enabled(const UserState& s, const Local& lm, double te, double t0) {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<Dist>(
         new HeiferCalvingDistribution<CowGen>(te))};
@@ -219,7 +219,7 @@ public:
     }
   }
 
-  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) const {
+  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) {
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
 };
@@ -230,7 +230,7 @@ class Parturition : public CowTransition
 {
 public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  Enabled(const UserState& s, const Local& lm, double te, double t0) const {
+  Enabled(const UserState& s, const Local& lm, double te, double t0) {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     } else {
@@ -238,7 +238,7 @@ public:
     }
   }
 
-  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) const {
+  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) {
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
 };
@@ -249,7 +249,7 @@ class CalfToDeath : public CowTransition
 {
 public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  Enabled(const UserState& s, const Local& lm, double te, double t0) const {
+  Enabled(const UserState& s, const Local& lm, double te, double t0) {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     } else {
@@ -257,7 +257,7 @@ public:
     }
   }
 
-  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) const {
+  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) {
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
 };
@@ -268,7 +268,7 @@ class H2ToDeath : public CowTransition
 {
 public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  Enabled(const UserState& s, const Local& lm, double te, double t0) const {
+  Enabled(const UserState& s, const Local& lm, double te, double t0) {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     } else {
@@ -276,7 +276,7 @@ public:
     }
   }
 
-  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) const {
+  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) {
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
 };
@@ -287,7 +287,7 @@ class DairyToDeath : public CowTransition
 {
 public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  Enabled(const UserState& s, const Local& lm, double te, double t0) const {
+  Enabled(const UserState& s, const Local& lm, double te, double t0) {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     } else {
@@ -295,7 +295,7 @@ public:
     }
   }
 
-  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) const {
+  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) {
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
 };
@@ -307,7 +307,7 @@ class H2Cull : public CowTransition
 {
 public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  Enabled(const UserState& s, const Local& lm, double te, double t0) const {
+  Enabled(const UserState& s, const Local& lm, double te, double t0) {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     } else {
@@ -315,7 +315,7 @@ public:
     }
   }
 
-  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) const {
+  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) {
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
 };
@@ -327,7 +327,7 @@ class DairyCull : public CowTransition
 {
 public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  Enabled(const UserState& s, const Local& lm, double te, double t0) const {
+  Enabled(const UserState& s, const Local& lm, double te, double t0) {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     } else {
@@ -335,7 +335,7 @@ public:
     }
   }
 
-  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) const {
+  virtual void Fire(UserState& s, Local& lm, double t0, CowGen& rng) {
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
 };

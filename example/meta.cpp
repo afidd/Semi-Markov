@@ -259,7 +259,7 @@ using SIRTransition=ExplicitTransition<Local,RNG,WithParams>;
 class InfectNeighbor : public SIRTransition
 {
   virtual std::pair<bool, std::unique_ptr<Dist>> Enabled(
-    const WithParams& s, const Local& lm, double te, double t0) const override {
+    const WithParams& s, const Local& lm, double te, double t0) override {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     } else {
@@ -268,7 +268,7 @@ class InfectNeighbor : public SIRTransition
   }
 
   virtual void Fire(WithParams& s, Local& lm,
-      double t0, RNG& rng) const override {
+      double t0, RNG& rng) override {
     BOOST_LOG_TRIVIAL(debug) << "Fire infection " << lm;
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
@@ -284,7 +284,7 @@ class Recover : public SIRTransition
 {
   virtual std::pair<bool, std::unique_ptr<Dist>> Enabled(
       const WithParams& s, const Local& lm,
-      double te, double t0) const override {
+      double te, double t0) override {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     } else {
@@ -293,7 +293,7 @@ class Recover : public SIRTransition
   }
 
   virtual void Fire(WithParams& s, Local& lm,
-      double t0, RNG& rng) const override {
+      double t0, RNG& rng) override {
     BOOST_LOG_TRIVIAL(debug) << "Fire recovery "<< lm;
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }

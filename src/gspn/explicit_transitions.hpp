@@ -54,13 +54,13 @@ public:
 
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<RNG>>>
   Enabled(const ExtraState& s, const LM& lm,
-          double enabling_time, double current_time) const {
+          double enabling_time, double current_time) {
     SMVLOG(BOOST_LOG_TRIVIAL(debug) <<
       "The base enabled is unlikely correct to call");
     return {false,std::unique_ptr<TransitionDistribution<RNG>>(nullptr)};
   }
 
-  virtual void Fire(ExtraState& s, LM& lm, double t0, RNG& rng) const {
+  virtual void Fire(ExtraState& s, LM& lm, double t0, RNG& rng) {
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
 };

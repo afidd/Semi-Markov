@@ -140,7 +140,7 @@ class InfectNeighbor : public SIRTransition
 public:
   virtual std::pair<bool, std::unique_ptr<Dist>>
   Enabled(const UserState& s, const Local& lm,
-    double te, double t0) const override {
+    double te, double t0) override {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(s.params.at(0), te))};
     } else {
@@ -149,7 +149,7 @@ public:
   }
 
   virtual void Fire(UserState& s, Local& lm, double t0,
-      RandGen& rng) const override {
+      RandGen& rng) override {
     BOOST_LOG_TRIVIAL(trace) << "Fire infection " << lm;
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
@@ -165,7 +165,7 @@ class Recover : public SIRTransition
 public:
   virtual
   std::pair<bool, std::unique_ptr<Dist>> Enabled(const UserState& s,
-      const Local& lm, double te, double t0) const override {
+      const Local& lm, double te, double t0) override {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(s.params.at(1), te))};
     } else {
@@ -174,7 +174,7 @@ public:
   }
 
   virtual void Fire(UserState& s, Local& lm, double t0,
-      RandGen& rng) const override {
+      RandGen& rng) override {
     BOOST_LOG_TRIVIAL(trace) << "Fire recovery "<< lm;
     lm.template TransferByStochiometricCoefficient<0>(rng);
   }
