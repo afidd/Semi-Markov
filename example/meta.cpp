@@ -259,7 +259,7 @@ using SIRTransition=ExplicitTransition<Local,RNG,WithParams>;
 class InfectNeighbor : public SIRTransition
 {
   virtual std::pair<bool, std::unique_ptr<Dist>> Enabled(
-    const WithParams& s, const Local& lm, double te, double t0) override {
+    const WithParams& s, const Local& lm, double te, double t0, RNG& rng) override {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     } else {
@@ -284,7 +284,7 @@ class Recover : public SIRTransition
 {
   virtual std::pair<bool, std::unique_ptr<Dist>> Enabled(
       const WithParams& s, const Local& lm,
-      double te, double t0) override {
+      double te, double t0, RNG& rng) override {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     } else {

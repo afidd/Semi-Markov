@@ -143,7 +143,7 @@ using Local = afidd::smv::LocalMarking<TokenContainer>;
 
 std::pair<bool,std::unique_ptr<afidd::smv::TransitionDistribution<RandGen>>>
 Enabled(const BrownionGSPN& et, TransitionKey trans_id,
-        const UserState& s, const Local& lm, double te, double t0)
+        const UserState& s, const Local& lm, double te, double t0, RandGen& rng)
 {
   if (lm.template Length<0>(0)>0) {
     // This is where we choose the distributions for the two

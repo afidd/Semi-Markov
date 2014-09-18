@@ -54,7 +54,7 @@ public:
 
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<RNG>>>
   Enabled(const ExtraState& s, const LM& lm,
-          double enabling_time, double current_time) {
+          double enabling_time, double current_time, RNG& rng) {
     SMVLOG(BOOST_LOG_TRIVIAL(debug) <<
       "The base enabled is unlikely correct to call");
     return {false,std::unique_ptr<TransitionDistribution<RNG>>(nullptr)};

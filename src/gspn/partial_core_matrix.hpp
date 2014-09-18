@@ -84,7 +84,7 @@ class PartialCoreMatrix
         std::unique_ptr<TransitionDistribution<RNG>> dist;
         std::tie(isEnabled, dist)=
             Enabled(gspn_, neighbor_id, state_->user, lm,
-            enabling_time, state_->CurrentTime());
+            enabling_time, state_->CurrentTime(), rng);
 
         if (isEnabled) {
           Propagator* appropriate=nullptr;

@@ -757,6 +757,66 @@ public:
   }
 
 
+  template<int I, int J, typename Match, typename Modifier>
+  int
+  Move(int place_from, int place_to, const Match& which_to_move,
+      const Modifier& modify_token)
+  {
+    SMVLOG(BOOST_LOG_TRIVIAL(trace)<< "Moving tokens from "<<place_from
+      <<" to "<<place_to);
+
+    auto& place_from_container=m_.at(place_from);
+    auto& from_container=std::get<I>(std::get<0>(place_from_container));
+
+    int moved_cnt=0;
+    if (from_container!=nullptr) {
+      typedef typename boost::mpl::at<typename LocalMarking::container_types,
+        boost::mpl::int_<J>>::type to_container_type;
+      auto& place_to_container=m_.at(place_to);
+      auto& to_container=std::get<J>(std::get<0>(place_to_container));
+      if (to_container==nullptr) {
+        SMVLOG(BOOST_LOG_TRIVIAL(trace)<< "Moving to_container null");
+        to_container=new to_container_type{};
+        added_.insert(place_to);
+      } else {
+        SMVLOG(BOOST_LOG_TRIVIAL(trace)<< "Moving to_container exists");
+      }
+      if (from_container!=to_container) {
+        modified_.insert(place_from);
+        modified_.insert(place_to);
+        for (auto begin=from_container->begin(); begin!=from_container->end();
+            ++begin) {
+          if (which_to_move(*begin)) {
+            detail::apply_token_function(*begin, modify_token);
+            detail::add_to_container(*to_container, *begin);
+            from_container->erase(begin);
+            ++moved_cnt;
+          }
+        }
+      } else {
+        // If the two containers are different, still apply the functor.
+        auto begin=from_container->begin();
+        for ( ; begin!=from_container->end(); ++begin) {
+          if (which_to_move(*begin)) {
+            detail::apply_token_function(*begin, modify_token);
+            ++moved_cnt;
+          }
+        }
+      }
+      if (from_container->size()==0) {
+        SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"Moving mark "<<place_from
+          <<" to erase.");
+        removed_.insert(place_from);
+      }
+    } else {
+      BOOST_LOG_TRIVIAL(error)<<"Cannot move a token from an empty container "
+        <<place_from<<" "<<place_to<<" "<<I;
+    }
+    SMVLOG(BOOST_LOG_TRIVIAL(trace)<< "~Moving tokens from "
+      <<place_from);
+    return moved_cnt;
+  }
+
 
   int Layer(int place_idx) const {
     auto& place_container=m_.at(place_idx);

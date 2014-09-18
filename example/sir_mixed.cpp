@@ -140,7 +140,7 @@ class InfectNeighbor : public SIRTransition
 public:
   virtual std::pair<bool, std::unique_ptr<Dist>>
   Enabled(const UserState& s, const Local& lm,
-    double te, double t0) override {
+    double te, double t0, RandGen& rng) override {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(s.params.at(0), te))};
     } else {
@@ -165,7 +165,7 @@ class Recover : public SIRTransition
 public:
   virtual
   std::pair<bool, std::unique_ptr<Dist>> Enabled(const UserState& s,
-      const Local& lm, double te, double t0) override {
+      const Local& lm, double te, double t0, RandGen& rng) override {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(s.params.at(1), te))};
     } else {

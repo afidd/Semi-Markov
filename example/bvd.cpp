@@ -147,7 +147,7 @@ class CalfToH1 : public CowTransition
 {
 public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  Enabled(const UserState& s, const Local& lm, double te, double t0) {
+  Enabled(const UserState& s, const Local& lm, double te, double t0, CowGen& rng) {
     if (lm.template InputTokensSufficient<0>()) {
       double weaning=s.params.at("weaning");
       auto dist=new smv::DiracDistribution<CowGen>(weaning, te);
@@ -168,7 +168,7 @@ class H1ToH2 : public CowTransition
 {
 public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  Enabled(const UserState& s, const Local& lm, double te, double t0) {
+  Enabled(const UserState& s, const Local& lm, double te, double t0, CowGen& rng) {
     if (lm.template InputTokensSufficient<0>()) {
       double left=s.params.at("breeding_left");
       double middle=s.params.at("breeding_middle");
@@ -191,7 +191,7 @@ class SellCalf : public CowTransition
 {
 public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  Enabled(const UserState& s, const Local& lm, double te, double t0) {
+  Enabled(const UserState& s, const Local& lm, double te, double t0, CowGen& rng) {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     } else {
@@ -210,7 +210,7 @@ class H2ToDairy : public CowTransition
 {
 public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  Enabled(const UserState& s, const Local& lm, double te, double t0) {
+  Enabled(const UserState& s, const Local& lm, double te, double t0, CowGen& rng) {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<Dist>(
         new HeiferCalvingDistribution<CowGen>(te))};
@@ -230,7 +230,7 @@ class Parturition : public CowTransition
 {
 public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  Enabled(const UserState& s, const Local& lm, double te, double t0) {
+  Enabled(const UserState& s, const Local& lm, double te, double t0, CowGen& rng) {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     } else {
@@ -249,7 +249,7 @@ class CalfToDeath : public CowTransition
 {
 public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  Enabled(const UserState& s, const Local& lm, double te, double t0) {
+  Enabled(const UserState& s, const Local& lm, double te, double t0, CowGen& rng) {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     } else {
@@ -268,7 +268,7 @@ class H2ToDeath : public CowTransition
 {
 public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  Enabled(const UserState& s, const Local& lm, double te, double t0) {
+  Enabled(const UserState& s, const Local& lm, double te, double t0, CowGen& rng) {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     } else {
@@ -287,7 +287,7 @@ class DairyToDeath : public CowTransition
 {
 public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  Enabled(const UserState& s, const Local& lm, double te, double t0) {
+  Enabled(const UserState& s, const Local& lm, double te, double t0, CowGen& rng) {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     } else {
@@ -307,7 +307,7 @@ class H2Cull : public CowTransition
 {
 public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  Enabled(const UserState& s, const Local& lm, double te, double t0) {
+  Enabled(const UserState& s, const Local& lm, double te, double t0, CowGen& rng) {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     } else {
@@ -327,7 +327,7 @@ class DairyCull : public CowTransition
 {
 public:
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<CowGen>>>
-  Enabled(const UserState& s, const Local& lm, double te, double t0) {
+  Enabled(const UserState& s, const Local& lm, double te, double t0, CowGen& rng) {
     if (lm.template InputTokensSufficient<0>()) {
       return {true, std::unique_ptr<ExpDist>(new ExpDist(1.0, te))};
     } else {
