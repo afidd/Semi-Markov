@@ -35,6 +35,7 @@
 #include <memory>
 #include <set>
 #include <functional>
+#include <mutex>
 #include "stochnet.hpp"
 #include "boost/random/mersenne_twister.hpp"
 #include "boost/log/core.hpp"
@@ -42,11 +43,26 @@
 #include "boost/mpl/vector.hpp"
 #include "boost/program_options.hpp"
 #include "smv.hpp"
+#include "ensemble.hpp"
 
 namespace smv=afidd::smv;
 using namespace smv;
 using RandGen=std::mt19937_64;
 
+
+enum class SIRParam { Beta, Gamma };
+/*! This class takes a parameter from the command line or a file,
+ *  with enough information to describe and store it.
+ */
+struct Parameter {
+  SIRParam kind;
+  std::string name;
+  double value;
+  std::string description;
+  Parameter(SIRParam k, std::string n, double v, std::string desc)
+  : kind(k), name(n), value(v), description(desc) {}
+  Parameter()=default;
+};
 
 struct IndividualToken
 {
@@ -122,7 +138,8 @@ using Local=LocalMarking<Uncolored<IndividualToken>>;
 // Extra state to add to the system state. Will be passed to transitions.
 struct WithParams {
   // Put our parameters here.
-  std::map<int,double> params;
+  std::map<SIRParam,double> params;
+  int64_t token_cnt;
 };
 
 
@@ -142,7 +159,8 @@ public:
   Enabled(const UserState& s, const Local& lm,
     double te, double t0, RandGen& rng) override {
     if (lm.template InputTokensSufficient<0>()) {
-      return {true, std::unique_ptr<ExpDist>(new ExpDist(s.params.at(0), te))};
+      return {true, std::unique_ptr<ExpDist>(
+        new ExpDist(s.params.at(SIRParam::Beta), te))};
     } else {
       return {false, std::unique_ptr<Dist>(nullptr)};
     }
@@ -151,7 +169,8 @@ public:
   virtual void Fire(UserState& s, Local& lm, double t0,
       RandGen& rng) override {
     BOOST_LOG_TRIVIAL(trace) << "Fire infection " << lm;
-    lm.template TransferByStochiometricCoefficient<0>(rng);
+    //lm.template TransferByStochiometricCoefficient<0>(rng);
+    lm.template Move<0,0>(1, 3, 1);
   }
 };
 
@@ -167,7 +186,8 @@ public:
   std::pair<bool, std::unique_ptr<Dist>> Enabled(const UserState& s,
       const Local& lm, double te, double t0, RandGen& rng) override {
     if (lm.template InputTokensSufficient<0>()) {
-      return {true, std::unique_ptr<ExpDist>(new ExpDist(s.params.at(1), te))};
+      return {true, std::unique_ptr<ExpDist>(
+        new ExpDist(s.params.at(SIRParam::Gamma), te))};
     } else {
       return {false, std::unique_ptr<Dist>(nullptr)};
     }
@@ -176,7 +196,8 @@ public:
   virtual void Fire(UserState& s, Local& lm, double t0,
       RandGen& rng) override {
     BOOST_LOG_TRIVIAL(trace) << "Fire recovery "<< lm;
-    lm.template TransferByStochiometricCoefficient<0>(rng);
+    //lm.template TransferByStochiometricCoefficient<0>(rng);
+    lm.template Move<0,0>(0, 1, 1);
   }
 };
 
@@ -250,19 +271,85 @@ void WriteIds(const GSPN& gspn, const std::string& fname,
   }
 }
 
+/*! An observer sees the whole state, but this is the part we extract.
+ *  This struct is what will be pulled from the state at each
+ *  time step.
+ */
+struct TrajectoryEntry {
+  int64_t s;
+  int64_t i;
+  int64_t r;
+  double t;
+  TrajectoryEntry(int64_t s, int64_t i, int64_t r, double t)
+  : s(s), i(i), r(r), t(t) {}
+  TrajectoryEntry()=default;
+};
+
+/*! Abstract base for observers of the trajectory,
+ *  because maybe we just want to save the final recovered count,
+ *  but maybe we want the area under the curve.
+ */
+class TrajectoryObserver
+{
+public:
+  virtual void Step(TrajectoryEntry sirt)=0;
+  virtual const std::vector<TrajectoryEntry>& Trajectory() const =0;
+};
+
+
+/*! Save the whole trajectory.
+ */
+class TrajectorySave : public TrajectoryObserver
+{
+  std::vector<TrajectoryEntry> trajectory_;
+  int64_t cnt_;
+ public:
+  TrajectorySave() : trajectory_{10000}, cnt_{0} {}
+  virtual void Step(TrajectoryEntry sirt) override {
+    trajectory_[cnt_]=sirt;
+    ++cnt_;
+    if (cnt_==trajectory_.size()) {
+      // write everything
+      cnt_=0;
+    }
+  }
+  virtual const std::vector<TrajectoryEntry>& Trajectory() const {
+    return trajectory_; }
+  int64_t final_removed() const { return trajectory_[cnt_-1].r; }
+  friend
+  std::ostream& operator<<(std::ostream& os, const TrajectorySave& ts) {
+    for (int64_t i=0; i<ts.cnt_; ++i) {
+      os << ts.trajectory_[i].s << '\t' << ts.trajectory_[i].i
+          << '\t' << ts.trajectory_[i].r << '\t'
+          << ts.trajectory_[i].t << std::endl;
+    }
+    return os;
+  }
+};
+
 
 template<typename SIRState, typename SIRGSPN>
 struct SIROutput
 {
   int64_t step_cnt{0};
+  std::vector<int64_t> sir_;
   const SIRGSPN& gspn_;
+  std::shared_ptr<TrajectoryObserver> observer_;
 
-  SIROutput(const SIRGSPN& gspn) : gspn_(gspn) {}
+  SIROutput(const SIRGSPN& gspn, std::vector<int64_t> sir,
+    std::shared_ptr<TrajectoryObserver> observer)
+    : gspn_(gspn), sir_{sir}, observer_{observer} {}
 
   void operator()(const SIRState& state) {
-    ++step_cnt;
     BOOST_LOG_TRIVIAL(debug)<<"trans "<<state.last_transition;
     auto transition_key=gspn_.VertexTransition(state.last_transition);
+    if (transition_key.ind1==transition_key.ind2) {
+      sir_[1]-=1;
+      sir_[2]+=1;
+    } else {
+      sir_[0]-=1;
+      sir_[1]+=1;
+    }
     int64_t id0, id1;
     typename SIRGSPN::UserPlaceKey key0, key1;
 
@@ -272,12 +359,100 @@ struct SIROutput
     BOOST_LOG_TRIVIAL(debug) << "trans " << transition_key
       << " time " << state.CurrentTime() << " step " << step_cnt;
     BOOST_LOG_TRIVIAL(trace) << state.marking;
+
+    //assert(this->check_sir(state));
+    observer_->Step({sir_[0], sir_[1], sir_[2], state.CurrentTime()});
+    ++step_cnt;
+  }
+
+  bool check_sir(const SIRState& state) {
+    int64_t sir_cnt=sir_[0]+sir_[1]+sir_[2];
+    int64_t token_id=0;
+    std::vector<int64_t> sir(3);
+    for (int64_t sir_idx=0; sir_idx<3; ++sir_idx) {
+      sir[sir_idx]=0;
+      for (int64_t sus_idx=0; sus_idx<sir_cnt; ++sus_idx) {
+        sir[sir_idx]+=Length<0>(state.marking,
+            gspn_.PlaceVertex(SIRPlace{sir_idx, sus_idx}));
+      }
+    }
+    for (int cidx=0; cidx<sir.size(); ++cidx) {
+      if (sir[cidx]!=sir_[cidx]) {
+        BOOST_LOG_TRIVIAL(error)<< "Expected: "
+            <<sir_[0]<<'\t'<<sir_[1]<<'\t'<<sir_[2];
+        BOOST_LOG_TRIVIAL(error)<< "Found: "
+            <<sir[0]<<'\t'<<sir[1]<<'\t'<<sir[2];
+        return false;
+      }
+    }
+    return true;
   }
 
   void final(const SIRState& state) {
-    BOOST_LOG_TRIVIAL(info) << "Took "<< step_cnt << " transitions.";
   }
 };
+
+
+int64_t SIR_run(const std::vector<int64_t>& sir_cnt, SIRGSPN& gspn,
+    const std::vector<Parameter>& parameters,
+    std::shared_ptr<TrajectoryObserver> observer,
+    RandGen& rng) {
+  using Mark=Marking<SIRGSPN::PlaceKey, Uncolored<IndividualToken>>;
+  using SIRState=GSPNState<Mark,SIRGSPN::TransitionKey,WithParams>;
+
+  SIRState state;
+  for (auto& cp : parameters) {
+    state.user.params[cp.kind]=cp.value;
+  }
+
+  int64_t token_id=0;
+  for (int64_t sir_idx=0; sir_idx<3; ++sir_idx) {
+    for (int64_t sus_idx=0; sus_idx<sir_cnt[sir_idx]; ++sus_idx) {
+      Add<0>(state.marking, gspn.PlaceVertex(SIRPlace{sir_idx, sus_idx}),
+        IndividualToken{});
+      ++token_id;
+    }
+  }
+  state.user.token_cnt=token_id;
+
+  //using Propagator=PropagateCompetingProcesses<int64_t,RandGen>;
+  using Propagator=NonHomogeneousPoissonProcesses<int64_t,RandGen>;
+  PropagateCompetingProcesses<int64_t,RandGen> simple;
+  Propagator competing;
+  using Dynamics=StochasticDynamics<SIRGSPN,SIRState,RandGen>;
+  Dynamics dynamics(gspn, {&competing, &simple});
+
+  BOOST_LOG_TRIVIAL(debug) << state.marking;
+
+  SIROutput<SIRState,SIRGSPN> output_function(gspn, sir_cnt, observer);
+
+  dynamics.Initialize(&state, &rng);
+
+  bool running=true;
+  auto nothing=[](SIRState&)->void {};
+  double last_time=state.CurrentTime();
+  while (running) {
+    SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"SIR_run() time "<<state.CurrentTime());
+    running=dynamics(state);
+    if (running) {
+      double new_time=state.CurrentTime();
+      if (new_time-last_time<0) {
+        BOOST_LOG_TRIVIAL(warning) << "last time "<<last_time <<" "
+          << " new_time "<<new_time;
+      }
+      last_time=new_time;
+      output_function(state);
+    }
+  }
+  if (running) {
+    BOOST_LOG_TRIVIAL(info)<<"Reached end time "<<state.CurrentTime();
+  } else {
+    BOOST_LOG_TRIVIAL(info)<<"No transitions left to fire at time "<<last_time;
+  }
+  output_function.final(state);
+  return 0;
+}
+
 
 
 
@@ -286,32 +461,44 @@ int main(int argc, char *argv[])
   namespace po=boost::program_options;
   po::options_description desc("Well-mixed SIR");
   int64_t individual_cnt=10;
+  int64_t thread_cnt=1;
+  int64_t run_cnt=1;
   size_t rand_seed=1;
-  double beta=1.0;
-  double gamma=1.0;
   std::string log_level;
   std::string translation_file;
+
+  std::vector<Parameter> parameters;
+  parameters.emplace_back(Parameter{SIRParam::Beta, "beta", 1,
+    "main infection rate"});
+  parameters.emplace_back(Parameter{SIRParam::Gamma, "gamma", 1,
+    "recovery rate"});
 
   desc.add_options()
     ("help", "show help message")
     ("size,s",
       po::value<int64_t>(&individual_cnt)->default_value(10),
       "size of the population")
+    ("threadcnt,j",
+      po::value<int64_t>(&thread_cnt)->default_value(1),
+      "number of threads to use")
+    ("run",
+      po::value<int64_t>(&run_cnt)->default_value(1),
+      "number of runs of the model")
     ("seed,r",
       po::value<size_t>(&rand_seed)->default_value(1),
       "seed for random number generator")
-    ("beta",
-      po::value<double>(&beta)->default_value(1.0),
-      "parameter for infection of neighbor")
-    ("gamma",
-      po::value<double>(&gamma)->default_value(1.0),
-      "parameter for recovery")
     ("loglevel", po::value<std::string>(&log_level)->default_value("info"),
       "Set the logging level to trace, debug, info, warning, error, or fatal.")
     ("translate",
       po::value<std::string>(&translation_file)->default_value(""),
       "write file relating place ids to internal ids")
     ;
+
+  for (auto& p : parameters) {
+    desc.add_options()(p.name.c_str(),
+      po::value<double>(&p.value)->default_value(p.value),
+      p.description.c_str());
+  }
 
   po::variables_map vm;
   auto parsed_options=po::parse_command_line(argc, argv, desc);
@@ -325,7 +512,6 @@ int main(int argc, char *argv[])
   }
 
   afidd::LogInit(log_level);
-  RandGen rng(rand_seed);
 
   auto gspn=BuildSystem(individual_cnt);
 
@@ -333,53 +519,33 @@ int main(int argc, char *argv[])
   {
     WriteIds(gspn, translation_file, individual_cnt);
   }
-
-
   // Marking of the net.
   static_assert(std::is_same<int64_t,SIRGSPN::PlaceKey>::value,
     "The GSPN's internal place type is int64_t.");
-  using Mark=Marking<SIRGSPN::PlaceKey, Uncolored<IndividualToken>>;
-  using SIRState=GSPNState<Mark,SIRGSPN::TransitionKey,WithParams>;
 
-  SIRState state;
-  state.user.params[0]=beta;
-  state.user.params[1]=gamma;
+  std::vector<int64_t> sir_init{individual_cnt-1, 1, 0};
+  BOOST_LOG_TRIVIAL(info)<<"Starting with sir="<<sir_init[0]<<" "<<sir_init[1]
+    <<" "<<sir_init[2];
 
-  for (int64_t individual=0; individual<individual_cnt; ++individual) {
-    auto susceptible=gspn.PlaceVertex({0, individual});
-    Add<0>(state.marking, susceptible, IndividualToken{});
-  }
-
-  using Propagator=NonHomogeneousPoissonProcesses<int64_t,RandGen>;
-  Propagator competing;
-  using Dynamics=StochasticDynamics<SIRGSPN,SIRState,RandGen>;
-  Dynamics dynamics(gspn, {&competing});
-
-  BOOST_LOG_TRIVIAL(debug) << state.marking;
-
-  // The initial input string moves a token from susceptible to infected.
-  auto first_case=static_cast<int64_t>(
-      smv::uniform_index(rng, individual_cnt));
-  BOOST_LOG_TRIVIAL(trace)<<"First case is "<<first_case;
-  int64_t first_s=gspn.PlaceVertex({0, first_case});
-  int64_t first_i=gspn.PlaceVertex({1, first_case});
-  auto input_string=[&first_s, &first_i](SIRState& state)->void {
-    Move<0,0>(state.marking, first_s, first_i, 1);
+  std::mutex printing;
+  auto runnable=[=, &gspn, &printing]
+      (RandGen& rng, size_t single_seed, size_t idx)->void {
+    std::shared_ptr<TrajectorySave> observer=std::make_shared<TrajectorySave>();
+    SIR_run(sir_init, gspn, parameters, observer, rng);
+    std::unique_lock<std::mutex> haveprint(printing);
+    std::cout << observer->final_removed() << std::endl;
+    //std::cout << *observer;
+    //file.SaveTrajectory(parameters, single_seed, idx, observer->Trajectory());
   };
 
-  input_string(state);
+  Ensemble<decltype(runnable),RandGen> ensemble(runnable, thread_cnt,
+      run_cnt, rand_seed);
+  ensemble.Run();
+  BOOST_LOG_TRIVIAL(debug)<<"Finished running ensemble.";
 
-  SIROutput<SIRState,SIRGSPN> output_function(gspn);
+  //file.Close();
 
-  dynamics.Initialize(&state, &rng);
 
-  bool running=true;
-  auto nothing=[](SIRState&)->void {};
-  while (running) {
-    running=dynamics(state);
-    if (running) output_function(state);
-  }
-  output_function.final(state);
   return 0;
 }
 
