@@ -80,6 +80,7 @@ class CustomParser(argparse.ArgumentParser):
         self.add_argument('-s', '--sparse-matrix-plot', dest='splot', action='store_true', default=False)
         self.add_argument('-p', '--probability-plot', dest='pplot', action='store_true', default=False)
         self.add_argument('-i', '--list-indices', dest='ilist', action='store_true', default=False)
+        self.add_argument('-m', '--mean', dest='mean', action='store_true', default=False)
         
 if __name__ == '__main__':
     parser = CustomParser()
@@ -98,13 +99,16 @@ if __name__ == '__main__':
 
     x = []
     y = []
-    for (i, j) in sorted(indx, key=indx.get):
+    for (i, j), n in indx.items():
         if j==1:
-            n = indx[(i,j)]
             x.append(ns.N-i)
             y.append(ns.N*f[n]/ns.R0)
 
     assert(abs(1.0-sum(y)) < 1.0e-12)
+
+    if ns.mean:
+        print('sum %f' % (np.sum(np.array(y)),))
+        print('mean %f' % (np.sum((ns.a+np.array(x))*np.array(y)),))
 
     if ns.splot:
         pylab.figure()

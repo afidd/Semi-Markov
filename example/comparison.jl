@@ -49,7 +49,7 @@ end
 function make_pdf(analytical, simulated, pdfname)
     x=reshape(1:cnt, cnt)
     assert(length(x)==length(simulated))
-    df=DataFrame(Recovered=x, Count=simulated/sum(simulated), Expected=analytical)
+    df=DataFrame(Recovered=x, Count=simulated, Expected=analytical)
     myplot=plot(df, layer(x="Recovered", y="Count", Geom.point,
             Theme(default_color=color("blue"))),
         layer(x="Recovered", y="Expected", Geom.point,
@@ -60,6 +60,12 @@ function make_pdf(analytical, simulated, pdfname)
 end
 
 simulated=simulated_distribution(cnt, r0, runs)
+simulated=simulated/sum(simulated)
 analytical=analytical_distribution(cnt, r0)
+
+first_entry=1/(1+r0*(cnt-1)/cnt)
+println("First entry ", first_entry, " analyt ", analytical[1],
+    " sim ", simulated[1])
+
 make_pdf(analytical, simulated, "CheckOnSIR")
 
