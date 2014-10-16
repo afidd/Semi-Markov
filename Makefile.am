@@ -10,7 +10,7 @@ AM_CPPFLAGS = -std=c++11 -Isrc -Isrc/continuous -Isrc/gspn -Isrc/utility $(BOOST
 bin_PROGRAMS = weiss bvd sirmixed meta disttest #sirgraph
 
 semimarkov_0_1_includedir = $(includedir)/semimarkov-0.1
-semimarkov_0_1_include_HEADERS = src/stochnet.hpp src/smv.hpp src/smv_config.hpp src/continuous/continuous_dynamics.hpp src/continuous/continuous_state.hpp src/continuous/local_marking.hpp src/continuous/marking.hpp src/continuous/stochastic_dynamics.hpp src/gspn/build_graph.hpp src/gspn/distributions.hpp src/gspn/explicit_transitions.hpp src/gspn/finite_state_machine.hpp src/gspn/gspn.hpp src/gspn/partial_core_matrix.hpp src/gspn/petri_graph.hpp src/utility/gspn_random.hpp src/utility/logging.hpp  src/utility/smv_algorithm.hpp
+semimarkov_0_1_include_HEADERS = src/stochnet.hpp src/smv.hpp src/smv_config.hpp src/continuous/continuous_dynamics.hpp src/continuous/continuous_state.hpp src/continuous/local_marking.hpp src/continuous/marking.hpp src/continuous/stochastic_dynamics.hpp src/gspn/build_graph.hpp src/gspn/distributions.hpp src/gspn/explicit_transitions.hpp src/gspn/finite_state_machine.hpp src/gspn/gspn.hpp src/gspn/partial_core_matrix.hpp src/gspn/petri_graph.hpp src/utility/ensemble.hpp src/utility/gspn_random.hpp src/utility/logging.hpp  src/utility/smv_algorithm.hpp
 #semimarkov_0_1_LDFLAGS = -version-info $(SEMIMARKOV_LIBRARY_VERSION)
 
 

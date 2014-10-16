@@ -77,7 +77,7 @@ class PartialCoreMatrix
 
         // Set up the local marking.
         auto neighboring_places=
-            NeighborsOfTransition(gspn_, neighbor_id);
+            InputsOfTransition(gspn_, neighbor_id);
         state_->marking.InitLocal(lm, neighboring_places);
 
         bool isEnabled=false;

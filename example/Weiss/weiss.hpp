@@ -175,6 +175,13 @@ NeighborsOfTransition(BrownionGSPN& g, TransitionKey trans_id)
           std::make_tuple(trans_id.to, 0, 1)};
 }
 
+std::vector<std::tuple<PlaceKey,int,int>>
+InputsOfTransition(BrownionGSPN& g, TransitionKey trans_id)
+{
+  return {std::make_tuple(trans_id.from, 0, -1),
+          std::make_tuple(trans_id.to, 0, 1)};
+}
+
 template<typename F>
 void NeighborsOfPlaces(BrownionGSPN& g,
     const std::set<PlaceKey>& place_id, const F& func)

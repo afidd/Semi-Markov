@@ -221,6 +221,10 @@ public:
 
 
 
+  /*! When adding a transition, the edges must be ordered so that
+   *  in edges precede out-edges, so that they will appear in the same
+   *  order in the local marking of the transition itself.
+   */
   bool AddTransition(BGTransition t, std::vector<PlaceEdge> e,
     std::unique_ptr<Transition> transition) {
     auto transition_vertex=add_vertex({PetriGraphColor::Transition, 0}, g_);
@@ -333,8 +337,8 @@ public:
       auto transition_iter=bimap_.tm_.left.find(old_vertex);
       if (place_iter!=bimap_.pm_.left.end()) {
         if (transition_iter!=bimap_.tm_.left.end()) {
-          SMVLOG(BOOST_LOG_TRIVIAL(error)<<"The same vertex points both to "
-            "a place and a transition.");
+          BOOST_LOG_TRIVIAL(error)<<"The same vertex points both to "
+            "a place and a transition.";
           assert(transition_iter==bimap_.tm_.left.end());
         }
         PutPlace(b, static_cast<int64_t>(new_vertex), place_iter->second);

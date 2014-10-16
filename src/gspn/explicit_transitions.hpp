@@ -197,6 +197,13 @@ public:
     ExplicitTransitions<State,P,T,L,Random>& et,
     typename ExplicitTransitions<State,P,T,L,Random>::TransitionKey trans_id);
 
+  template<typename State, typename P, typename T, typename L, typename Random>
+  friend
+  std::vector<std::tuple<int64_t,int,int>>
+  InputsOfTransition(
+    ExplicitTransitions<State,P,T,L,Random>& et,
+    typename ExplicitTransitions<State,P,T,L,Random>::TransitionKey trans_id);
+
   template<typename F, typename State, typename P, typename T, typename L,
     typename Random>
   friend
@@ -226,6 +233,16 @@ NeighborsOfTransition(
   typename ExplicitTransitions<P,T,L,Random,State>::TransitionKey trans_id)
 {
   return GraphNeighborsOfTransition<PetriGraphType>(et.graph, trans_id);
+}
+
+
+template<typename P, typename T, typename L, typename Random, typename State>
+std::vector<std::tuple<int64_t,int,int>>
+InputsOfTransition(
+  ExplicitTransitions<P,T,L,Random,State>& et,
+  typename ExplicitTransitions<P,T,L,Random,State>::TransitionKey trans_id)
+{
+  return GraphInputsOfTransition<PetriGraphType>(et.graph, trans_id);
 }
 
 

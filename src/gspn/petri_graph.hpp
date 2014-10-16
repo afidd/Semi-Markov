@@ -145,6 +145,22 @@ GraphNeighborsOfTransition(Graph& g, int64_t trans_id) {
   return place_ids;
 }
 
+template<typename Graph>
+std::vector<std::tuple<int64_t,int,int>>
+GraphInputsOfTransition(Graph& g, int64_t trans_id) {
+  assert(g[trans_id].color==PetriGraphColor::Transition);
+  std::vector<std::tuple<int64_t,int,int>> place_ids;
+
+  auto initer=in_edges(trans_id, g);
+  for (; initer.first!=initer.second; ++initer.first) {
+    auto sc=g[*initer.first].stochiometric_coefficient;
+    auto place_id=source(*initer.first, g);
+    assert(g[place_id].color==PetriGraphColor::Place);
+    auto level=g[place_id].token_layer;
+    place_ids.push_back(std::make_tuple(place_id, level, sc));
+  }
+  return place_ids;
+}
 
 
 
