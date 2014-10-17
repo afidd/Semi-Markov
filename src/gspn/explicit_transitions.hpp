@@ -51,6 +51,8 @@ class ExplicitTransition
 {
 public:
   typedef ExtraState UserState;
+  typedef LM LocalMarking;
+  typedef RNG RandGen;
 
   virtual std::pair<bool,std::unique_ptr<TransitionDistribution<RNG>>>
   Enabled(const ExtraState& s, const LM& lm,

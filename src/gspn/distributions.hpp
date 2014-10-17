@@ -416,7 +416,7 @@ public:
   }
 
 
-  virtual bool BoundedHazard() const { return false; }
+  virtual bool BoundedHazard() const { return true; }
 
   
   virtual double HazardIntegral(double t0, double t1) const { return 0.0; }
