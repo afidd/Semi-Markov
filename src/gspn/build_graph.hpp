@@ -86,7 +86,8 @@ bool PutPlace(BiGraphCorrespondence<BGPlace,BGTransition,vert_t>& map,
   bool success;
   std::tie(inserted, success)=map.pm_.left.insert(VertToPlace(k, val));
   if (success==false) {
-    SMVLOG(BOOST_LOG_TRIVIAL(error)<<"Failed to insert a place value.");
+    SMVLOG(BOOST_LOG_TRIVIAL(error)<<"Failed to insert a place value. "
+      <<k<<" val "<<val<<" Inserting the same place twice?");
     assert(success);
   }
   return true;

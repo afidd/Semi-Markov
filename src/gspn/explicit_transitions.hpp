@@ -86,6 +86,8 @@ public:
   typedef ETRand RNG;
   typedef int64_t PlaceKey;
   typedef int64_t TransitionKey;
+  using PlaceEdge=std::tuple<PKey,int>;
+  using edge_t=boost::graph_traits<PetriGraphType>::edge_descriptor;
   // This gspn expects transitions to be of this base class.
   // Derive from this base class to make transitions.
   typedef smv::ExplicitTransition<Local,RNG,ExtraState> Transition;
@@ -98,9 +100,11 @@ private:
   // were stored as bare objects.
   std::map<TransitionKey,std::unique_ptr<Transition>> transitions;
   PetriGraph graph;
+  int64_t vertex_cnt_;
 
 public:
-  explicit ExplicitTransitions(size_t num_vertices) : graph(num_vertices) {}
+  explicit ExplicitTransitions(size_t num_vertices) : graph(num_vertices),
+      vertex_cnt_{0} {}
 
   // These copy constructor and copy assignment operators are
   // deleted because this type can only be moved with std::move();
@@ -186,6 +190,78 @@ public:
     for (const auto& kv : transitions) {
       writer.Write(kv.first, this->VertexTransition(kv.first));
     }
+  }
+
+  ///// These are for creating ExplicitTransitions.
+  bool AddPlace(PKey p, int token_layer=0) {
+    if (vertex_cnt_==num_vertices(graph)) {
+      add_vertex({PetriGraphColor::Place, token_layer}, graph);
+    } else {
+      graph[vertex_cnt_].color=PetriGraphColor::Place;
+      graph[vertex_cnt_].token_layer=token_layer;
+    }
+    bool success=PutPlace(bimap_, vertex_cnt_, p);
+    ++vertex_cnt_;
+    return success;
+  }
+
+  /*! When adding a transition, the edges must be ordered so that
+   *  in edges precede out-edges, so that they will appear in the same
+   *  order in the local marking of the transition itself.
+   */
+  bool AddTransition(TKey t, std::vector<PlaceEdge> e,
+    std::unique_ptr<Transition> transition) {
+    if (vertex_cnt_==num_vertices(graph)) {
+      add_vertex({PetriGraphColor::Transition, 0}, graph);
+    } else {
+      graph[vertex_cnt_].color=PetriGraphColor::Transition;
+      graph[vertex_cnt_].token_layer=0;
+    }
+    bool added=PutTransition(bimap_, vertex_cnt_, t);
+
+    for (auto edge : e) {
+      PKey p=std::get<0>(edge);
+      int weight=std::get<1>(edge);
+      if (!this->AddEdge(vertex_cnt_, p, weight)) {
+        added=false;
+      }
+    }
+
+    transitions.emplace(vertex_cnt_, std::move(transition));
+
+    ++vertex_cnt_;
+    assert(added);
+    return added;
+  }
+
+  int64_t VerticesUsed() { return vertex_cnt_; }
+
+  bool AddEdge(int64_t transition, PKey p, int weight)
+  {
+    assert(graph[transition].color==PetriGraphColor::Transition);
+    auto pv=GetPvertex(bimap_, p);
+    assert(graph[pv].color==PetriGraphColor::Place);
+
+    if (weight<0) {
+      edge_t new_edge;
+      bool success;
+      std::tie(new_edge, success)=boost::add_edge(pv, transition, {weight},
+          graph);
+      if (!success) {
+        SMVLOG(BOOST_LOG_TRIVIAL(error) << "Could not add edge");
+        return false;
+      }
+    } else {
+      edge_t new_edge;
+      bool success;
+      std::tie(new_edge, success)=boost::add_edge(transition, pv, {weight},
+          graph);
+      if (!success) {
+        SMVLOG(BOOST_LOG_TRIVIAL(error) << "Could not add edge");
+        return false;
+      }
+    }
+    return true;
   }
 
   friend BuildGraph<ExplicitTransitions<PKey,TKey,Local,ETRand,ExtraState>>;
