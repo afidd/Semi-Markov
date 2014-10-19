@@ -34,6 +34,7 @@
 #include "boost/accumulators/statistics/mean.hpp"
 #include "boost/accumulators/statistics/moment.hpp"
 #include "boost/accumulators/statistics/variance.hpp"
+#include "boost/math/special_functions/gamma.hpp"
 #include "logging.hpp"
 #include "stochnet.hpp"
 #include "gspn_random.hpp"
@@ -248,10 +249,6 @@ public:
 };
 
 
-
-
-
-
 template<typename RNG>
 class WeibullDistribution : public TransitionDistribution<RNG>
 {
@@ -382,31 +379,29 @@ public:
 
 
 
-
+/*! Gamma distribution using alpha=shape and beta=rate.
+ * (1/Gamma(alpha))beta^alpha * x^(alpha-1) * e^(-beta*t)
+ * Equivalent to using theta=1/beta for a scale parameter.
+ * alpha is the shape.
+ */
 template<typename RNG>
 class GammaDistribution : public TransitionDistribution<RNG>
 {
-  using Params=std::tuple<double,double,double, double, double>;
+  using Params=std::tuple<double,double,double>;
   Params params_;
 public:
-  GammaDistribution(double alpha, double theta, double enabling_time,
-      double shift=0.0, double normal=1.0)
-  : params_{alpha, theta, enabling_time, shift, normal}
+  GammaDistribution(double alpha, double beta, double enabling_time)
+  : params_{alpha, beta, enabling_time}
   {}
-
 
   virtual double Sample(double current_time, RNG& rng) const {
     double te=std::get<2>(params_);
-    double ts=std::get<3>(params_);
     double t0=current_time;
-    double U=uniform(rng)/std::get<4>(params_);
+    double U=uniform(rng);
     auto dist=boost::math::gamma_distribution<double>(
-      std::get<0>(params_), std::get<1>(params_));
-    if (U>=1) {
-      return std::numeric_limits<double>::infinity();
-    }
+      std::get<0>(params_), 1.0/std::get<1>(params_));
 
-    double d=t0-(te+ts);
+    double d=t0-te;
     if (d>0) {
       auto cumulative=boost::math::cdf(dist, d);
       return boost::math::quantile(dist, U*(1-cumulative) + cumulative) - d;
@@ -415,13 +410,23 @@ public:
     }
   }
 
-
   virtual bool BoundedHazard() const { return true; }
-
   
-  virtual double HazardIntegral(double t0, double t1) const { return 0.0; }
+  virtual double HazardIntegral(double t0, double t1) const {
+    double a=std::get<0>(params_);
+    double b=std::get<1>(params_);
+    double te=std::get<2>(params_);
+    double ga=boost::math::tgamma(a);
+    return std::log((ga-boost::math::tgamma_lower(a, b*(t0-te)))/
+        (ga-boost::math::tgamma_lower(a, b*(t1-te))));
+  }
+
   virtual double ImplicitHazardIntegral(double xa, double t0) const {
-    return 0.0;
+    double a=std::get<0>(params_);
+    double b=std::get<1>(params_);
+    double te=std::get<2>(params_);
+    double quad=1-std::exp(-xa)*(1-boost::math::gamma_p(a, b*(t0-te)));
+    return te + boost::math::gamma_p_inv(a, quad)/b;
   }
 
   virtual double EnablingTime() const {
@@ -687,6 +692,61 @@ class TriangularDistribution : public TransitionDistribution<RNG>
   }
 };
 
+
+template<typename RNG>
+class LogLogisticDistribution : public TransitionDistribution<RNG>
+{
+  double a_;
+  double b_;
+  double te_;
+public:
+  LogLogisticDistribution(double alpha, double beta, double enabling_time)
+  : a_(alpha), b_(beta), te_(enabling_time) {}
+
+
+  virtual double Sample(double current_time,
+      RNG& rng) const
+  {
+    double U=uniform(rng);
+    return te_ + uquantile(U+(1-U)*ucdf(current_time-te_));
+  }
+
+  virtual bool BoundedHazard() const { return true; }
+
+  virtual double HazardIntegral(double t0, double t1) const {
+    return ulogccdf(t0-te_)-ulogccdf(t1-te_);
+  }
+
+  virtual double ImplicitHazardIntegral(double xa, double t0) const {
+    return te_+uinvlogccdf(-xa+ulogccdf(t0-te_));
+  }
+
+  virtual double EnablingTime() const {
+    return te_;
+  }
+
+  bool CheckSamples(const std::vector<double>& samples, double dt) {
+    bool pass=false;
+    return pass;
+  }
+ private:
+  // unshifted, meaning without any te_ this would be correct.
+  double uquantile(double U) {
+    return std::pow(a_*(U/(1-U)), 1/b_);
+  }
+  // unshifted cumulative distribution function
+  double ucdf(double t) {
+    return 1/(1+pow(t/a_, -b_));
+  }
+  // unshifted log of the complement of the cdf (the log survival)
+  double ulogccdf(double t) {
+    return -std::log(1 + std::pow(t/a_, b_));
+  }
+  // unshifted inverse log of the survival.
+  double uinvlogccdf(double lp) {
+    return a_*(1-std::pow(std::exp(-lp), 1/b_));
+  }
+};
 
 
 } // smv
