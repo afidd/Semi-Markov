@@ -439,7 +439,7 @@ public:
     namespace bac=boost::accumulators;
     bool pass=true;
     double a=std::get<0>(params_);
-    double th=std::get<1>(params_);
+    double th=1.0/std::get<1>(params_);
 
     bac::accumulator_set<double, bac::stats<bac::tag::mean,
         bac::tag::moment<2>, bac::tag::moment<3>,
@@ -748,6 +748,75 @@ public:
   }
 };
 
+
+/*! Uniform distribution between times te_+ta_ and te_+tb_.
+ */
+template<typename RNG>
+class UniformDistribution : public TransitionDistribution<RNG>
+{
+  double ta_;
+  double tb_;
+  double te_;
+ public:
+  UniformDistribution()=default;
+  UniformDistribution(double left, double right, double te)
+    : ta_(left), tb_(right), te_(te) {
+      assert(tb_>ta_);
+  }
+
+  virtual bool BoundedHazard() const { return true; }
+
+  virtual double HazardIntegral(double t0, double t1) const {
+    double S0=1;
+    if (t0-te_>ta_) {
+      S0=1-(t0-te_-ta_)/(tb_-ta_);
+    }
+    double S1=1;
+    if (t1-te_>ta_) {
+      S1=1-(t1-te_-ta_)/(tb_-ta_);
+    }
+    if (t1>tb_+te_ || t0>tb_+te_) {
+      return std::numeric_limits<double>::max();
+    }
+    double retval=std::log(S0)-std::log(S1);
+    SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"UniformDistribution: a "<<ta_
+        <<" b "<<tb_<<" e "<<te_<<" hazint t0 "<<t0<<" t1 "<<t1
+        <<" ret "<<retval);
+    return retval;
+  }
+  
+  virtual double ImplicitHazardIntegral(double xa, double t0) const {
+    if (t0-te_<ta_) t0=ta_+te_;
+    double retval=te_+ta_+(tb_-ta_)*(1-std::exp(-xa)*(1-(t0-te_-ta_)/(tb_-ta_)));
+    SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"UniformDistribution: a "<<ta_
+        <<" b "<<tb_<<" e "<<te_<<" invhint xa "<<xa<<" t0 "<<t0
+        <<" ret "<<retval);
+    return retval;
+  }
+
+  virtual double EnablingTime() const {
+    return te_;
+  }
+
+  double Sample(double current_time, RNG& rng) const {
+    return te_+tb_+(tb_-ta_)*smv::uniform(rng);
+  }
+
+  double CumulativeProbability(double enabling_time, double current_time,
+    double x) const
+  {
+    return 0.0;
+  }
+
+  bool CheckSamples(const std::vector<double>& samples, double dt)
+  {
+    bool pass=true;
+
+    // Try Kolmogorov-Smirnov test.
+
+    return pass;
+  }
+};
 
 } // smv
 } // afidd

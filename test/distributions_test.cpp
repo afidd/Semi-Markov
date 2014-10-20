@@ -112,6 +112,19 @@ BOOST_AUTO_TEST_CASE( gamma )
     }
     BOOST_CHECK(dist1.CheckSamples(vals, 0.0));
   }
+
+  double eps=1e-9;
+  GammaDistribution<RandGen> dist1(3.969, 1/1.107, 10);
+  BOOST_CHECK(dist1.ImplicitHazardIntegral(
+      dist1.HazardIntegral(10,12),10)==12);
+  BOOST_CHECK(dist1.ImplicitHazardIntegral(
+      dist1.HazardIntegral(11,12),11)==12);
+  double hazint=dist1.HazardIntegral(11.5,12);
+  double invint=dist1.ImplicitHazardIntegral(hazint, 11.5);
+  BOOST_LOG_TRIVIAL(debug)<<"int "<<hazint<<" inv "<<invint;
+  BOOST_CHECK(abs(12-invint)<eps);
+  BOOST_CHECK(dist1.ImplicitHazardIntegral(
+      dist1.HazardIntegral(11,12.99),11)==12.99);
 }
 
 
@@ -156,6 +169,33 @@ BOOST_AUTO_TEST_CASE( piecewiselinear )
   }
   std::sort(vals.begin(), vals.end());
   tofile(vals, "stdpiece.txt");
+}
+
+
+
+BOOST_AUTO_TEST_CASE( uniform )
+{
+  afidd::LogInit("debug");
+  RandGen rng(1);
+  UniformDistribution<RandGen> dist1(1, 3, 10);
+  BOOST_CHECK(dist1.HazardIntegral(10, 10.5)==0.0);
+  BOOST_CHECK(dist1.HazardIntegral(10.5, 11)==0.0);
+  BOOST_CHECK(dist1.HazardIntegral(11, 11.5)>0.0);
+  BOOST_CHECK(dist1.HazardIntegral(11.5, 11.99)>0.0);
+  BOOST_CHECK(dist1.ImplicitHazardIntegral(0.6, 10)>11.0);
+  BOOST_CHECK(dist1.ImplicitHazardIntegral(0.6, 11)>11.0);
+  BOOST_CHECK(dist1.ImplicitHazardIntegral(999, 11.5)>11.9);
+  BOOST_LOG_TRIVIAL(debug)<<"Uniform invhazard 999, 11.5 "
+      << dist1.ImplicitHazardIntegral(999, 11.5);
+  BOOST_CHECK(dist1.ImplicitHazardIntegral(999, 11.5)<=13.0);
+  BOOST_CHECK(dist1.ImplicitHazardIntegral(
+      dist1.HazardIntegral(10,12),10)==12);
+  BOOST_CHECK(dist1.ImplicitHazardIntegral(
+      dist1.HazardIntegral(11,12),11)==12);
+  BOOST_CHECK(dist1.ImplicitHazardIntegral(
+      dist1.HazardIntegral(11.5,12),11.5)==12);
+  BOOST_CHECK(dist1.ImplicitHazardIntegral(
+      dist1.HazardIntegral(11,12.99),11)==12.99);
 }
 
 

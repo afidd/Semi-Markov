@@ -290,6 +290,25 @@ class NonHomogeneousPoissonProcesses
     }
   }
 
+  std::pair<size_t,size_t> ContentSize() const {
+    size_t inf_cnt=0;
+    for (auto b=queue_.begin(); b!=queue_.end(); ++b) {
+      if (std::isinf(b->time)) {
+        ++inf_cnt;
+      }
+    }
+    return {queue_.size(), inf_cnt};
+  }
+
+  double FiringTime(const TransitionKey& tkey) const {
+    for (auto b=queue_.begin(); b!=queue_.end(); ++b) {
+      if (b->key==tkey) {
+        return b->time;
+      }
+    }
+    return -1;
+  }
+
   /*! Ask whether a transition is enabled.
    */
   virtual std::tuple<bool,double> Enabled(const TransitionKey& tkey
@@ -323,6 +342,10 @@ class NonHomogeneousPoissonProcesses
     bool clock_started=(trans_loc!=distributions_.end());
     if (clock_started) {
       TransitionEntry& entry=trans_loc->second;
+      if (entry.dist!=nullptr) {
+        entry.remaining_exponential_interval-=entry.dist->HazardIntegral(
+          entry.last_modification_time, when);
+      }
       queue_.update(entry.queue_iter,
           {tkey, distribution->ImplicitHazardIntegral(
           entry.remaining_exponential_interval, when)});
