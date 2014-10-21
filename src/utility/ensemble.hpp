@@ -24,21 +24,22 @@ class Ensemble {
   int run_cnt_;
   size_t rand_seed_;
   // States are 0 available 1 running 2 please join this thread.
-  std::vector<std::atomic<int>> ready_flag_;
+  std::vector<int> ready_flag_;
   std::vector<std::thread> thread_;
   std::mutex ensemble_m_;
   std::condition_variable thread_done_;
  public:
   Ensemble(Runnable runner, int thread_cnt, int run_cnt, size_t rand_seed)
   : runner_(runner), thread_cnt_(thread_cnt), run_cnt_(run_cnt),
-  rand_seed_(rand_seed), rng_(thread_cnt), thread_(thread_cnt) {
+  rand_seed_(rand_seed), rng_(thread_cnt), thread_(thread_cnt),
+  ready_flag_(thread_cnt) {
     BOOST_LOG_TRIVIAL(info)<<"threads "<<thread_cnt<<" runs "<<run_cnt;
     for (auto& rnginit : rng_) {
       rnginit.seed(rand_seed);
       ++rand_seed;
     }
     for (size_t flag_init_idx=0; flag_init_idx<thread_cnt; ++flag_init_idx) {
-      ready_flag_.emplace_back(0);
+      ready_flag_[flag_init_idx]=0;
     }
     BOOST_LOG_TRIVIAL(info)<<"Next available rand seed: "<<rand_seed;
   }
