@@ -31,15 +31,14 @@ class Ensemble {
  public:
   Ensemble(Runnable runner, int thread_cnt, int run_cnt, size_t rand_seed)
   : runner_(runner), thread_cnt_(thread_cnt), run_cnt_(run_cnt),
-  rand_seed_(rand_seed), rng_(thread_cnt), thread_(thread_cnt),
-  ready_flag_(thread_cnt) {
+  rand_seed_(rand_seed), rng_(thread_cnt), thread_(thread_cnt) {
     BOOST_LOG_TRIVIAL(info)<<"threads "<<thread_cnt<<" runs "<<run_cnt;
     for (auto& rnginit : rng_) {
       rnginit.seed(rand_seed);
       ++rand_seed;
     }
-    for (auto& ready_init : ready_flag_) {
-      ready_init=0;
+    for (size_t flag_init_idx=0; flag_init_idx<thread_cnt; ++flag_init_idx) {
+      ready_flag_.emplace_back(0);
     }
     BOOST_LOG_TRIVIAL(info)<<"Next available rand seed: "<<rand_seed;
   }
