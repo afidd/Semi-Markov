@@ -732,6 +732,7 @@ public:
             }
           }
         } else {
+          modified_.insert(place_from);
           // If the two containers are different, still apply the functor.
           auto begin=from_container->begin();
           for (auto didx=cnt; didx>0; --didx) {
@@ -794,6 +795,7 @@ public:
           }
         }
       } else {
+        modified_.insert(place_from);
         // If the two containers are different, still apply the functor.
         auto begin=from_container->begin();
         for ( ; begin!=from_container->end(); ++begin) {
