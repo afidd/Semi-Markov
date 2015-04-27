@@ -605,14 +605,18 @@ class DiracDistribution : public TransitionDistribution<RNG> {
  public:
   DiracDistribution(double value, double te) : value_(value), te_(te) {}
 
-  virtual bool BoundedHazard() const { return false; }
+  virtual bool BoundedHazard() const { return true; }
 
   virtual double HazardIntegral(double t0, double t1) const {
+    double absolute_time=te_+value_;
+    if (absolute_time>=t0 && absolute_time<t1) {
+      return 1.0;
+    }
     return 0.0;
   }
   
   virtual double ImplicitHazardIntegral(double xa, double t0) const {
-    return 0.0;
+    return te_+value_;
   }
 
   virtual double EnablingTime() const {
