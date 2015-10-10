@@ -404,9 +404,9 @@ public:
     double d=t0-te;
     if (d>0) {
       auto cumulative=boost::math::cdf(dist, d);
-      return boost::math::quantile(dist, U*(1-cumulative) + cumulative) - d;
+      return boost::math::quantile(dist, U*(1-cumulative) + cumulative) - d; XXX// +te
     } else {
-      return boost::math::quantile(dist, U)-d;
+      return boost::math::quantile(dist, U)-d; XXX// +te
     }
   }
 

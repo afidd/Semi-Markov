@@ -188,7 +188,7 @@ public:
 
 
   template<typename Writer>
-  void WriteKeys(const Writer& writer) {
+  void WriteKeys(Writer& writer) {
     for (const auto& kv : transitions) {
       writer.Write(kv.first, this->VertexTransition(kv.first));
     }

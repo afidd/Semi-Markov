@@ -351,6 +351,7 @@ struct initialize_local
 
     initialize_local<J,Maps,PlaceKey,LM> il;
     il(maps, place_id, idx, layer, stochiometric_coefficient, lm);
+    SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"initialize_local exit");
   }
 };
 
@@ -612,6 +613,12 @@ public:
 
   template<int I>
   int Length(int place_idx) const {
+    BOOST_ASSERT_MSG(place_idx>=0, "Place index less than zero.");
+    if (place_idx>=m_.size()) {
+      BOOST_LOG_TRIVIAL(error)<<"LocalMarking::Length Place index out of "
+        "bounds " << place_idx << " with "<< m_.size() <<" places";
+      throw std::runtime_error("Place index is beyond the of edges.");
+    }
     auto& place_container=m_.at(place_idx);
     auto& token_container=std::get<I>(std::get<0>(place_container));
     if (token_container!=nullptr) {
@@ -704,11 +711,79 @@ public:
       <<" to "<<place_to);
     if (0==cnt) return;
 
-    auto& place_from_container=m_.at(place_from);
-    auto& from_container=std::get<I>(std::get<0>(place_from_container));
+    try {
+      auto& place_from_container=m_.at(place_from);
+      auto& from_container=std::get<I>(std::get<0>(place_from_container));
 
-    if (from_container!=nullptr) {
-      if (from_container->size()>=cnt) {
+      if (from_container!=nullptr) {
+        if (from_container->size()>=cnt) {
+          typedef typename boost::mpl::at<typename LocalMarking::container_types,
+            boost::mpl::int_<J>>::type to_container_type;
+          auto& place_to_container=m_.at(place_to);
+          auto& to_container=std::get<J>(std::get<0>(place_to_container));
+          if (to_container==nullptr) {
+            SMVLOG(BOOST_LOG_TRIVIAL(trace)<< "Moving to_container null");
+            to_container=new to_container_type{};
+            added_.insert(place_to);
+          } else {
+            SMVLOG(BOOST_LOG_TRIVIAL(trace)<< "Moving to_container exists");
+          }
+          if (from_container!=to_container) {
+            modified_.insert(place_from);
+            modified_.insert(place_to);
+            for (auto didx=cnt; didx>0; --didx) {
+              auto begin=from_container->begin();
+              if (begin!=from_container->end()) {
+                detail::apply_token_function(*begin, modify_token);
+                detail::add_to_container(*to_container, *begin);
+                from_container->erase(begin);
+              }
+            }
+          } else {
+            // If the two containers are different, still apply the functor.
+            auto begin=from_container->begin();
+            for (auto didx=cnt; didx>0; --didx) {
+              detail::apply_token_function(*begin, modify_token);
+              ++begin;
+            }
+          }
+          if (from_container->size()==0) {
+            SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"Moving mark "<<place_from
+              <<" to erase.");
+            removed_.insert(place_from);
+          }
+        } else {
+          BOOST_LOG_TRIVIAL(error)<<"Not enough tokens to move "
+            <<place_from<<" "<<place_to<<" "<<I<<" "<<cnt;
+        }
+      } else {
+        BOOST_LOG_TRIVIAL(error)<<"Cannot move a token from an empty container "
+          <<place_from<<" "<<place_to<<" "<<I<<" "<<cnt;
+      }
+      SMVLOG(BOOST_LOG_TRIVIAL(trace)<< "~Moving "<<cnt<<" tokens from "
+        <<place_from);
+    } catch (const std::out_of_range& oor) {
+      BOOST_LOG_TRIVIAL(error)<<"Out of range error moving token from "
+        << place_from << " to " << place_to << " cnt " << cnt;
+      throw;
+    }
+  }
+
+
+  template<int I, int J, typename Match, typename Modifier>
+  int
+  Move(int place_from, int place_to, const Match& which_to_move,
+      const Modifier& modify_token)
+  {
+    SMVLOG(BOOST_LOG_TRIVIAL(trace)<< "Moving tokens from "<<place_from
+      <<" to "<<place_to);
+
+    int moved_cnt=0;
+    try {
+      auto& place_from_container=m_.at(place_from);
+      auto& from_container=std::get<I>(std::get<0>(place_from_container));
+
+      if (from_container!=nullptr) {
         typedef typename boost::mpl::at<typename LocalMarking::container_types,
           boost::mpl::int_<J>>::type to_container_type;
         auto& place_to_container=m_.at(place_to);
@@ -723,21 +798,23 @@ public:
         if (from_container!=to_container) {
           modified_.insert(place_from);
           modified_.insert(place_to);
-          for (auto didx=cnt; didx>0; --didx) {
-            auto begin=from_container->begin();
-            if (begin!=from_container->end()) {
+          for (auto begin=from_container->begin(); begin!=from_container->end();
+              ++begin) {
+            if (which_to_move(*begin)) {
               detail::apply_token_function(*begin, modify_token);
               detail::add_to_container(*to_container, *begin);
               from_container->erase(begin);
+              ++moved_cnt;
             }
           }
         } else {
-          modified_.insert(place_from);
           // If the two containers are different, still apply the functor.
           auto begin=from_container->begin();
-          for (auto didx=cnt; didx>0; --didx) {
-            detail::apply_token_function(*begin, modify_token);
-            ++begin;
+          for ( ; begin!=from_container->end(); ++begin) {
+            if (which_to_move(*begin)) {
+              detail::apply_token_function(*begin, modify_token);
+              ++moved_cnt;
+            }
           }
         }
         if (from_container->size()==0) {
@@ -746,76 +823,17 @@ public:
           removed_.insert(place_from);
         }
       } else {
-        BOOST_LOG_TRIVIAL(error)<<"Not enough tokens to move "
-          <<place_from<<" "<<place_to<<" "<<I<<" "<<cnt;
+        BOOST_LOG_TRIVIAL(error)<<"Cannot move a token from an empty container "
+          <<place_from<<" "<<place_to<<" "<<I;
       }
-    } else {
-      BOOST_LOG_TRIVIAL(error)<<"Cannot move a token from an empty container "
-        <<place_from<<" "<<place_to<<" "<<I<<" "<<cnt;
+      SMVLOG(BOOST_LOG_TRIVIAL(trace)<< "~Moving tokens from "
+        <<place_from);
+    } catch (const std::out_of_range& oor) {
+      BOOST_LOG_TRIVIAL(error)<<"Out of range error moving token from "
+        << place_from << " to " << place_to;
+      throw;
     }
-    SMVLOG(BOOST_LOG_TRIVIAL(trace)<< "~Moving "<<cnt<<" tokens from "
-      <<place_from);
-  }
 
-
-  template<int I, int J, typename Match, typename Modifier>
-  int
-  Move(int place_from, int place_to, const Match& which_to_move,
-      const Modifier& modify_token)
-  {
-    SMVLOG(BOOST_LOG_TRIVIAL(trace)<< "Moving tokens from "<<place_from
-      <<" to "<<place_to);
-
-    auto& place_from_container=m_.at(place_from);
-    auto& from_container=std::get<I>(std::get<0>(place_from_container));
-
-    int moved_cnt=0;
-    if (from_container!=nullptr) {
-      typedef typename boost::mpl::at<typename LocalMarking::container_types,
-        boost::mpl::int_<J>>::type to_container_type;
-      auto& place_to_container=m_.at(place_to);
-      auto& to_container=std::get<J>(std::get<0>(place_to_container));
-      if (to_container==nullptr) {
-        SMVLOG(BOOST_LOG_TRIVIAL(trace)<< "Moving to_container null");
-        to_container=new to_container_type{};
-        added_.insert(place_to);
-      } else {
-        SMVLOG(BOOST_LOG_TRIVIAL(trace)<< "Moving to_container exists");
-      }
-      if (from_container!=to_container) {
-        modified_.insert(place_from);
-        modified_.insert(place_to);
-        for (auto begin=from_container->begin(); begin!=from_container->end();
-            ++begin) {
-          if (which_to_move(*begin)) {
-            detail::apply_token_function(*begin, modify_token);
-            detail::add_to_container(*to_container, *begin);
-            from_container->erase(begin);
-            ++moved_cnt;
-          }
-        }
-      } else {
-        modified_.insert(place_from);
-        // If the two containers are different, still apply the functor.
-        auto begin=from_container->begin();
-        for ( ; begin!=from_container->end(); ++begin) {
-          if (which_to_move(*begin)) {
-            detail::apply_token_function(*begin, modify_token);
-            ++moved_cnt;
-          }
-        }
-      }
-      if (from_container->size()==0) {
-        SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"Moving mark "<<place_from
-          <<" to erase.");
-        removed_.insert(place_from);
-      }
-    } else {
-      BOOST_LOG_TRIVIAL(error)<<"Cannot move a token from an empty container "
-        <<place_from<<" "<<place_to<<" "<<I;
-    }
-    SMVLOG(BOOST_LOG_TRIVIAL(trace)<< "~Moving tokens from "
-      <<place_from);
     return moved_cnt;
   }
 
@@ -852,7 +870,7 @@ public:
     SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"TransferByStochiometricCoefficient");
     using TokenType=typename boost::mpl::at<
       typename LocalMarking::token_types,boost::mpl::int_<I>>::type&;
-    detail::DoNothing<TokenType> do_nothing;
+    //detail::DoNothing<TokenType> do_nothing;
 
     std::vector<int> ins;
     std::vector<int> outs;

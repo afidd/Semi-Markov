@@ -28,6 +28,7 @@
 
 #include <memory>
 #include <map>
+#include <exception>
 #include "logging.hpp"
 #include "distributions.hpp"
 #include "continuous_dynamics.hpp"
@@ -82,9 +83,15 @@ class PartialCoreMatrix
 
         bool isEnabled=false;
         std::unique_ptr<TransitionDistribution<RNG>> dist;
-        std::tie(isEnabled, dist)=
-            Enabled(gspn_, neighbor_id, state_->user, lm,
-            enabling_time, state_->CurrentTime(), rng);
+        try {
+          std::tie(isEnabled, dist)=
+              Enabled(gspn_, neighbor_id, state_->user, lm,
+              enabling_time, state_->CurrentTime(), rng);
+        } catch (const std::exception& e) {
+          BOOST_LOG_TRIVIAL(error)<<"Exception in Enabled new of "
+            << neighbor_id <<": " << e.what();
+          throw;
+        }
 
         if (isEnabled) {
           Propagator* appropriate=nullptr;
@@ -101,16 +108,41 @@ class PartialCoreMatrix
             bool was_enabled=previous_propagator!=nullptr;
             if (was_enabled) {
               if (previous_propagator==appropriate) {
-                appropriate->Enable(neighbor_id, dist, state_->CurrentTime(),
-                    was_enabled, rng);
+                try {
+                  appropriate->Enable(neighbor_id, dist, state_->CurrentTime(),
+                      was_enabled, rng);
+                } catch (const std::exception& e) {
+                  BOOST_LOG_TRIVIAL(error)<<"Exception in Enabled previous of "
+                    << neighbor_id <<": " << e.what();
+                  throw;
+                }
               } else {
-                previous_propagator->Disable(neighbor_id, state_->CurrentTime());
-                appropriate->Enable(neighbor_id, dist, state_->CurrentTime(),
-                    was_enabled, rng);
+                try {
+                  previous_propagator->Disable(neighbor_id,
+                    state_->CurrentTime());
+                } catch (const std::exception& e) {
+                  BOOST_LOG_TRIVIAL(error)<<"Exception in Disable of "
+                    << neighbor_id <<": " << e.what();
+                  throw;
+                }
+                try {
+                  appropriate->Enable(neighbor_id, dist, state_->CurrentTime(),
+                      was_enabled, rng);
+                } catch (const std::exception& e) {
+                  BOOST_LOG_TRIVIAL(error)<<"Exception in Enable wasn't "
+                    << "noprev of " << neighbor_id <<": " << e.what();
+                  throw;
+                }
               }
             } else {
-              appropriate->Enable(neighbor_id, dist, state_->CurrentTime(),
-                  was_enabled, rng);
+              try {
+                appropriate->Enable(neighbor_id, dist, state_->CurrentTime(),
+                    was_enabled, rng);
+                } catch (const std::exception& e) {
+                  BOOST_LOG_TRIVIAL(error)<<"Exception in Enable wasn't of "
+                    << neighbor_id <<": " << e.what();
+                  throw;
+                }
             }
           } else {
             BOOST_ASSERT_MSG(previous_propagator!=nullptr, "Transition didn't "

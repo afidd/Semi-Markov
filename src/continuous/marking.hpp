@@ -97,12 +97,13 @@ public:
       auto layer=std::get<1>(line);
       auto stochiometric_coefficient=std::get<2>(line);
 
-      SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"Marking::init_local<"<<layer<<">("
+      SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"Marking::InitLocal<"<<layer<<">("
         <<place_id<<", "<<idx<<", "<<stochiometric_coefficient<<")");
       il(maps_, place_id, idx, layer, stochiometric_coefficient, lm);
 
       ++idx;
     }
+    SMVLOG(BOOST_LOG_TRIVIAL(trace)<<"Marking::InitLocal exit");
   }
 
 
@@ -182,8 +183,8 @@ void Add(Marking& m, typename Marking::place_t place_id,
 template<int I, typename Marking, typename RNG>
 void Remove(Marking& m, typename Marking::place_t place_id,
   size_t cnt, RNG& rng) {
-  typedef typename boost::mpl::at<typename Marking::container_types,
-    boost::mpl::int_<I>>::type container_type;
+  // typedef typename boost::mpl::at<typename Marking::container_types,
+  //   boost::mpl::int_<I>>::type container_type;
 
   auto& typed_dict=std::get<I>(m.maps_);
   auto place_tokens=typed_dict.find(place_id);
